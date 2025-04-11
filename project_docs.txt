@@ -1,0 +1,89 @@
+# Project Documentation: Hybrid E-commerce Platform
+
+## 1. Project Summary
+
+A mobile-first Progressive Web App (PWA) enabling online product discovery, cart management, and checkout. Uniquely integrates a mandatory customer-initiated phone call post-checkout for order verification. Verification is facilitated by admin-managed service area checks (using customer location captured via browser Geolocation API) and dynamic assignment of an available company phone number for the customer to call. Includes a separate Admin Panel for managing products, categories, orders, service zones (via map interface), and phone number availability.
+
+**Core Problem:** Provide a structured online sales channel for businesses requiring a human verification step (phone call) before fulfillment, while offering online browsing convenience. Addresses service area constraints and manages verification calls efficiently.
+
+## 2. Goals
+
+*   **Business:** Increase order volume, improve order accuracy, enhance operational control (Admin Panel), manage service areas, build brand credibility.
+*   **Customer UX:** Intuitive mobile browsing/checkout, clear post-order call instructions, order history, accessibility, multi-language support.
+*   **Admin UX:** Efficient order/product/zone/phone management workflow, clear data visualization (including maps).
+*   **Technical:** Reliability (especially checkout/location/phone assignment), Security (HTTPS, auth, input validation), Performance (fast PWA/API), Maintainability (clean code, tests, docs), Scalability (ready for growth).
+
+## 3. High-Level Architecture & Tech Stack
+
+*   **Architecture:** Monorepo (`pnpm` workspaces), Customer PWA <-> Backend API <-> DB, Admin Panel <-> Backend API <-> DB.
+*   **Monorepo:** `pnpm` workspaces.
+*   **Customer Frontend:** Vue.js 3 (Vite, TypeScript, PWA plugin).
+*   **Admin Frontend:** Vue.js 3 (Vite, TypeScript).
+*   **Backend API:** Node.js (Express.js, TypeScript).
+*   **Database:** PostgreSQL (with PostGIS extension).
+*   **Styling:** Tailwind CSS (for both frontends).
+*   **Mapping (Admin):** Leaflet.js + OpenStreetMap.
+*   **API:** RESTful JSON API.
+*   **Authentication:** JWTs via HTTP-only cookies.
+*   **Geospatial:** PostGIS queries or Turf.js library in backend.
+*   **Process Management:** `pm2` (Node.js).
+*   **Containerization:** Docker / Docker Compose.
+
+## 4. Lean MVP Plan V1 (Prioritized)
+
+Focuses on the absolute core flow: Online Order -> Location Capture -> Backend Location Check -> Backend Phone Assignment -> Customer Sees Number -> Minimal Admin View/Control.
+
+**Priority 1: Core Backend & Minimal Data (Target: Sprint 1)**
+*   **Goal:** Establish essential API endpoints and database structure for the core flow.
+*   **Tasks:**
+    1.  **Project Setup:** Initialize Monorepo (`pnpm`, Git), Basic Backend API project (Node.js/Express/TS).
+    2.  **Database Setup (Minimal):** Dockerized PostgreSQL. Simplest Schema (Users, Products(basic), Orders(basic), ServiceAreas(geojson text), PhoneNumbers(status)). Use ORM (Prisma/Sequelize).
+    3.  **Backend Auth API (Minimal):** `POST /api/auth/register`, `POST /api/auth/login` (JWT).
+    4.  **Backend Core Order/Phone API (Minimal):**
+        *   `POST /api/orders`: Receives user/order data + lat/lon. Saves order. **Performs location check** (Turf.js vs ServiceAreas). Saves result. Returns `orderId`.
+        *   `GET /api/orders/assign-number/{orderId}`: Finds first 'Available' phone number, returns `numberString`.
+    5.  **Backend Read APIs (Minimal - Admin/Customer):** `GET /api/products`, `GET /api/admin/orders`, `GET /api/admin/phonenumbers`, `POST /api/admin/phonenumbers/{id}/status`, `GET /api/admin/serviceareas`, `POST /api/admin/serviceareas`.
+*   **Testing:** Manually test APIs (Postman/Insomnia). Manually populate minimal DB data for testing.
+
+**Priority 2: Minimal Admin Interface (Target: Sprint 2)**
+*   **Goal:** Allow admins to login, manage phone availability, see incoming orders, and add service zones (via GeoJSON text paste).
+*   **Tasks:**
+    1.  **Setup Admin Frontend:** Basic Vue3/Vite/TS/Tailwind.
+    2.  **Admin Login UI:** Calls backend login.
+    3.  **Admin Phone Management UI:** List numbers, show status, provide toggle button calling status update API.
+    4.  **Admin Order Viewing UI:** Simple table showing key order details (incl. location coords & check result). No map/editing.
+    5.  **Admin Service Zone Adding UI:** List existing zones (name). Form with Name input + TextArea for GeoJSON paste. Submit calls add zone API.
+
+**Priority 3: Minimal Customer Frontend (Target: Sprint 3)**
+*   **Goal:** Allow customers to register/login, see products, add to basic client-side cart, checkout (triggering location capture & core flow), see success page with assigned number.
+*   **Tasks:**
+    1.  **Setup Customer Frontend:** Basic Vue3/Vite/TS/Tailwind (no PWA focus yet).
+    2.  **Customer Auth UI:** Register/Login forms calling backend.
+    3.  **Basic Product Display:** Fetch/display products (list/grid), "Add to Cart" button.
+    4.  **Simple Client-Side Cart:** Manage cart state locally. Display items/total.
+    5.  **Checkout Page (Single):** Name/Phone/Address(TextArea) inputs. Button triggers Geolocation `getCurrentPosition()`. On success, POSTs data to `/api/orders`. On API success, redirects to Success Page (`orderId`). Handle Geo/API errors.
+    6.  **Order Success Page:** Calls `/api/orders/assign-number/{orderId}`. Displays assigned phone number prominently (`tel:` link).
+
+**Deferred Features (Post-MVP):**
+PWA features, search/filter/sort, password reset, saved addresses, profiles, multi-language, admin dashboard, admin map UI, advanced phone logic, category management, product variants, image uploads, admin editing/deleting, detailed styling, tests, full Dockerization, etc.
+
+## 5. Current Progress
+
+*   **Current State:** Project Initiation & Planning Refinement.
+*   **Current Focus:** Agreed on Lean MVP scope. Preparing for Sprint 1 (Core Backend Setup).
+*   **Current Branch:** N/A (Will create `main` branch shortly).
+
+## 6. Chat Summary
+
+*   Session started: [Timestamp]
+*   Project Type: New Project.
+*   User provided detailed requirements for Hybrid E-commerce Platform.
+*   Architect proposed initial Architecture, Tech Stack, and Phased Plan.
+*   User requested simplification for MVP/Agile approach.
+*   Architect proposed a leaner, prioritized MVP plan (Backend -> Min Admin -> Min Customer).
+*   User agreed to the Lean MVP Plan V1.
+*   Architect instructed Coder to update `project_docs.txt` with the revised plan.
+
+## 7. Dev Notes / Lessons Learned
+
+*   (Empty - will be populated as we progress) 
