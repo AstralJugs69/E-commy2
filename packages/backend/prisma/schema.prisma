@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Make sure DATABASE_URL is set in your .env file
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique // Using email for login initially
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]  // Relation to Order model
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Float
+  description String? // Optional description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Removed relation to OrderItem for MVP simplicity - will add items directly to order details later if needed
+}
+
+model Order {
+  id                  Int      @id @default(autoincrement())
+  userId              Int // Relation to User
+  user                User     @relation(fields: [userId], references: [id])
+  customerName        String
+  customerPhone       String
+  addressText         String   // Simple text address for MVP
+  latitude            Float?   // Store captured location
+  longitude           Float?   // Store captured location
+  status              String   @default("Pending Call") // e.g., "Pending Call", "Verified", "Processing", "Shipped", "Cancelled"
+  locationCheckResult String?  // e.g., "Inside Zone [ZoneName]", "Outside Zone", "Check Failed"
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  // Cart items details can be added later, perhaps as a JSON field or separate table if complexity grows
+}
+
+model ServiceArea {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  geoJsonPolygon String   // Store the GeoJSON polygon as a string or JSONB for MVP (Using String for simplicity first)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PhoneNumber {
+  id            Int      @id @default(autoincrement())
+  numberString  String   @unique
+  status        String   @default("Offline") // e.g., "Available", "Busy", "Offline"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
