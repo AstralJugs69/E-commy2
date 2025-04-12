@@ -2,7 +2,7 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}", // Include React file types
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {},
