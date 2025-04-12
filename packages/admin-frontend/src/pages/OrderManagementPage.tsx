@@ -29,6 +29,9 @@ const OrderManagementPage: React.FC = () => {
       setError(null);
       
       const token = localStorage.getItem('admin_token');
+      console.log('API Base URL:', API_BASE_URL);
+      console.log('Token exists:', !!token);
+      
       if (!token) {
         setError("Authentication token not found.");
         setIsLoading(false);
@@ -36,6 +39,9 @@ const OrderManagementPage: React.FC = () => {
       }
 
       try {
+        console.log('Making request to:', `${API_BASE_URL}/admin/orders`);
+        console.log('Using authorization header:', `Bearer ${token.substring(0, 10)}...`);
+        
         const response = await axios.get(`${API_BASE_URL}/admin/orders`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -44,6 +50,13 @@ const OrderManagementPage: React.FC = () => {
         console.log('Orders fetched:', response.data); // Debug log
       } catch (err: any) {
         console.error("Error fetching orders:", err);
+        console.error("Error details:", {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          url: err.config?.url,
+          method: err.config?.method
+        });
         setError(axios.isAxiosError(err) && err.response 
           ? err.response.data.message 
           : "Failed to fetch orders.");

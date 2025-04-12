@@ -8,8 +8,10 @@ const prisma = new PrismaClient();
 
 // GET /api/admin/orders - Fetch all orders for admin view
 router.get('/orders', isAdmin, async (req: Request, res: Response) => {
+  console.log('GET /api/admin/orders route hit');
   try {
     // Fetch all orders from the database with relevant fields
+    console.log('Fetching orders from database...');
     const orders = await prisma.order.findMany({
       select: {
         id: true,
@@ -33,6 +35,7 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       }
     });
 
+    console.log(`Found ${orders.length} orders`);
     // Return the list as JSON
     res.status(200).json(orders);
   } catch (error) {
@@ -196,6 +199,12 @@ router.post('/serviceareas', isAdmin, async (req: Request, res: Response) => {
     console.error("Error creating service area:", error);
     res.status(500).json({ message: 'Error creating service area' });
   }
+});
+
+// Simple test route to verify the admin routes are accessible
+router.get('/test', (req: Request, res: Response) => {
+  console.log('GET /api/admin/test route hit');
+  res.status(200).json({ message: 'Admin routes are working' });
 });
 
 export default router; 

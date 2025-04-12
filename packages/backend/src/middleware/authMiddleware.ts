@@ -22,15 +22,17 @@ declare global {
 
 // Admin authentication middleware
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  console.log('isAdmin middleware called');
   const authHeader = req.headers.authorization;
   
   // Check if Authorization header exists and starts with 'Bearer '
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1]; // Extract token
+    console.log('Token found, verifying...');
     try {
       // Verify the token
       const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-      
+      console.log('Token verified successfully:', decoded);
       // Attach decoded payload to request object
       req.user = decoded;
       
@@ -39,10 +41,12 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
       next(); // Token is valid (for MVP), proceed to the route handler
     } catch (error) {
       // Token verification failed (invalid or expired)
+      console.error('Token verification failed:', error);
       res.status(401).json({ message: 'Unauthorized: Invalid token' });
     }
   } else {
     // No token provided
+    console.log('No auth token provided in request');
     res.status(401).json({ message: 'Unauthorized: Token required' });
   }
 };
