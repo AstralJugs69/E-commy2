@@ -10,7 +10,7 @@ interface Order {
   locationCheckResult: string | null;
   addressText: string;
   createdAt: string;
-  user: {
+  user?: {
     email: string;
   };
 }
@@ -34,18 +34,37 @@ const OrderManagementPage: React.FC = () => {
         return;
       }
 
+      console.log('Token found:', token); // Log token (without showing the full value)
+      
       try {
+        console.log('Fetching from:', `${API_BASE_URL}/admin/orders`);
+        
         const response = await axios.get(`${API_BASE_URL}/admin/orders`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
         
-        console.log('Orders API response:', response.data);
-        setOrders(response.data as Order[]);
+        console.log('Orders API response status:', response.status);
+        console.log('Orders API response data:', response.data);
+        
+        if (Array.isArray(response.data)) {
+          setOrders(response.data);
+        } else {
+          console.error('Response is not an array:', response.data);
+          setError('Unexpected API response format');
+        }
       } catch (err: any) {
         console.error("Error fetching orders:", err);
-        setError(axios.isAxiosError(err) && err.response 
-          ? err.response.data.message 
-          : "Failed to fetch orders.");
+        if (axios.isAxiosError(err)) {
+          console.error('Error response:', err.response);
+          console.error('Error request:', err.request);
+          console.error('Error config:', err.config);
+          setError(err.response?.data?.message || err.message || 'Network error occurred');
+        } else {
+          setError("Unknown error occurred");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -82,6 +101,15 @@ const OrderManagementPage: React.FC = () => {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">Order Management</h1>
       
+      <div className="mb-4">
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Refresh Orders
+        </button>
+      </div>
+      
       {isLoading && (
         <div className="flex justify-center">
           <p className="text-gray-500">Loading orders...</p>
@@ -96,7 +124,7 @@ const OrderManagementPage: React.FC = () => {
       
       {!isLoading && !error && orders.length === 0 && (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-          <p>No orders found.</p>
+          <p>No orders found. Please check your API connection and authentication.</p>
         </div>
       )}
       
