@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod'; // Import Zod for validation
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -121,6 +122,68 @@ router.get('/serviceareas', isAdmin, async (req: Request, res: Response) => {
     // 4. Handle potential database errors
     console.error("Error fetching service areas:", error);
     res.status(500).json({ message: 'Error fetching service areas' });
+  }
+});
+
+// Define a Zod schema for input validation
+const createServiceAreaSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  geoJsonPolygon: z.string().min(10, { message: "GeoJSON Polygon string is required and must be valid" }) // Basic check
+  // Add more specific GeoJSON validation later if needed
+});
+
+// POST /api/admin/serviceareas - Create a new service area
+router.post('/serviceareas', isAdmin, async (req: Request, res: Response) => {
+  // 1. Validate Request Body using Zod
+  const validationResult = createServiceAreaSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    res.status(400).json({ 
+      message: "Validation failed", 
+      errors: validationResult.error.errors 
+    });
+    return;
+  }
+
+  // Extract validated data
+  const { name, geoJsonPolygon } = validationResult.data;
+
+  // Optional: Add further validation to check if geoJsonPolygon is valid JSON
+  try {
+    JSON.parse(geoJsonPolygon);
+  } catch (e) {
+    res.status(400).json({ 
+      message: 'geoJsonPolygon field does not contain valid JSON string.' 
+    });
+    return;
+  }
+
+  try {
+    // 2. Use Prisma client's `create` method to add a new ServiceArea record
+    const newServiceArea = await prisma.serviceArea.create({
+      data: {
+        name,
+        geoJsonPolygon
+      },
+      select: { // Select fields to return
+        id: true,
+        name: true,
+        geoJsonPolygon: true
+      }
+    });
+
+    // 3. Return the newly created service area object as JSON with a 201 Created status
+    res.status(201).json(newServiceArea);
+
+  } catch (error: any) {
+    // 4. Handle potential errors
+    if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+      res.status(409).json({ 
+        message: `Service area with name '${name}' already exists.` 
+      });
+      return;
+    }
+    console.error("Error creating service area:", error);
+    res.status(500).json({ message: 'Error creating service area' });
   }
 });
 
