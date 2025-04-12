@@ -28,6 +28,43 @@ router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/orders - Fetch all orders
+router.get('/orders', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // Fetch all orders from the database
+    const orders = await prisma.order.findMany({
+      select: {
+        id: true,
+        customerName: true,
+        customerPhone: true,
+        status: true,
+        locationCheckResult: true,
+        addressText: true,
+        latitude: true,
+        longitude: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        user: { 
+          select: { 
+            email: true 
+          } 
+        }
+      },
+      orderBy: {
+        createdAt: 'desc' // Show newest orders first
+      }
+    });
+
+    // Return the list as JSON
+    res.status(200).json(orders);
+  } catch (error) {
+    // Handle potential database errors
+    console.error("Error fetching orders for admin:", error);
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
+
 // POST /api/admin/phonenumbers/:id/status - Update a phone number's status
 router.post('/phonenumbers/:id/status', isAdmin, async (req: Request, res: Response) => {
   // 1. Get the phone number ID from route parameters
