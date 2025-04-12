@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -7,6 +8,7 @@ const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const API_BASE_URL = 'http://localhost:3001/api'; // Adjust port if needed
+  const navigate = useNavigate();
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); // Prevent default form submission
@@ -27,9 +29,8 @@ const LoginPage: React.FC = () => {
 
       if (response.data && response.data.token) {
         localStorage.setItem('admin_token', response.data.token);
-        console.log('Login successful! Token:', response.data.token);
-        // alert('Login Successful!'); // Temporary feedback
-        // Future: navigate('/admin/dashboard');
+        // Navigate to the dashboard after successful login
+        navigate('/admin/dashboard', { replace: true });
       } else {
         setErrorMessage('Login failed: Invalid response from server.');
       }
