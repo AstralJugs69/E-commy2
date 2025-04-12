@@ -38,8 +38,8 @@ function LoginPage() {
         // Store token in localStorage
         localStorage.setItem('admin_token', response.data.token);
         console.log('Login successful!');
-        // Navigate to dashboard or home page
-        navigate('/dashboard');
+        // Navigate to admin dashboard
+        navigate('/admin/dashboard', { replace: true });
       } else {
         // Handle unexpected response format
         setErrorMessage('Invalid server response');
