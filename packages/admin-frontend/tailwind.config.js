@@ -2,7 +2,7 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}", // Include all relevant file types within src
+    "./src/**/*.{js,ts,jsx,tsx}", // Include React file types
   ],
   theme: {
     extend: {},
