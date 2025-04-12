@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
-import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
+import * as turf from '@turf/turf';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -53,7 +53,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
     });
 
     // 4. Create a Turf.js point from the provided coordinates
-    const customerLocation = turfPoint([longitude, latitude]); // GeoJSON is [Lon, Lat]
+    const customerLocation = turf.point([longitude, latitude]); // GeoJSON is [Lon, Lat]
 
     // 5. Iterate through service areas and perform point-in-polygon check
     for (const area of serviceAreas) {
@@ -61,7 +61,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
         const polygon = JSON.parse(area.geoJsonPolygon); // Parse the stored string
         // Ensure it's a valid Polygon or MultiPolygon GeoJSON structure before checking
         if (polygon && (polygon.type === 'Polygon' || polygon.type === 'MultiPolygon') && polygon.coordinates) {
-          if (booleanPointInPolygon(customerLocation, polygon)) {
+          if (turf.booleanPointInPolygon(customerLocation, polygon)) {
             locationCheckResult = `Inside Zone`;
             zoneName = area.name; // Store the zone name for reference
             break; // Found a containing zone, no need to check others
