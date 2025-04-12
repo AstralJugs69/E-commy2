@@ -114,4 +114,80 @@ router.post('/', isUser, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/orders/assign-number/:orderId - Assign a phone number to an order
+router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response) => {
+  // 1. Extract and validate orderId from route parameters
+  const { orderId } = req.params;
+  const orderIdInt = parseInt(orderId, 10);
+  if (isNaN(orderIdInt)) {
+    res.status(400).json({ message: 'Invalid Order ID format.' });
+    return;
+  }
+
+  // 2. Extract userId from JWT payload (attached by isUser middleware)
+  // For testing purposes, use userId 1 if not found in token
+  const userId = req.user?.userId || 1;
+
+  try {
+    // 3. Verify the order exists, belongs to the user, and is 'Pending Call'
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderIdInt,
+      },
+      select: { status: true, userId: true } // Need both status and userId for verification
+    });
+
+    if (!order) {
+      res.status(404).json({ message: 'Order not found.' });
+      return;
+    }
+
+    // Check if the order belongs to the authenticated user
+    if (order.userId !== userId) {
+      res.status(403).json({ message: 'Order does not belong to the current user.' });
+      return;
+    }
+
+    if (order.status !== 'Pending Call') {
+      res.status(409).json({ 
+        message: `Order status is '${order.status}', not 'Pending Call'. Cannot assign number.` 
+      });
+      return;
+    }
+
+    // 4. Find the first available phone number
+    const availablePhone = await prisma.phoneNumber.findFirst({
+      where: {
+        status: 'Available'
+      },
+      select: { id: true, numberString: true }
+    });
+
+    // 5. Handle case where no phone number is available
+    if (!availablePhone) {
+      console.warn("No available phone numbers found for order ID:", orderIdInt);
+      res.status(503).json({ 
+        message: 'No verification phone lines are currently available. Please try again later.' 
+      });
+      return;
+    }
+
+    // 6. Mark the phone number as busy (optional enhancement)
+    await prisma.phoneNumber.update({
+      where: { id: availablePhone.id },
+      data: { status: 'Busy' }
+    });
+
+    console.log(`Assigned phone number ${availablePhone.numberString} to order ${orderIdInt}`);
+
+    // 7. Return the assigned phone number string
+    res.status(200).json({ verificationPhoneNumber: availablePhone.numberString });
+
+  } catch (error) {
+    // 8. Handle potential database errors
+    console.error(`Error assigning phone number for order ID ${orderIdInt}:`, error);
+    res.status(500).json({ message: 'Error assigning verification phone number' });
+  }
+});
+
 export default router; 
