@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Type definition for order data
+// Define Order type
 interface Order {
   id: number;
   customerName: string;
   customerPhone: string;
+  addressText: string;
   status: string;
   locationCheckResult: string | null;
-  addressText: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
-  user?: {
+  user: {
     email: string;
   };
 }
@@ -21,94 +23,47 @@ const OrderManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const API_BASE_URL = 'http://localhost:3001/api';
 
-  // Fetch orders data
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true);
       setError(null);
-      const token = localStorage.getItem('admin_token');
       
+      const token = localStorage.getItem('admin_token');
       if (!token) {
         setError("Authentication token not found.");
         setIsLoading(false);
         return;
       }
 
-      console.log('Token found:', token); // Log token (without showing the full value)
-      
       try {
-        console.log('Fetching from:', `${API_BASE_URL}/admin/orders`);
-        
         const response = await axios.get(`${API_BASE_URL}/admin/orders`, {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
         
-        console.log('Orders API response status:', response.status);
-        console.log('Orders API response data:', response.data);
-        
-        if (Array.isArray(response.data)) {
-          setOrders(response.data);
-        } else {
-          console.error('Response is not an array:', response.data);
-          setError('Unexpected API response format');
-        }
+        setOrders(response.data);
+        console.log('Orders fetched:', response.data); // Debug log
       } catch (err: any) {
         console.error("Error fetching orders:", err);
-        if (axios.isAxiosError(err)) {
-          console.error('Error response:', err.response);
-          console.error('Error request:', err.request);
-          console.error('Error config:', err.config);
-          setError(err.response?.data?.message || err.message || 'Network error occurred');
-        } else {
-          setError("Unknown error occurred");
-        }
+        setError(axios.isAxiosError(err) && err.response 
+          ? err.response.data.message 
+          : "Failed to fetch orders.");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchOrders();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  // Format date string
+  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString();
-  };
-
-  // Get status badge styling
-  const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending call':
-        return 'bg-blue-100 text-blue-800';
-      case 'verified':
-        return 'bg-green-100 text-green-800';
-      case 'processing':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">Order Management</h1>
-      
-      <div className="mb-4">
-        <button 
-          onClick={() => window.location.reload()} 
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Refresh Orders
-        </button>
-      </div>
       
       {isLoading && (
         <div className="flex justify-center">
@@ -124,7 +79,7 @@ const OrderManagementPage: React.FC = () => {
       
       {!isLoading && !error && orders.length === 0 && (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-          <p>No orders found. Please check your API connection and authentication.</p>
+          <p>No orders found.</p>
         </div>
       )}
       
@@ -136,17 +91,17 @@ const OrderManagementPage: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location Check</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    #{order.id}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {order.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {order.customerName}
@@ -154,19 +109,26 @@ const OrderManagementPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {order.customerPhone}
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                    {order.addressText}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusStyle(order.status)}`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      order.status === 'Pending Call' ? 'bg-yellow-100 text-yellow-800' :
+                      order.status === 'Verified' ? 'bg-blue-100 text-blue-800' :
+                      order.status === 'Processing' ? 'bg-purple-100 text-purple-800' :
+                      order.status === 'Shipped' ? 'bg-green-100 text-green-800' :
+                      order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
                       {order.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.locationCheckResult || 'N/A'}
+                    {order.locationCheckResult || 'Not checked'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(order.createdAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.user?.email || 'N/A'}
                   </td>
                 </tr>
               ))}
