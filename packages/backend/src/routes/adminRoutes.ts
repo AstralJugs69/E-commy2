@@ -52,4 +52,54 @@ router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/phonenumbers/:id/status - Update a phone number's status
+router.post('/phonenumbers/:id/status', isAdmin, async (req: Request, res: Response) => {
+  // 1. Get the phone number ID from route parameters
+  const { id } = req.params;
+  // 2. Get the new status from the request body
+  const { status } = req.body;
+
+  // 3. Basic Input Validation
+  const allowedStatuses = ['Available', 'Busy', 'Offline'];
+  if (!status || !allowedStatuses.includes(status)) {
+    res.status(400).json({ 
+      message: 'Invalid status provided. Must be one of: ' + allowedStatuses.join(', ') 
+    });
+    return;
+  }
+
+  const phoneNumberId = parseInt(id, 10);
+  if (isNaN(phoneNumberId)) {
+    res.status(400).json({ message: 'Invalid phone number ID.' });
+    return;
+  }
+
+  try {
+    // 4. Update the phone number's status in the database
+    const updatedPhoneNumber = await prisma.phoneNumber.update({
+      where: { id: phoneNumberId },
+      data: { status },
+      select: { 
+        id: true, 
+        numberString: true, 
+        status: true 
+      }
+    });
+
+    // 5. Return the updated phone number
+    res.status(200).json(updatedPhoneNumber);
+
+  } catch (error: any) {
+    // 6. Handle potential errors
+    if (error.code === 'P2025') { // Prisma code for record not found
+      res.status(404).json({ 
+        message: `Phone number with ID ${phoneNumberId} not found.` 
+      });
+      return;
+    }
+    console.error(`Error updating phone number ${phoneNumberId} status:`, error);
+    res.status(500).json({ message: 'Error updating phone number status' });
+  }
+});
+
 export default router; 
