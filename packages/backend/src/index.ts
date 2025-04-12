@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import productRoutes from './routes/productRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -16,11 +18,11 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Hybrid E-commerce Backend API is running!');
 });
 
-// --- Placeholder for future API routes ---
+// API Routes
 // app.use('/api/auth', authRoutes);
-// app.use('/api/products', productRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/admin', adminRoutes);
 // app.use('/api/orders', orderRoutes);
-// app.use('/api/admin', adminRoutes);
 
 // Start Server
 app.listen(port, () => {

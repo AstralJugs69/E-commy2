@@ -27,7 +27,7 @@ A mobile-first Progressive Web App (PWA) enabling online product discovery, cart
 *   **Authentication:** JWTs via HTTP-only cookies.
 *   **Geospatial:** PostGIS queries or Turf.js library in backend.
 *   **Process Management:** `pm2` (Node.js).
-*   **Containerization:** Docker / Docker Compose.
+*   **Containerization:** (Deferred - Using local PostgreSQL for initial development).
 
 ## 4. Lean MVP Plan V1 (Prioritized)
 
@@ -37,7 +37,7 @@ Focuses on the absolute core flow: Online Order -> Location Capture -> Backend L
 *   **Goal:** Establish essential API endpoints and database structure for the core flow.
 *   **Tasks:**
     1.  **Project Setup:** Initialize Monorepo (`pnpm`, Git), Basic Backend API project (Node.js/Express/TS).
-    2.  **Database Setup (Minimal):** Dockerized PostgreSQL. Simplest Schema (Users, Products(basic), Orders(basic), ServiceAreas(geojson text), PhoneNumbers(status)). Use ORM (Prisma/Sequelize).
+    2.  **Database Setup (Minimal):** Local PostgreSQL instance. Simplest Schema (Users, Products(basic), Orders(basic), ServiceAreas(geojson text), PhoneNumbers(status)). Use ORM (Prisma/Sequelize).
     3.  **Backend Auth API (Minimal):** `POST /api/auth/register`, `POST /api/auth/login` (JWT).
     4.  **Backend Core Order/Phone API (Minimal):**
         *   `POST /api/orders`: Receives user/order data + lat/lon. Saves order. **Performs location check** (Turf.js vs ServiceAreas). Saves result. Returns `orderId`.
@@ -86,4 +86,4 @@ PWA features, search/filter/sort, password reset, saved addresses, profiles, mul
 
 ## 7. Dev Notes / Lessons Learned
 
-*   (Empty - will be populated as we progress) 
+*   L17: Switched from Dockerized PostgreSQL to local PostgreSQL instance due to initial setup issues. Adjusted `DATABASE_URL` in `.env` accordingly. Updated `dev` script in `packages/backend/package.json` to remove single quotes for Windows PowerShell compatibility (`nodemon --watch src/**/*.ts --exec ts-node src/index.ts`). Initial migration successful. 
