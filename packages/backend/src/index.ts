@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import productRoutes from './routes/productRoutes';
 import adminRoutes from './routes/adminRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -22,7 +23,7 @@ app.get('/', (req: Request, res: Response) => {
 // app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
-// app.use('/api/orders', orderRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Start Server
 app.listen(port, () => {
