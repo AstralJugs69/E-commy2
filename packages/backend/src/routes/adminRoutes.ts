@@ -102,4 +102,26 @@ router.post('/phonenumbers/:id/status', isAdmin, async (req: Request, res: Respo
   }
 });
 
+// GET /api/admin/serviceareas - Fetch all service areas
+router.get('/serviceareas', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // 1. Fetch all records from the ServiceArea table
+    const serviceAreas = await prisma.serviceArea.findMany({
+      // 2. Select the fields needed: id, name, geoJsonPolygon
+      select: {
+        id: true,
+        name: true,
+        geoJsonPolygon: true // The string representation
+      }
+    });
+    
+    // 3. Return the list as JSON
+    res.status(200).json(serviceAreas);
+  } catch (error) {
+    // 4. Handle potential database errors
+    console.error("Error fetching service areas:", error);
+    res.status(500).json({ message: 'Error fetching service areas' });
+  }
+});
+
 export default router; 
