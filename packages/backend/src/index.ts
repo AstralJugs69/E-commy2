@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import productRoutes from './routes/productRoutes';
 import adminRoutes from './routes/adminRoutes';
 import orderRoutes from './routes/orderRoutes';
+import authRoutes from './routes/authRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -20,7 +21,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // API Routes
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
