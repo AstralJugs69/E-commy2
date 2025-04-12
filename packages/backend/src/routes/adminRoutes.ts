@@ -6,6 +6,42 @@ import { isAdmin } from '../middleware/authMiddleware';
 const router = Router();
 const prisma = new PrismaClient();
 
+// GET /api/admin/orders - Fetch all orders for admin view
+router.get('/orders', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // Fetch all orders from the database with relevant fields
+    const orders = await prisma.order.findMany({
+      select: {
+        id: true,
+        customerName: true,
+        customerPhone: true,
+        status: true,
+        locationCheckResult: true,
+        latitude: true,
+        longitude: true,
+        addressText: true,
+        createdAt: true,
+        // Include related user info if needed
+        user: {
+          select: {
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc' // Show newest orders first
+      }
+    });
+
+    // Return the list as JSON
+    res.status(200).json(orders);
+  } catch (error) {
+    // Handle potential database errors
+    console.error("Error fetching orders for admin:", error);
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
+
 // GET /api/admin/phonenumbers - Fetch all phone numbers
 router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
   try {
@@ -25,43 +61,6 @@ router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
     // Handle potential database errors
     console.error("Error fetching phone numbers:", error);
     res.status(500).json({ message: 'Error fetching phone numbers' });
-  }
-});
-
-// GET /api/admin/orders - Fetch all orders
-router.get('/orders', isAdmin, async (req: Request, res: Response) => {
-  try {
-    // Fetch all orders from the database
-    const orders = await prisma.order.findMany({
-      select: {
-        id: true,
-        customerName: true,
-        customerPhone: true,
-        status: true,
-        locationCheckResult: true,
-        addressText: true,
-        latitude: true,
-        longitude: true,
-        createdAt: true,
-        updatedAt: true,
-        userId: true,
-        user: { 
-          select: { 
-            email: true 
-          } 
-        }
-      },
-      orderBy: {
-        createdAt: 'desc' // Show newest orders first
-      }
-    });
-
-    // Return the list as JSON
-    res.status(200).json(orders);
-  } catch (error) {
-    // Handle potential database errors
-    console.error("Error fetching orders for admin:", error);
-    res.status(500).json({ message: 'Error fetching orders' });
   }
 });
 
