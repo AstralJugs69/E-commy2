@@ -70,7 +70,10 @@ PWA features, search/filter/sort, password reset, saved addresses, profiles, mul
 ## 5. Current Progress
 
 *   **Current State:** Project Initiation & Planning Refinement.
-*   **Current Focus:** Agreed on Lean MVP scope. Preparing for Sprint 1 (Core Backend Setup).
+    - All Sprint 1 backend API endpoints implemented and tested (Auth, Products, Admin CRUD for Phones/Zones, Core Order processing w/ location check & number assignment).
+    - Implemented utility scripts (seed-user, fix-service-areas, generate-token) for testing/maintenance.
+    - Added enhancement: Assigned phone numbers are marked 'Busy'.
+*   **Current Focus:** Completed Sprint 1 (Core Backend). Preparing for Sprint 2 (Minimal Admin Interface).
 *   **Current Branch:** N/A (Will create `main` branch shortly).
 
 ## 6. Chat Summary
@@ -83,7 +86,16 @@ PWA features, search/filter/sort, password reset, saved addresses, profiles, mul
 *   Architect proposed a leaner, prioritized MVP plan (Backend -> Min Admin -> Min Customer).
 *   User agreed to the Lean MVP Plan V1.
 *   Architect instructed Coder to update `project_docs.txt` with the revised plan.
+*   Implemented POST /api/admin/phonenumbers/:id/status.
+*   Implemented GET /api/admin/serviceareas.
+*   Implemented POST /api/admin/serviceareas (with Zod validation).
+*   Implemented POST /api/orders (with Zod validation, isUser middleware, Turf.js location check). User added fixes/scripts for GeoJSON issues & testing.
+*   Implemented GET /api/orders/assign-number/:orderId (with isUser middleware, order/status check, marks number 'Busy').
+*   Sprint 1 (Core Backend) Completed.
 
 ## 7. Dev Notes / Lessons Learned
 
-*   L17: Switched from Dockerized PostgreSQL to local PostgreSQL instance due to initial setup issues. Adjusted `DATABASE_URL` in `.env` accordingly. Updated `dev` script in `packages/backend/package.json` to remove single quotes for Windows PowerShell compatibility (`nodemon --watch src/**/*.ts --exec ts-node src/index.ts`). Initial migration successful. 
+*   L17: Switched from Dockerized PostgreSQL to local PostgreSQL instance due to initial setup issues. Adjusted `DATABASE_URL` in `.env` accordingly. Updated `dev` script in `packages/backend/package.json` to remove single quotes for Windows PowerShell compatibility (`nodemon --watch src/**/*.ts --exec ts-node src/index.ts`). Initial migration successful.
+*   L18: GeoJSON Handling - Parsing GeoJSON strings from DB requires robust error handling (try-catch). Invalid GeoJSON data can break location checks; utility scripts (e.g., fix-service-areas.js) can help maintain data integrity.
+*   L19: Testing Auth Endpoints - Utility scripts (e.g., generate-token.js, seed-user.js) are valuable for simplifying the testing of JWT-protected endpoints, especially during backend-only development.
+*   L20: State Management (Backend) - Critical operations like assigning a phone number should update the resource's state (e.g., PhoneNumber status to 'Busy') to prevent race conditions or duplicate assignments. 
