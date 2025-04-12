@@ -59,20 +59,20 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Admin Login</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <h2 className="login-heading">Admin Login</h2>
         
         <form onSubmit={handleLogin}>
           {/* Email input */}
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">
               Email Address
             </label>
             <input
               id="email"
               type="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -81,14 +81,14 @@ function LoginPage() {
           </div>
           
           {/* Password input */}
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 text-sm font-medium mb-2">
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">
               Password
             </label>
             <input
               id="password"
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -98,7 +98,7 @@ function LoginPage() {
           
           {/* Error message */}
           {errorMessage && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            <div className="error-message">
               {errorMessage}
             </div>
           )}
@@ -107,11 +107,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-2 px-4 rounded-md font-medium text-white ${
-              isLoading 
-                ? 'bg-blue-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-            }`}
+            className={isLoading ? "submit-button loading" : "submit-button"}
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
