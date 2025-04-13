@@ -1,65 +1,87 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // Make sure DATABASE_URL is set in your .env file
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique // Using email for login initially
-  passwordHash  String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  orders        Order[]  // Relation to Order model
+  id                   Int       @id @default(autoincrement())
+  email                String    @unique
+  passwordHash         String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  passwordResetExpires DateTime?
+  passwordResetToken   String?   @unique
+  orders               Order[]
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   price       Float
-  description String? // Optional description
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  // Removed relation to OrderItem for MVP simplicity - will add items directly to order details later if needed
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  imageUrl    String?
+  stock       Int         @default(0)
+  categoryId  Int?
+  orderItems  OrderItem[]
+  category    Category?   @relation(fields: [categoryId], references: [id])
 }
 
 model Order {
-  id                  Int      @id @default(autoincrement())
-  userId              Int // Relation to User
-  user                User     @relation(fields: [userId], references: [id])
-  customerName        String
-  customerPhone       String
-  addressText         String   // Simple text address for MVP
-  latitude            Float?   // Store captured location
-  longitude           Float?   // Store captured location
-  status              String   @default("Pending Call") // e.g., "Pending Call", "Verified", "Processing", "Shipped", "Cancelled"
-  locationCheckResult String?  // e.g., "Inside Zone [ZoneName]", "Outside Zone", "Check Failed"
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  // Cart items details can be added later, perhaps as a JSON field or separate table if complexity grows
+  id                  Int         @id @default(autoincrement())
+  userId              Int
+  latitude            Float?
+  longitude           Float?
+  status              String
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  shippingDetails     Json?
+  totalAmount         Float
+  locationCheckResult String?
+  user                User        @relation(fields: [userId], references: [id])
+  items               OrderItem[]
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  productName String
+  quantity    Int
+  price       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
 }
 
 model ServiceArea {
   id             Int      @id @default(autoincrement())
   name           String   @unique
-  geoJsonPolygon String   // Store the GeoJSON polygon as a string or JSONB for MVP (Using String for simplicity first)
+  geoJsonPolygon String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
 model PhoneNumber {
-  id            Int      @id @default(autoincrement())
-  numberString  String   @unique
-  status        String   @default("Offline") // e.g., "Available", "Busy", "Offline"
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  numberString String   @unique
+  status       String   @default("Offline")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

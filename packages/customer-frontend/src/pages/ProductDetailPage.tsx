@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Image, Button, Spinner, Alert, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Image, Button, Spinner, Alert, Badge, Card } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
@@ -148,21 +148,19 @@ const ProductDetailPage = () => {
         <Col md={6} className="mb-3 mb-md-0">
           <div className="position-relative">
             {product.imageUrl ? (
-              <Image 
-                src={product.imageUrl} 
+              <Card.Img 
+                variant="top" 
+                src={`${API_BASE_URL}${product.imageUrl}`} 
                 alt={product.name}
-                fluid 
-                rounded 
-                className="product-image shadow-sm"
-                style={{ maxHeight: '400px', width: '100%', objectFit: 'contain' }}
+                style={{ height: '300px', objectFit: 'cover' }}
               />
             ) : (
-              <div 
-                className="rounded shadow-sm d-flex align-items-center justify-content-center bg-light"
-                style={{ height: '400px', width: '100%' }}
-              >
-                <span className="text-muted">No image available</span>
-              </div>
+              <Card.Img 
+                variant="top" 
+                src="/placeholder-image.svg"
+                alt={product.name}
+                style={{ height: '300px', objectFit: 'cover' }}
+              />
             )}
             {isNewProduct() && (
               <Badge 
