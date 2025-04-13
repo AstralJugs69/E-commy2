@@ -258,17 +258,19 @@ router.post('/change-password', isUser, (async (req: Request, res: Response) => 
   try {
     // Get user ID from req.user (added by isUser middleware)
     if (!req.user || !req.user.userId) {
-      return res.status(401).json({ message: "User not authenticated." });
+      res.status(401).json({ message: "User not authenticated." });
+      return;
     }
     const userId = req.user.userId;
 
     // Validate request body
     const validationResult = changePasswordSchema.safeParse(req.body);
     if (!validationResult.success) {
-      return res.status(400).json({
+      res.status(400).json({
         message: 'Validation failed',
         errors: validationResult.error.flatten().fieldErrors
       });
+      return;
     }
 
     const { currentPassword, newPassword } = validationResult.data;
@@ -284,7 +286,8 @@ router.post('/change-password', isUser, (async (req: Request, res: Response) => 
     // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ message: "Incorrect current password." });
+      res.status(401).json({ message: "Incorrect current password." });
+      return;
     }
 
     // Hash new password
@@ -297,10 +300,10 @@ router.post('/change-password', isUser, (async (req: Request, res: Response) => 
     });
 
     // Return success response
-    return res.status(200).json({ message: "Password updated successfully." });
+    res.status(200).json({ message: "Password updated successfully." });
   } catch (error) {
     console.error('Password change error:', error);
-    return res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An internal server error occurred' });
   }
 }) as RequestHandler);
 
@@ -309,7 +312,8 @@ router.get('/me', isUser, (async (req: Request, res: Response) => {
   // isUser middleware already attached user info if token was valid
   if (!req.user) {
     // This case should technically be caught by isUser, but good to double check
-    return res.status(401).json({ message: "User data not found in token." });
+    res.status(401).json({ message: "User data not found in token." });
+    return;
   }
 
   // Return only necessary, non-sensitive info from the token payload
