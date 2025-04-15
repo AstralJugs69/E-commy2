@@ -52,3 +52,42 @@ export default tseslint.config({
   },
 })
 ```
+
+## PWA Configuration
+
+This project is configured as a Progressive Web App (PWA) using `vite-plugin-pwa`. Follow these steps to ensure the PWA functionality works correctly:
+
+### Required Icon Files
+
+The following icon files must be placed in the `public/images/icons/` directory:
+
+- `icon-192x192.png` - A 192x192 pixel PNG icon for Android devices
+- `icon-512x512.png` - A 512x512 pixel PNG icon for larger devices and high-resolution displays
+
+These files are referenced in the PWA manifest configuration in `vite.config.ts` and are necessary for proper PWA functionality.
+
+### Configuration Files
+
+1. **vite.config.ts**: Contains the PWA plugin configuration with manifest details:
+   - App name: "Hybrid Store"
+   - Theme color: #14B8A6
+   - Icons configuration
+   - Workbox configuration for asset caching
+
+2. **index.html**: Contains required meta tags:
+   - `<meta name="theme-color" content="#14B8A6" />`
+   - `<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />`
+
+### Testing PWA Functionality
+
+1. Build the app for production: `npm run build`
+2. Preview the build: `npm run preview`
+3. Use Chrome's Lighthouse tool to verify PWA compliance
+4. Test installation on both desktop and mobile devices
+
+### Customizing the PWA
+
+To customize the PWA configuration:
+1. Modify the manifest settings in `vite.config.ts`
+2. Update the theme-color in both `vite.config.ts` and `index.html`
+3. Replace the icon files with your own branded versions
