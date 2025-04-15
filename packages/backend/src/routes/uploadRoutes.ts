@@ -14,10 +14,10 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Configure multer storage
 const storage = multer.diskStorage({
-    destination: function (req: Request, file: Express.Multer.File, cb) {
+    destination: function (req: any, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) {
         cb(null, uploadsDir);
     },
-    filename: function (req: Request, file: Express.Multer.File, cb) {
+    filename: function (req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
         // Generate a unique filename with timestamp and original extension
         const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter to only allow specific image types
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     // Accept only images
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     
@@ -52,8 +52,8 @@ const upload = multer({
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
-    // Handle file upload
-    upload.single('productImage')(req, res, (err: any) => {
+    // Handle file upload with manually typed callback
+    upload.single('productImage')(req as any, res as any, (err: any) => {
         if (err) {
             let errorMessage = 'File upload failed.';
             
@@ -67,12 +67,14 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
                 errorMessage = err.message;
             }
             
-            return res.status(400).json({ message: errorMessage });
+            res.status(400).json({ message: errorMessage });
+            return;
         }
         
         // No file was uploaded
         if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded. Please select a file.' });
+            res.status(400).json({ message: 'No file uploaded. Please select a file.' });
+            return;
         }
         
         // File upload successful
