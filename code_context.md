@@ -1,4 +1,4 @@
-# Project Code Context (2025-04-15 01:37:13)
+# Project Code Context (2025-04-15 16:52:24)
 
 ## Key Configuration Files
 
@@ -180,7 +180,7 @@ Focuses on the absolute core flow: Online Order -> Location Capture -> Backend L
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^4.18.2",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
     "react-router-bootstrap": "^0.26.3",
@@ -190,7 +190,7 @@ Focuses on the absolute core flow: Online Order -> Location Capture -> Backend L
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.13",
+    "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.14.1",
     "@types/turf": "^3.5.32",
@@ -555,7 +555,8 @@ app.listen(port, () => {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isUser = exports.isAdmin = void 0;
-var jsonwebtoken_1 = require("jsonwebtoken");
+// Replace the problematic import with direct require
+var jwt = require('jsonwebtoken');
 var JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only'; // Use environment variable or default for development
 // Admin authentication middleware
 var isAdmin = function (req, res, next) {
@@ -565,9 +566,10 @@ var isAdmin = function (req, res, next) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
         var token = authHeader.split(' ')[1]; // Extract token
         console.log('Token found, verifying...');
+        console.log('JWT_SECRET exists:', !!JWT_SECRET);
         try {
             // Verify the token
-            var decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            var decoded = jwt.verify(token, JWT_SECRET);
             console.log('Token verified successfully:', decoded);
             // Attach decoded payload to request object
             req.user = decoded;
@@ -597,7 +599,7 @@ var isUser = function (req, res, next) {
         var token = authHeader.split(' ')[1]; // Extract token
         try {
             // Verify the token
-            var decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            var decoded = jwt.verify(token, JWT_SECRET);
             // Attach decoded payload to request object
             req.user = decoded;
             next(); // Token is valid, proceed to the route handler
@@ -620,9 +622,15 @@ exports.isUser = isUser;
 
 ```typescript
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+// Use require instead of import for jwt to avoid transpilation issues
+const jwt = require('jsonwebtoken');
+import dotenv from 'dotenv';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only'; // Use environment variable or default for development
+// Load environment variables first
+dotenv.config();
+
+// Get JWT secret with a fallback for development
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only';
 
 // Interface for the JWT payload
 interface UserPayload {
@@ -650,12 +658,15 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1]; // Extract token
     console.log('Token found, verifying...');
+    console.log('JWT_SECRET exists:', !!JWT_SECRET); // Debug
+    
     try {
       // Verify the token
-      const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+      const decoded = jwt.verify(token, JWT_SECRET);
       console.log('Token verified successfully:', decoded);
+      
       // Attach decoded payload to request object
-      req.user = decoded;
+      req.user = decoded as UserPayload;
       
       // TODO (Future): Check if the decoded payload corresponds to an admin user in the DB.
       // For MVP V1, just verifying the token is enough to proceed.
@@ -676,32 +687,25 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 // Will be differentiated in future for role-based access
 export const isUser = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
-  console.log(`[Auth Middleware] isUser called for path: ${req.path}`); // Log path
   
   // Check if Authorization header exists and starts with 'Bearer '
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1]; // Extract token
-    console.log(`[Auth Middleware] Token received: ${token ? 'Yes' : 'No'}`); // Log if token extracted
-    // console.log(`[Auth Middleware] Full Token: ${token}`); // Optional: Log full token if needed for debugging, but be careful with sensitive data
-    console.log(`[Auth Middleware] Secret being used for verification: ${JWT_SECRET}`); // Log the secret
+    
     try {
       // Verify the token
-      console.log('[Auth Middleware] Verifying token...');
-      const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-      console.log('[Auth Middleware] Token verification SUCCESS:', decoded); // Log success and payload
+      const decoded = jwt.verify(token, JWT_SECRET);
       
       // Attach decoded payload to request object
-      req.user = decoded;
+      req.user = decoded as UserPayload;
       
       next(); // Token is valid, proceed to the route handler
-    } catch (error: any) {
+    } catch (error) {
       // Token verification failed (invalid or expired)
-      console.error('[Auth Middleware] Token verification FAILED:', error.message); // Log the specific error message
       res.status(401).json({ message: 'Unauthorized: Invalid token' });
     }
   } else {
     // No token provided
-    console.log('[Auth Middleware] No Authorization header with Bearer token found.');
     res.status(401).json({ message: 'Unauthorized: Token required' });
   }
 };
@@ -1285,7 +1289,7 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // Environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only';
+const JWT_SECRET = process.env.JWT_SECRET || 'hybrid_ecommerce_secret_key_for_development_only';
 const SALT_ROUNDS = 10;
 
 // Zod schema for password reset request
@@ -2023,7 +2027,7 @@ const prisma = new PrismaClient();
 const categorySchema = z.object({
   name: z.string().min(1, { message: "Category name is required" }).max(100),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional()
+  imageUrl: z.string().url({ message: "Invalid URL format" }).optional().or(z.literal('')), // Allow empty string or valid URL
 });
 
 const updateCategorySchema = categorySchema.partial();
@@ -2037,7 +2041,7 @@ router.post('/', isAdmin, (async (req: Request, res: Response) => {
   try {
     // Validate request body
     const validationResult = categorySchema.safeParse(req.body);
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         message: 'Validation failed',
@@ -2045,24 +2049,20 @@ router.post('/', isAdmin, (async (req: Request, res: Response) => {
       });
       return;
     }
-    
+
     const { name, description, imageUrl } = validationResult.data;
-    
+
     // Create the category with type safety
     const categoryData: Prisma.CategoryCreateInput = {
       name,
-      description
+      description: description || null, // Ensure null if empty/undefined
+      imageUrl: imageUrl || null // Ensure null if empty/undefined
     };
-    
-    // Add imageUrl only if it exists
-    if (imageUrl) {
-      categoryData.imageUrl = imageUrl;
-    }
-    
+
     const newCategory = await prisma.category.create({
       data: categoryData
     });
-    
+
     res.status(201).json(newCategory);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -2072,7 +2072,7 @@ router.post('/', isAdmin, (async (req: Request, res: Response) => {
         return;
       }
     }
-    
+
     console.error('Error creating category:', error);
     res.status(500).json({ message: 'An error occurred while creating the category.' });
   }
@@ -2090,7 +2090,7 @@ router.get('/', isAdmin, (async (req: Request, res: Response) => {
         name: 'asc'
       }
     });
-    
+
     res.status(200).json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -2111,10 +2111,10 @@ router.put('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
       res.status(400).json({ message: 'Invalid category ID.' });
       return;
     }
-    
+
     // Validate request body
     const validationResult = updateCategorySchema.safeParse(req.body);
-    
+
     if (!validationResult.success) {
       res.status(400).json({
         message: 'Validation failed',
@@ -2122,40 +2122,40 @@ router.put('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
       });
       return;
     }
-    
-    // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
+
+    // Check if category exists (use findUniqueOrThrow for cleaner error handling)
+    await prisma.category.findUniqueOrThrow({
       where: { id: categoryId }
-    });
-    
-    if (!existingCategory) {
-      res.status(404).json({ message: 'Category not found.' });
-      return;
-    }
-    
+    }).catch(() => { throw { status: 404, message: 'Category not found.' } });
+
+
     // Create update data with proper typing
     const updateData: Prisma.CategoryUpdateInput = {};
-    
+
     if (validationResult.data.name !== undefined) {
       updateData.name = validationResult.data.name;
     }
-    
+
     if (validationResult.data.description !== undefined) {
-      updateData.description = validationResult.data.description;
+      updateData.description = validationResult.data.description || null; // Set to null if empty string
     }
-    
+
     if (validationResult.data.imageUrl !== undefined) {
-      updateData.imageUrl = validationResult.data.imageUrl;
+      updateData.imageUrl = validationResult.data.imageUrl || null; // Set to null if empty string
     }
-    
+
     // Update the category
     const updatedCategory = await prisma.category.update({
       where: { id: categoryId },
       data: updateData
     });
-    
+
     res.status(200).json(updatedCategory);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle specific errors first
+    if (error?.status === 404) {
+        return res.status(404).json({ message: error.message });
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       // P2002 is the error code for unique constraint violation
       if (error.code === 'P2002') {
@@ -2163,7 +2163,7 @@ router.put('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
         return;
       }
     }
-    
+
     console.error('Error updating category:', error);
     res.status(500).json({ message: 'An error occurred while updating the category.' });
   }
@@ -2182,39 +2182,39 @@ router.delete('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
       res.status(400).json({ message: 'Invalid category ID.' });
       return;
     }
-    
-    // Check if category exists
+
+    // Check if category exists and if it has products in one go
     const existingCategory = await prisma.category.findUnique({
       where: { id: categoryId },
-      include: { products: { select: { id: true }, take: 1 } }
+      include: { _count: { select: { products: true } } } // Count associated products
     });
-    
+
     if (!existingCategory) {
       res.status(404).json({ message: 'Category not found.' });
       return;
     }
-    
+
     // Check if category has associated products
-    if (existingCategory.products.length > 0) {
-      res.status(409).json({ message: 'Cannot delete category with associated products.' });
+    if (existingCategory._count.products > 0) {
+      res.status(409).json({ message: `Cannot delete category "${existingCategory.name}" as it has ${existingCategory._count.products} associated products.` });
       return;
     }
-    
+
     // Delete the category
     await prisma.category.delete({
       where: { id: categoryId }
     });
-    
+
     res.status(204).send();
-  } catch (error) {
+  } catch (error: any) {
+    // Check for specific Prisma errors if needed, though findUnique handles not found
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2003 is the foreign key constraint error
-      if (error.code === 'P2003') {
-        res.status(409).json({ message: 'Cannot delete category with associated products.' });
-        return;
-      }
+       // P2003 might still happen if relations change, though the check above should prevent it
+       if (error.code === 'P2003') {
+         return res.status(409).json({ message: 'Cannot delete category due to existing references.' });
+       }
     }
-    
+
     console.error('Error deleting category:', error);
     res.status(500).json({ message: 'An error occurred while deleting the category.' });
   }
@@ -2250,7 +2250,7 @@ router.get('/', async (req: Request, res: Response) => {
         name: 'asc'
       }
     });
-    
+
     res.status(200).json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -2266,7 +2266,7 @@ export default router;
 
 ```typescript
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client'; // Import Prisma type
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -2276,31 +2276,39 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // Define Zod schemas for order validation
-const orderItemSchema = z.object({
+// Ensure Product includes necessary fields for cart context
+const cartItemSchema = z.object({
   productId: z.number().int().positive(),
   quantity: z.number().int().positive(),
-  price: z.number().positive()
+  // Price validation might be better handled by fetching product price server-side
+  // For now, assume price sent from frontend is correct for the item
+  price: z.number().positive({ message: "Item price must be positive" }),
+  // Include potentially other needed fields like name, imageUrl if needed from cart
+  name: z.string().optional(), // Optional: name might be fetched server-side
+  imageUrl: z.string().optional(),
 });
+
 
 const shippingDetailsSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required" }),
-  address: z.string().optional(),
+  phone: z.string().min(1, { message: "Phone number is required" }),
+  address: z.string().optional(), // Made optional
   city: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
-  phone: z.string().min(1, { message: "Phone number is required" })
 });
 
 const locationSchema = z.object({
-  lat: z.number(),
-  lng: z.number()
-}).optional();
+  lat: z.number({ invalid_type_error: "Latitude must be a number" }),
+  lng: z.number({ invalid_type_error: "Longitude must be a number" })
+}).optional(); // Location object itself is optional
 
 const createOrderSchema = z.object({
-  items: z.array(orderItemSchema).min(1, { message: "At least one product is required" }),
-  shippingDetails: shippingDetailsSchema.optional(),
-  location: locationSchema,
-  totalAmount: z.number().positive()
+  items: z.array(cartItemSchema).min(1, { message: "At least one product is required" }),
+  // Shipping details are required, but address fields within are optional
+  shippingDetails: shippingDetailsSchema,
+  location: locationSchema, // Location might not be provided
+  totalAmount: z.number().positive({ message: "Total amount must be positive" })
 });
 
 // POST /api/orders - Create a new order
@@ -2309,17 +2317,19 @@ router.post('/', isUser, async (req: Request, res: Response) => {
     // Validate request body using Zod schema
     const validationResult = createOrderSchema.safeParse(req.body);
     if (!validationResult.success) {
-      res.status(400).json({ 
-        message: "Validation failed", 
-        errors: validationResult.error.errors 
+      console.error("Order validation failed:", validationResult.error.flatten());
+      res.status(400).json({
+        message: "Validation failed",
+        errors: validationResult.error.flatten().fieldErrors // Send detailed errors
       });
       return;
     }
-    
+
     const { items, shippingDetails, location, totalAmount } = validationResult.data;
     const userId = req.user?.userId;
 
     if (!userId) {
+      // This should technically be caught by isUser, but double-check
       res.status(401).json({ message: "User ID not found in token" });
       return;
     }
@@ -2331,151 +2341,130 @@ router.post('/', isUser, async (req: Request, res: Response) => {
     let locationCheckResult: string | null = null; // Initialize as null
     let checkedZoneName: string | null = null; // Optional: store name of zone found
 
-    // Only perform check if latitude and longitude are provided
+    // --- Perform Location Check (only if coordinates provided) ---
     if (latitude !== null && longitude !== null) {
       locationCheckResult = "Outside Zone"; // Default to Outside if coords are provided
       console.log(`Performing location check for coords: Lat=${latitude}, Lon=${longitude}`);
       try {
-        // Fetch service area polygons from DB
         const serviceAreas = await prisma.serviceArea.findMany({
           select: { id: true, name: true, geoJsonPolygon: true }
         });
         console.log(`Checking against ${serviceAreas.length} service areas.`);
 
-        // Create a Turf.js point
         const customerLocation = turfPoint([longitude, latitude]); // GeoJSON format: [Lon, Lat]
 
-        // Iterate and perform point-in-polygon check
         for (const area of serviceAreas) {
           try {
-            const polygon = JSON.parse(area.geoJsonPolygon); // Parse the stored string
-            // Basic validation of parsed GeoJSON structure
+            const polygon = JSON.parse(area.geoJsonPolygon);
             if (polygon && (polygon.type === 'Polygon' || polygon.type === 'MultiPolygon') && polygon.coordinates) {
               if (booleanPointInPolygon(customerLocation, polygon)) {
-                locationCheckResult = `Inside Zone`; // Update result
-                checkedZoneName = area.name; // Store zone name
+                locationCheckResult = `Inside Zone`; // Simplified result
+                checkedZoneName = area.name;
                 console.log(`Point IS INSIDE zone: ${area.name} (ID: ${area.id})`);
-                break; // Found containing zone
+                break;
               } else {
-                console.log(`Point is outside zone: ${area.name} (ID: ${area.id})`);
+                 console.log(`Point is outside zone: ${area.name} (ID: ${area.id})`);
               }
             } else {
               console.warn(`Skipping invalid GeoJSON structure for ServiceArea ID ${area.id}`);
             }
           } catch (parseError) {
             console.error(`Error parsing GeoJSON for ServiceArea ID ${area.id}:`, parseError);
-            // Skip this area if parsing fails, don't block the order
           }
         }
       } catch (dbError) {
         console.error("Error fetching service areas for location check:", dbError);
-        // Decide if this should prevent order creation or just skip the check
-        // For now, let's log and proceed without a check result
         locationCheckResult = "Check Failed (DB Error)";
       }
     } else {
       console.log("Latitude/Longitude not provided, skipping location check.");
       locationCheckResult = "Not Provided"; // Indicate coords were missing
     }
+    // --- End Location Check ---
 
     // Create the order and order items in a transaction
     const order = await prisma.$transaction(async (tx) => {
       // --- Stock Check ---
+      console.log("Checking stock for items:", items);
       for (const item of items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
           select: { stock: true, name: true }
         });
-        
         if (!product) {
-          // Important: Throw error to rollback transaction
           throw new Error(`Product with ID ${item.productId} not found.`);
         }
-        
         if (product.stock < item.quantity) {
-          // Important: Throw error to rollback transaction
           throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`);
         }
-        
         console.log(`Stock OK for ${product.name} (ID: ${item.productId}) - Available: ${product.stock}, Requested: ${item.quantity}`);
       }
       console.log("Stock check passed for all items.");
       // --- End Stock Check ---
-      
-      // 1. Create the order
+
+      // --- Create Order ---
+      console.log("Creating order record...");
       const newOrder = await tx.order.create({
         data: {
-          userId,
-          status: 'PENDING',
-          totalAmount,
-          // Add shipping details if provided
-          ...(shippingDetails && {
-            shippingDetails: JSON.stringify({
-              fullName: shippingDetails.fullName,
-              address: shippingDetails.address || '',
-              city: shippingDetails.city || '',
-              zipCode: shippingDetails.zipCode || '',
-              country: shippingDetails.country || '',
-              phone: shippingDetails.phone
-            })
-          }),
-          // Add location data
+          userId: userId,
+          status: 'Pending Call', // Initial status
+          totalAmount: totalAmount,
+          shippingDetails: shippingDetails as any, // Store the shippingDetails JSON
           latitude: latitude,
           longitude: longitude,
-          locationCheckResult: locationCheckResult
-        }
+          locationCheckResult: locationCheckResult, // Save the result
+        },
       });
+      console.log(`Order created with ID: ${newOrder.id}`);
 
-      // 2. Create order items linked to the order and decrement stock
+      // --- Create OrderItems and Decrement Stock ---
       for (const item of items) {
-        // Fetch product to get its name
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          select: { name: true }
-        });
+        // Fetch product again inside transaction to ensure consistency? Or trust validation?
+        // Let's trust validation and use name/price from request for simplicity now.
+        // const product = await tx.product.findUniqueOrThrow({ where: { id: item.productId }, select: { name: true, price: true } });
 
-        // Create order item
+        console.log(`Creating order item for product ID: ${item.productId}, quantity: ${item.quantity}`);
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
             productId: item.productId,
-            productName: product!.name,
+            productName: item.name || `Product ${item.productId}`, // Use name from cart or default
             quantity: item.quantity,
-            price: item.price
-          }
+            price: item.price, // Price at time of order (from validated cart item)
+          },
         });
-        
+
         // Decrement stock
         await tx.product.update({
           where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
+          data: { stock: { decrement: item.quantity } },
         });
-        
         console.log(`Decremented stock for product ${item.productId} by ${item.quantity}`);
       }
 
-      return newOrder;
+      return newOrder; // Return the created order object
+    }); // End transaction
+
+    // Transaction successful if it reaches here
+    console.log(`Order ${order.id} created successfully.`);
+    res.status(201).json({
+      message: "Order created successfully",
+      orderId: order.id, // Return the order ID
     });
 
-    res.status(201).json({ 
-      message: "Order created successfully",
-      id: order.id
-    });
   } catch (error: any) {
     // Check for specific errors thrown from transaction
-    if (error.message && (error.message.startsWith('Insufficient stock') || error.message.startsWith('Product with ID'))) {
-      console.warn(`Order creation failed due to validation: ${error.message}`);
-      res.status(400).json({ message: error.message }); // Return specific stock/product error
-      return;
+    if (error.message?.startsWith('Insufficient stock') || error.message?.startsWith('Product with ID')) {
+       console.warn(`Order creation failed due to validation: ${error.message}`);
+       return res.status(400).json({ message: error.message }); // Return specific stock/product error
     }
-    
     // Handle other errors (DB errors, etc.)
     console.error("Error creating order:", error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An internal server error occurred during order creation' });
   }
 });
 
-// GET /api/orders/:id - Get an order by ID
+// GET /api/orders/:id - Get an order by ID (for the authenticated user)
 router.get('/:id', isUser, async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
@@ -2490,28 +2479,67 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch the order with its items
+    // Fetch the order with its items, ensure it belongs to the user
     const order = await prisma.order.findUnique({
-      where: { 
+      where: {
         id: orderId,
-        userId // Ensure the order belongs to the authenticated user
+        userId: userId // Security check: only fetch user's own order
       },
       include: {
-        items: true
+        items: { // Include order items
+           include: { // Include product details for each item
+              product: {
+                 select: { name: true, imageUrl: true } // Select needed product fields
+              }
+           }
+        }
+        // Optionally include user details if needed, but usually not required here
       }
     });
 
     if (!order) {
-      res.status(404).json({ message: "Order not found" });
+      // Return 404 if order not found OR doesn't belong to the user
+      res.status(404).json({ message: "Order not found or access denied" });
       return;
     }
 
-    res.status(200).json(order);
+    // Parse shippingDetails if it's a string (it should be JSON from creation)
+    let parsedShippingDetails = order.shippingDetails;
+    if (typeof order.shippingDetails === 'string') {
+        try {
+            parsedShippingDetails = JSON.parse(order.shippingDetails);
+        } catch (e) {
+            console.error(`Failed to parse shippingDetails JSON for order ${order.id}`);
+            // Keep it as null or original string if parse fails? Or return empty object?
+            parsedShippingDetails = null;
+        }
+    }
+
+
+    // Map items to include necessary details
+    const processedItems = order.items.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        productName: item.product?.name || item.productName || 'Unknown Product', // Use name from relation or stored name
+        imageUrl: item.product?.imageUrl // Get image URL from relation
+    }));
+
+    const responseOrder = {
+        ...order,
+        shippingDetails: parsedShippingDetails, // Send parsed JSON or null
+        items: processedItems
+    };
+
+
+    res.status(200).json(responseOrder);
   } catch (error) {
     console.error("Error fetching order:", error);
     res.status(500).json({ message: "An internal server error occurred" });
   }
 });
+
 
 // GET /api/orders - Get all orders for the authenticated user
 router.get('/', isUser, async (req: Request, res: Response) => {
@@ -2522,12 +2550,20 @@ router.get('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch all orders for the user
+    // Fetch all orders for the user, select necessary fields for list view
     const orders = await prisma.order.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        items: true
+      select: { // Select only fields needed for the history list
+          id: true,
+          status: true,
+          totalAmount: true,
+          createdAt: true,
+          // Optionally include a summary of items if needed for display
+          // items: {
+          //     take: 1, // Take only the first item for summary display maybe?
+          //     select: { productName: true }
+          // }
       }
     });
 
@@ -2537,6 +2573,7 @@ router.get('/', isUser, async (req: Request, res: Response) => {
     res.status(500).json({ message: "An internal server error occurred" });
   }
 });
+
 
 // GET /api/orders/assign-number/:orderId - Assign a phone number to an order
 router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response) => {
@@ -2556,26 +2593,30 @@ router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response
   }
 
   try {
-    // 3. Verify the order exists and belongs to the user
+    // 3. Verify the order exists, belongs to the user, and is 'Pending Call'
     const order = await prisma.order.findUnique({
-      where: { 
+      where: {
         id: orderIdInt,
+        // Ensure the order belongs to the authenticated user
+        userId: userId,
       },
-      select: { userId: true } // Need userId for verification
+      select: { status: true, userId: true } // Select status for verification
     });
 
     if (!order) {
-      res.status(404).json({ message: 'Order not found.' });
-      return;
+      // Use 404 to indicate not found or not belonging to user
+      return res.status(404).json({ message: 'Order not found or does not belong to user.' });
     }
-
-    // Check if the order belongs to the authenticated user
-    if (order.userId !== userId) {
-      res.status(403).json({ message: 'Order does not belong to the current user.' });
-      return;
+    // Allow fetching number even if status moved past Pending Call,
+    // but log if status is unexpected. Assignment should only happen once ideally.
+    if (order.status !== 'Pending Call') {
+       console.warn(`Assign number called for order ${orderIdInt} with status ${order.status}.`);
+       // Allow proceeding for now, maybe number was already assigned.
+       // return res.status(409).json({ message: `Order status is '${order.status}', not 'Pending Call'. Cannot assign number.` }); // 409 Conflict
     }
 
     // 4. Find the first available phone number
+    // Simple strategy: Find the first one marked 'Available'.
     const availablePhone = await prisma.phoneNumber.findFirst({
       where: {
         status: 'Available'
@@ -2586,28 +2627,28 @@ router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response
     // 5. Handle case where no phone number is available
     if (!availablePhone) {
       console.warn("No available phone numbers found for order ID:", orderIdInt);
-      res.status(503).json({ 
-        message: 'No verification phone lines are currently available. Please try again later.' 
-      });
-      return;
+      // Return 503 Service Unavailable
+      return res.status(503).json({ message: 'No verification phone lines are currently available. Please try again later.' });
     }
 
-    // 6. Mark the phone number as busy
+    // 6. Mark the phone number as busy (Consider if this should only happen once)
+    // To prevent re-assigning/marking busy repeatedly, check if a number was already assigned
+    // For now, we proceed with marking busy - needs refinement if called multiple times.
     await prisma.phoneNumber.update({
       where: { id: availablePhone.id },
       data: { status: 'Busy' }
     });
-
-    console.log(`Assigned phone number ${availablePhone.numberString} to order ${orderIdInt}`);
+    console.log(`Marked phone number ${availablePhone.numberString} as Busy for order ${orderIdInt}`);
 
     // 7. Return the assigned phone number string
     res.status(200).json({ verificationPhoneNumber: availablePhone.numberString });
 
   } catch (error) {
-    console.error("Error assigning phone number to order:", error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    console.error(`Error assigning phone number for order ID ${orderIdInt}:`, error);
+    res.status(500).json({ message: 'Error assigning verification phone number' });
   }
 });
+
 
 export default router;
 ```
@@ -2630,8 +2671,8 @@ const productSchema = z.object({
   price: z.number().positive({ message: "Price must be a positive number" }),
   description: z.string().optional(),
   stock: z.number().int().min(0, { message: "Stock cannot be negative" }).optional(),
-  imageUrl: z.string().optional(),
-  categoryId: z.number().int().optional(),
+  imageUrl: z.string().url({ message: "Invalid image URL" }).optional().or(z.literal('')), // Allow empty string
+  categoryId: z.number().int().positive().optional().nullable(), // Allow null or positive int
 });
 
 // For updates, make all fields optional
@@ -2639,7 +2680,7 @@ const updateProductSchema = productSchema.partial();
 
 // Define Zod schema for stock adjustment
 const adjustStockSchema = z.object({
-  adjustment: z.number().int({ message: "Adjustment must be an integer" }), 
+  adjustment: z.number().int({ message: "Adjustment must be an integer" }),
 });
 
 // GET /api/admin/products - Get all products with category info
@@ -2649,16 +2690,16 @@ router.get('/', isAdmin, async (req: Request, res: Response) => {
       include: {
         category: {
           select: {
-            id: true,
+            id: true, // Include category ID
             name: true
           }
         }
       },
       orderBy: {
-        id: 'desc'
+        id: 'desc' // Or name: 'asc' etc.
       }
     });
-    
+
     res.status(200).json(products);
   } catch (error) {
     console.error('Error fetching products with categories:', error);
@@ -2673,39 +2714,48 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
   if (!validationResult.success) {
     res.status(400).json({
       message: "Validation failed",
-      errors: validationResult.error.errors
+      errors: validationResult.error.flatten().fieldErrors // Send detailed errors
     });
     return;
   }
 
-  const validatedData = validationResult.data;
+  // Prepare data, ensuring optional fields are handled correctly
+  const { categoryId, stock, imageUrl, description, ...restData } = validationResult.data;
+  const productData: Prisma.ProductCreateInput = {
+      ...restData,
+      description: description || null, // Set to null if undefined/empty
+      imageUrl: imageUrl || null, // Set to null if undefined/empty
+      stock: stock ?? 0, // Default stock to 0 if not provided
+      // Connect to category only if categoryId is provided and valid
+      ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
+  };
 
   try {
     // Create product using Prisma
     const newProduct = await prisma.product.create({
-      data: validatedData
+      data: productData,
+      include: { category: true } // Include category in response
     });
 
     // Return created product with 201 status
     res.status(201).json(newProduct);
   } catch (error: any) {
     // Check for specific Prisma errors
-    if (error.code === 'P2002') {
-      // This handles unique constraint violations
-      res.status(409).json({ message: 'A product with these details already exists' });
-      return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') { // Unique constraint violation
+            return res.status(409).json({ message: 'A product with this name/details might already exist.' });
+        }
+        if (error.code === 'P2003' || error.code === 'P2025') { // Foreign key constraint or related record not found (Category)
+             console.error("Foreign key error:", error.meta);
+             return res.status(400).json({ message: 'Invalid Category ID provided.' });
+        }
     }
-    
-    // Foreign key constraint violation - invalid categoryId
-    if (error.code === 'P2003') {
-      res.status(400).json({ message: 'Invalid category ID provided' });
-      return;
-    }
-    
+
     console.error("Error creating product:", error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An internal server error occurred while creating the product.' });
   }
 });
+
 
 // PUT /api/admin/products/:productId - Update an existing product
 router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
@@ -2721,48 +2771,66 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
   if (!validationResult.success) {
     res.status(400).json({
       message: "Validation failed",
-      errors: validationResult.error.errors
+      errors: validationResult.error.flatten().fieldErrors
     });
     return;
   }
 
   // Check if the request body is empty (no fields to update)
-  if (Object.keys(req.body).length === 0) {
+  if (Object.keys(validationResult.data).length === 0) {
     res.status(400).json({ message: 'No fields provided for update' });
     return;
   }
 
-  const validatedData = validationResult.data;
+  // Prepare update data carefully
+  const { categoryId, ...restData } = validationResult.data;
+  const updateData: Prisma.ProductUpdateInput = { ...restData };
+
+  // Handle optional fields explicitly setting null if empty string passed
+  if ('description' in updateData) updateData.description = updateData.description || null;
+  if ('imageUrl' in updateData) updateData.imageUrl = updateData.imageUrl || null;
+  if ('stock' in updateData && updateData.stock === undefined) delete updateData.stock; // Don't update stock if undefined
+
+  // Handle category connection/disconnection
+  if (categoryId !== undefined) { // Check if categoryId was provided in the update request
+      if (categoryId === null || categoryId === 0) { // Allow unsetting category
+          updateData.category = { disconnect: true };
+      } else {
+          updateData.category = { connect: { id: categoryId } };
+      }
+  }
+
 
   try {
     // Update product using Prisma
     const updatedProduct = await prisma.product.update({
       where: { id: productIdInt },
-      data: validatedData,
+      data: updateData,
       include: {
-        category: true
+        category: true // Include category in response
       }
     });
 
     // Return updated product
     res.status(200).json(updatedProduct);
   } catch (error: any) {
-    // Handle "Not Found" error
-    if (error.code === 'P2025') {
-      res.status(404).json({ message: `Product with ID ${productIdInt} not found` });
-      return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // Handle "Not Found" error
+        if (error.code === 'P2025') {
+            return res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
+        }
+        // Handle foreign key constraint violation (invalid categoryId)
+        if (error.code === 'P2003' || (error.code === 'P2025' && error.message.includes('constraint'))) {
+             console.error("Foreign key error on update:", error.meta);
+             return res.status(400).json({ message: 'Invalid Category ID provided for update.' });
+        }
     }
-    
-    // Foreign key constraint violation - invalid categoryId
-    if (error.code === 'P2003') {
-      res.status(400).json({ message: 'Invalid category ID provided' });
-      return;
-    }
-    
+
     console.error(`Error updating product ${productIdInt}:`, error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An internal server error occurred while updating the product.' });
   }
 });
+
 
 // POST /api/admin/products/:productId/adjust-stock - Adjust product stock
 router.post('/:productId/adjust-stock', isAdmin, async (req: Request, res: Response) => {
@@ -2782,12 +2850,12 @@ router.post('/:productId/adjust-stock', isAdmin, async (req: Request, res: Respo
     }
     const { adjustment } = validationResult.data;
 
-    if (adjustment === 0) {
+    if (adjustment === 0) { // No change needed
          // Fetch current product data if no adjustment needed
          try {
             const product = await prisma.product.findUnique({
                 where: { id: productIdInt },
-                select: { id: true, name: true, stock: true } 
+                select: { id: true, name: true, stock: true }
             });
             if (!product) {
                 res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
@@ -2857,6 +2925,9 @@ router.delete('/:productId', isAdmin, async (req: Request, res: Response) => {
 
   try {
     // Delete product using Prisma
+    // Prisma automatically handles relation checks based on schema (onDelete behavior)
+    // If OrderItem relation has onDelete: Cascade/SetNull/Restrict, it behaves accordingly.
+    // If it has Restrict (default if not specified), Prisma will throw P2003 if items exist.
     await prisma.product.delete({
       where: { id: productIdInt }
     });
@@ -2864,24 +2935,25 @@ router.delete('/:productId', isAdmin, async (req: Request, res: Response) => {
     // Return 204 No Content on successful deletion
     res.status(204).send();
   } catch (error: any) {
-    // Handle "Not Found" error
-    if (error.code === 'P2025') {
-      res.status(404).json({ message: `Product with ID ${productIdInt} not found` });
-      return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // Handle "Not Found" error
+        if (error.code === 'P2025') {
+            return res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
+        }
+        // Handle foreign key constraint violations (product referenced in OrderItem)
+        if (error.code === 'P2003') {
+             console.warn(`Attempted to delete product ${productIdInt} referenced in orders.`);
+             return res.status(409).json({
+                message: 'Cannot delete product because it is referenced in existing orders. Consider marking it as inactive instead.'
+             });
+        }
     }
-    
-    // Handle potential foreign key constraint violations
-    if (error.code === 'P2003') {
-      res.status(409).json({ 
-        message: 'Cannot delete product because it is referenced in orders. Consider marking it as inactive instead.' 
-      });
-      return;
-    }
-    
+
     console.error(`Error deleting product ${productIdInt}:`, error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An internal server error occurred while deleting the product.' });
   }
 });
+
 
 export default router;
 ```
@@ -2898,7 +2970,7 @@ const prisma = new PrismaClient();
 
 /**
  * @route GET /api/products
- * @description Get all products with optional search, filtering, and pagination
+ * @description Get all products with optional search and filtering
  * @access Public
  */
 router.get('/', async (req: Request, res: Response) => {
@@ -2915,11 +2987,9 @@ router.get('/', async (req: Request, res: Response) => {
     // Extract pagination parameters
     const page = parseInt(req.query.page as string || '1', 10);
     const limit = parseInt(req.query.limit as string || '12', 10); // Default limit 12
-    
     if (isNaN(page) || page < 1 || isNaN(limit) || limit < 1) {
-      return res.status(400).json({ message: 'Invalid pagination parameters.' });
+        return res.status(400).json({ message: 'Invalid pagination parameters.' });
     }
-    
     const skip = (page - 1) * limit;
     
     // Build the where clause for filtering
@@ -2977,6 +3047,7 @@ router.get('/', async (req: Request, res: Response) => {
     
     console.log(`Found ${products.length} products (page ${page} of ${Math.ceil(totalProducts / limit)})`);
     
+    // Return paginated response
     res.status(200).json({
       products: products,
       currentPage: page,
@@ -3092,6 +3163,7 @@ router.get('/:productId/reviews', async (req: Request, res: Response) => {
   }
 });
 
+// Export the router
 export default router;
 ```
 
@@ -3593,7 +3665,7 @@ export default router;
 
 ```typescript
 import { Router, Request, Response } from 'express';
-import multer, { FileFilterCallback } from 'multer';
+import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { isAdmin } from '../middleware/authMiddleware'; // Protect upload
@@ -3608,10 +3680,10 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Configure multer storage
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: function (req: any, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) {
         cb(null, uploadsDir);
     },
-    filename: (req, file, cb) => {
+    filename: function (req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
         // Generate a unique filename with timestamp and original extension
         const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
@@ -3620,7 +3692,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter to only allow specific image types
-const fileFilter = (req: any, file: Express.Multer.File, cb: FileFilterCallback) => {
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     // Accept only images
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     
@@ -3646,10 +3718,8 @@ const upload = multer({
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
-    // Handle file upload using middleware directly instead of applying it inline
-    const uploadSingle = upload.single('productImage');
-    
-    uploadSingle(req as any, res as any, (err: any) => {
+    // Handle file upload with manually typed callback
+    upload.single('productImage')(req as any, res as any, (err: any) => {
         if (err) {
             let errorMessage = 'File upload failed.';
             
@@ -4745,13 +4815,25 @@ th {
 ### File: `packages/customer-frontend/src/main.tsx`
 
 ```tsx
-import { createRoot } from 'react-dom/client'
-import 'bootstrap/dist/css/bootstrap.min.css'
-import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+// Import Bootstrap CSS FIRST
+import 'bootstrap/dist/css/bootstrap.min.css';
 import App from './App.tsx'
+import './index.css' // Your custom CSS (optional overrides)
+import { AuthProvider } from './context/AuthContext'; // Import
+import { CartProvider } from './context/CartContext'; // Import
+import { Toaster } from 'react-hot-toast';
 
-createRoot(document.getElementById('root')!).render(
-  <App />
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AuthProvider> {/* Wrap App */}
+      <CartProvider> {/* Wrap App */}
+        <Toaster position="top-right" />
+        <App />
+      </CartProvider>
+    </AuthProvider>
+  </React.StrictMode>,
 )
 ```
 
@@ -4940,11 +5022,12 @@ export default Layout;
 
 ```tsx
 import React from 'react';
-import { Card } from 'react-bootstrap';
+import { Card, Button, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaStar, FaRegStar, FaStarHalfAlt } from 'react-icons/fa';
+import { useCart } from '../context/CartContext';
+import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface Product {
   id: number;
@@ -4953,88 +5036,71 @@ interface Product {
   description: string | null;
   imageUrl: string | null;
   stock: number;
-  averageRating?: number | null;
-  reviewCount?: number;
 }
 
 interface ProductCardProps {
   product: Product;
 }
 
-// Simplified Star Rating component
-const StarRating = ({ rating }: { rating: number | null | undefined }) => {
-  if (!rating) return null;
-  
-  const stars = [];
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  
-  // Add full stars
-  for (let i = 0; i < fullStars; i++) {
-    stars.push(<FaStar key={`full-${i}`} className="text-warning" />);
-  }
-  
-  // Add half star if needed
-  if (hasHalfStar) {
-    stars.push(<FaStarHalfAlt key="half" className="text-warning" />);
-  }
-  
-  // Add empty stars to reach 5
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-  for (let i = 0; i < emptyStars; i++) {
-    stars.push(<FaRegStar key={`empty-${i}`} className="text-warning" />);
-  }
-  
-  return <div className="d-inline-flex">{stars}</div>;
-};
-
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+    toast.success(`${product.name} added to cart!`);
+  };
+
   return (
     <Card className="h-100 shadow-sm mb-2">
+      <div className="position-relative">
+        {product.imageUrl ? (
+          <Card.Img 
+            variant="top" 
+            src={`${API_BASE_URL}${product.imageUrl}`} 
+            alt={product.name}
+            style={{ height: '180px', objectFit: 'cover' }}
+          />
+        ) : (
+          <Card.Img 
+            variant="top" 
+            src="/placeholder-image.svg"
+            alt={product.name}
+            style={{ height: '180px', objectFit: 'cover' }}
+          />
+        )}
+        {product.stock > 0 ? (
+          <Badge 
+            bg={product.stock > 10 ? "success" : "warning"} 
+            className="position-absolute top-0 end-0 m-2"
+          >
+            {product.stock > 10 ? 'In Stock' : `Only ${product.stock} left`}
+          </Badge>
+        ) : (
+          <Badge 
+            bg="danger" 
+            className="position-absolute top-0 end-0 m-2"
+          >
+            Out of Stock
+          </Badge>
+        )}
+      </div>
       <Link to={`/product/${product.id}`} className="text-decoration-none">
-        <div className="position-relative">
-          {product.imageUrl ? (
-            <Card.Img 
-              variant="top" 
-              src={`${API_BASE_URL}${product.imageUrl}`} 
-              alt={product.name}
-              style={{ height: '180px', objectFit: 'cover' }}
-              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                // Prevent infinite loop if placeholder itself fails
-                if (e.currentTarget.src !== '/placeholder-image.svg') {
-                  e.currentTarget.onerror = null; // Remove handler after first error
-                  e.currentTarget.src = '/placeholder-image.svg';
-                }
-              }}
-            />
-          ) : (
-            <Card.Img 
-              variant="top" 
-              src="/placeholder-image.svg"
-              alt={product.name}
-              style={{ height: '180px', objectFit: 'cover' }}
-            />
-          )}
-        </div>
         <Card.Body className="d-flex flex-column p-3">
-          <Card.Title className="text-dark mb-2 h6">{product.name}</Card.Title>
-          <Card.Subtitle className="mb-2 text-primary">€{product.price.toFixed(2)}</Card.Subtitle>
-          
-          {/* Display Rating if available */}
-          {product.averageRating !== undefined && product.averageRating !== null && (
-            <div className="d-flex align-items-center mb-2">
-              <StarRating rating={product.averageRating} />
-              <small className="ms-1 text-muted">
-                ({product.reviewCount ?? 0})
-              </small>
-            </div>
-          )}
-          
-          <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block text-truncate">
-            {product.description || ''}
-          </Card.Text>
+          <Card.Title className="text-dark mb-2">{product.name}</Card.Title>
+          <Card.Subtitle className="mb-3 text-muted">€{product.price.toFixed(2)}</Card.Subtitle>
+          <Card.Text className="text-muted small flex-grow-1">{product.description || ''}</Card.Text>
         </Card.Body>
       </Link>
+      <Card.Footer className="bg-white border-0 pt-0 p-3">
+        <Button 
+          variant="primary" 
+          className="w-100"
+          onClick={() => handleAddToCart(product)}
+          disabled={product.stock <= 0}
+        >
+          {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+        </Button>
+      </Card.Footer>
     </Card>
   );
 };
@@ -5134,7 +5200,6 @@ export const useAuth = (): AuthContextType => {
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { useAuth } from './AuthContext';
 
 // Define types for cart items and product
 interface Product {
@@ -5154,6 +5219,7 @@ interface CartContextType {
   cartItems: CartItem[];
   addToCart: (product: Product) => Promise<void>;
   addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
+  updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   clearCart: () => Promise<void>;
   getCartTotal: () => number;
@@ -5164,20 +5230,27 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const { token, isAuthenticated, isAuthLoading } = useAuth();
   
+  // Get token from localStorage
+  const getToken = (): string | null => {
+    return localStorage.getItem('customer_token');
+  };
+  
+  const isAuthenticated = (): boolean => {
+    return !!getToken();
+  };
+
   // Fetch cart items from API
   const fetchCart = async (): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
-      console.log('No authentication for fetching cart');
-      setCartItems([]);
+    const token = getToken();
+    if (!token) {
+      console.log('No token available for fetching cart');
       return;
     }
     
@@ -5206,15 +5279,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       })));
     } catch (err) {
       console.error("Error fetching cart:", err);
+      setError("Failed to load cart items.");
       
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        // Silent fail on 401 during initial load
-        console.log("Authentication required for cart access");
-        setCartItems([]);
-        return;
+        toast.error("Your session has expired. Please log in again.");
       }
-      
-      setError("Failed to load cart items.");
     } finally {
       setIsLoading(false);
     }
@@ -5247,8 +5316,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Add or update cart item quantity
   const addOrUpdateItemQuantity = async (productId: number, quantity: number): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
+    const token = getToken();
+    
+    console.log('Adding/updating cart item:', { productId, quantity, isLoggedIn: !!token });
+    
+    if (!token || !isAuthenticated()) {
+      console.log('User not authenticated, token:', token);
       toast.error("Please log in to update your cart.");
       throw new Error("User not authenticated");
     }
@@ -5265,6 +5338,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Sending API request to add/update cart:', {
         url: `${API_BASE_URL}/cart/item`,
         data: { productId, quantity },
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       // Use the POST /cart/item endpoint to add or update an item
@@ -5289,12 +5363,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           message: err.message
         });
         
-        // Handle authentication failure gracefully
-        if (err.response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          return;
-        }
-        
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -5308,8 +5376,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Remove item from cart
   const removeFromCart = async (productId: number): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
+    const token = getToken();
+    
+    if (!token || !isAuthenticated()) {
       toast.error("Please log in to update your cart.");
       throw new Error("User not authenticated");
     }
@@ -5334,12 +5403,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let errorMsg = "Failed to remove item from cart.";
       
       if (axios.isAxiosError(err) && err.response) {
-        // Handle authentication failure gracefully
-        if (err.response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          return;
-        }
-        
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -5353,8 +5416,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Clear cart
   const clearCart = async (): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
+    const token = getToken();
+    
+    if (!token || !isAuthenticated()) {
       toast.error("Please log in to clear your cart.");
       throw new Error("User not authenticated");
     }
@@ -5371,7 +5435,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       // Update local state
-      setCartItems([]);
+    setCartItems([]);
       
       toast.success("Cart cleared successfully.");
     } catch (err) {
@@ -5379,12 +5443,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let errorMsg = "Failed to clear cart.";
       
       if (axios.isAxiosError(err) && err.response) {
-        // Handle authentication failure gracefully
-        if (err.response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          return;
-        }
-        
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -5407,25 +5465,19 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Calculate the total price of items in the cart
   const totalPrice = getCartTotal();
 
-  // Fetch cart items when auth state changes
+  // Initialize cart from API when component mounts
   useEffect(() => {
-    // Only attempt to fetch cart when auth is fully loaded
-    if (!isAuthLoading) {
-      if (isAuthenticated && token) {
-        fetchCart();
-      } else {
-        // If not authenticated, set empty cart
-        setCartItems([]);
-        setIsLoading(false);
-      }
+    if (isAuthenticated()) {
+      fetchCart();
     }
-  }, [isAuthenticated, token, isAuthLoading]);
+  }, []);
 
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addToCart,
+      addToCart, 
       addOrUpdateItemQuantity,
+      updateCartItemQuantity: addOrUpdateItemQuantity,
       removeFromCart, 
       clearCart, 
       getCartTotal, 
@@ -5464,6 +5516,9 @@ interface Product {
   price: number;
   imageUrl: string | null;
   stock: number;
+  description?: string | null;
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
 interface WishlistItem {
@@ -5486,34 +5541,27 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const { token, isAuthenticated, isAuthLoading } = useAuth();
+  const { token, isAuthenticated } = useAuth();
 
   // Fetch wishlist items when auth state changes
   useEffect(() => {
-    // Only attempt to fetch wishlist when auth is fully loaded
-    if (!isAuthLoading) {
-      if (isAuthenticated && token) {
-        fetchWishlist();
-      } else {
-        // If not authenticated, set empty wishlist
-        setWishlistItems([]);
-        setIsLoading(false);
-      }
+    if (isAuthenticated && token) {
+      fetchWishlist();
+    } else {
+      // Clear wishlist when logged out
+      setWishlistItems([]);
     }
-  }, [isAuthenticated, token, isAuthLoading]);
+  }, [isAuthenticated, token]);
 
   // Fetch wishlist items from API
   const fetchWishlist = async (): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
-      console.log('No authentication for fetching wishlist');
-      setWishlistItems([]);
+    if (!isAuthenticated || !token) {
       return;
     }
     
@@ -5528,15 +5576,11 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       setWishlistItems(response.data);
     } catch (err) {
       console.error("Error fetching wishlist:", err);
+      setError("Failed to load wishlist items.");
       
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        // Silent fail on 401 during initial load
-        console.log("Authentication required for wishlist access");
-        setWishlistItems([]);
-        return;
+        toast.error("Your session has expired. Please log in again.");
       }
-      
-      setError("Failed to load wishlist items.");
     } finally {
       setIsLoading(false);
     }
@@ -5544,8 +5588,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Add item to wishlist
   const addToWishlist = async (productId: number): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
+    if (!isAuthenticated || !token) {
       toast.error("Please log in to add items to your wishlist.");
       throw new Error("User not authenticated");
     }
@@ -5573,12 +5616,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
           return;
         }
         
-        // Handle authentication failure gracefully
-        if (err.response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          return;
-        }
-        
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -5591,8 +5628,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Remove item from wishlist
   const removeFromWishlist = async (productId: number): Promise<void> => {
-    // Verify authentication is complete and user is authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
+    if (!isAuthenticated || !token) {
       toast.error("Please log in to manage your wishlist.");
       throw new Error("User not authenticated");
     }
@@ -5613,12 +5649,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       let errorMsg = "Failed to remove item from wishlist.";
       
       if (axios.isAxiosError(err) && err.response) {
-        // Handle authentication failure gracefully
-        if (err.response.status === 401) {
-          toast.error("Your session has expired. Please log in again.");
-          return;
-        }
-        
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -5670,7 +5700,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FaTrash, FaShoppingCart } from 'react-icons/fa';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const CartPage = () => {
   // Get all required functions from cart context in one place
@@ -5697,9 +5727,9 @@ const CartPage = () => {
           <FaShoppingCart className="empty-state-icon" />
           <p className="empty-state-text">Your cart is empty</p>
           <p className="mb-4 text-muted">Add products to your cart to get started with your shopping</p>
-          <Button variant="primary" as={Link} to="/" className="px-4">
+          <Link to="/" className="btn btn-primary px-4">
             Start Shopping
-          </Button>
+          </Link>
         </div>
       ) : (
         <>
@@ -5857,7 +5887,7 @@ const CartPage = () => {
               <h4 className="mb-3">Total: {formatCurrency(getCartTotal())}</h4>
               <div className="d-grid gap-2 d-sm-flex justify-content-sm-end">
                 <Button variant="outline-secondary" onClick={() => clearCart()}>Clear Cart</Button>
-                <Button variant="secondary" as={Link} to="/">Continue Shopping</Button>
+                <Link to="/" className="btn btn-secondary">Continue Shopping</Link>
                 <Button variant="success" onClick={handleCheckout}>Proceed to Checkout</Button>
               </div>
             </Card.Body>
@@ -5913,6 +5943,7 @@ const CheckoutPage: React.FC = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -5978,6 +6009,8 @@ const CheckoutPage: React.FC = () => {
 
     // Validate only required fields
     setValidationError(null); // Clear previous validation errors
+    setError(null); // Clear previous errors
+    
     if (!formData.fullName.trim() || !formData.phone.trim()) {
       setValidationError('Please fill in all required fields: Name and Phone.');
       return; // Stop submission
@@ -6010,19 +6043,37 @@ const CheckoutPage: React.FC = () => {
         }
       );
 
-      if (response.data.id) {
+      // --- BEGIN DEBUG LOGGING ---
+      console.log("Checkout API Response Status:", response.status);
+      console.log("Checkout API Response Headers:", response.headers);
+      console.log("Checkout API Response Data:", response.data);
+      console.log("Checking specifically for response.data.orderId:", response.data?.orderId);
+      // --- END DEBUG LOGGING ---
+
+      // Check if orderId exists in the response data
+      if (response.data?.orderId) {
+        console.log("SUCCESS PATH: Order ID found in response. Navigating...");
         clearCart();
         toast.success('Order placed successfully!');
-        navigate(`/order/success/${response.data.id}`);
+        navigate(`/order/success/${response.data.orderId}`);
       } else {
-        toast.error('Failed to create order');
+        console.error("ERROR PATH: Order ID *missing* in successful response!", response.data);
+        toast.error('Failed to create order (Invalid confirmation from server)');
+        setError("Order placed, but couldn't get confirmation ID.");
       }
     } catch (error) {
-      console.error('Error placing order:', error);
+      console.error("ERROR PATH: API call caught an error object:", error);
       if (axios.isAxiosError(error) && error.response) {
-        toast.error(`Order failed: ${error.response.data.message || 'Unknown error'}`);
+        const errorMessage = error.response.data.message || 'Unknown error';
+        console.error("ERROR DETAILS:", {
+          status: error.response.status,
+          data: error.response.data
+        });
+        toast.error(`Order failed: ${errorMessage}`);
+        setError(errorMessage);
       } else {
         toast.error('Failed to place order. Please check your connection and try again.');
+        setError('Network error. Please check your connection and try again.');
       }
     } finally {
       setLoading(false);
@@ -6059,6 +6110,13 @@ const CheckoutPage: React.FC = () => {
                     {validationError}
                   </Alert>
                 )}
+                
+                {error && (
+                  <Alert variant="danger" className="mb-3">
+                    {error}
+                  </Alert>
+                )}
+                
                 <Row>
                   <Col xs={12} className="mb-3">
                     <Form.Group>
@@ -6251,7 +6309,7 @@ interface CustomerOrder {
   // Other fields like userId, latitude, longitude might be present but not displayed
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Helper functions (consider moving to utils)
 const formatDateTime = (isoString: string) => {
@@ -6439,10 +6497,9 @@ export default CustomerOrderDetailPage;
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
 
@@ -6463,7 +6520,14 @@ interface Category {
   imageUrl?: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+interface PaginatedProductsResponse {
+  products: Product[];
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -6472,8 +6536,6 @@ const HomePage = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const { addToCart } = useCart(); // Get addToCart function from context
   const { wishlistItems, addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
-  const { isAuthenticated, isAuthLoading } = useAuth();
-  const navigate = useNavigate();
   
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -6485,12 +6547,11 @@ const HomePage = () => {
   const [sortOrder, setSortOrder] = useState<string>('desc'); // Default order
   
   // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [totalProducts, setTotalProducts] = useState<number>(0);
-  const PRODUCTS_PER_PAGE = 12; // Match backend default limit
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = 1) => {
     setIsLoading(true);
     setError(null);
 
@@ -6509,17 +6570,24 @@ const HomePage = () => {
       if (sortOrder) {
         params.append('sortOrder', sortOrder);
       }
-      params.append('page', currentPage.toString());
-      params.append('limit', PRODUCTS_PER_PAGE.toString());
+      
+      // Add pagination parameters
+      params.append('page', page.toString());
+      params.append('limit', '12'); // Default limit
+      
       const queryString = params.toString();
       const apiUrl = `${API_BASE_URL}/products${queryString ? `?${queryString}` : ''}`;
 
       console.log(`Fetching products from ${apiUrl}`);
-      const response = await axios.get(apiUrl);
+      const response = await axios.get<PaginatedProductsResponse>(apiUrl);
+      
+      // Update state with paginated response data
       setProducts(response.data.products);
       setCurrentPage(response.data.currentPage);
       setTotalPages(response.data.totalPages);
       setTotalProducts(response.data.totalProducts);
+      
+      console.log(`Loaded page ${response.data.currentPage} of ${response.data.totalPages}`);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         const errorMessage = err.response.data.message || 'Failed to fetch products';
@@ -6533,17 +6601,22 @@ const HomePage = () => {
       setIsLoading(false);
     }
   };
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    if (page !== currentPage) {
+      setCurrentPage(page);
+      fetchProducts(page);
+      // Scroll to top of product section
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
-  // Handle filter changes - reset to page 1
+  // Fetch products when search term, category filter, or sort changes - reset to page 1
   useEffect(() => {
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]);
-
-  // Fetch products when search term, category filter, sort, or page changes
-  useEffect(() => {
-    fetchProducts();
-  }, [searchTerm, selectedCategoryId, sortBy, sortOrder, currentPage]);
+    setCurrentPage(1); // Reset to first page when filters change
+    fetchProducts(1);
+  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -6564,12 +6637,6 @@ const HomePage = () => {
   }, []);
 
   const handleAddToCart = (product: Product) => {
-    if (!isAuthenticated) {
-      toast.error("Please log in to add items to your cart");
-      navigate('/login', { state: { returnUrl: '/' } });
-      return;
-    }
-    
     addToCart(product);
     toast.success(`${product.name} added to cart!`);
   };
@@ -6578,41 +6645,12 @@ const HomePage = () => {
     e.preventDefault(); // Prevent navigation to product detail
     e.stopPropagation(); // Prevent event bubbling
     
-    // Check if authentication is loading or user is not authenticated
-    if (isAuthLoading) {
-      toast.error("Please wait while we check your authentication status");
-      return;
-    }
-    
-    if (!isAuthenticated) {
-      toast.error("Please log in to manage your wishlist");
-      navigate('/login', { state: { returnUrl: '/' } });
-      return;
-    }
-    
-    try {
-      if (isWishlisted(product.id)) {
-        removeFromWishlist(product.id)
-          .then(() => toast.success(`${product.name} removed from wishlist`))
-          .catch(err => {
-            if (axios.isAxiosError(err) && err.response?.status === 401) {
-              toast.error("Your session has expired. Please log in again.");
-              navigate('/login', { state: { returnUrl: '/' } });
-            }
-          });
-      } else {
-        addToWishlist(product.id)
-          .then(() => toast.success(`${product.name} added to wishlist`))
-          .catch(err => {
-            if (axios.isAxiosError(err) && err.response?.status === 401) {
-              toast.error("Your session has expired. Please log in again.");
-              navigate('/login', { state: { returnUrl: '/' } });
-            }
-          });
-      }
-    } catch (error) {
-      console.error("Error updating wishlist:", error);
-      toast.error("There was a problem updating your wishlist");
+    if (isWishlisted(product.id)) {
+      removeFromWishlist(product.id);
+      toast.success(`${product.name} removed from wishlist`);
+    } else {
+      addToWishlist(product.id);
+      toast.success(`${product.name} added to wishlist`);
     }
   };
 
@@ -6641,6 +6679,64 @@ const HomePage = () => {
     }
     
     return <div className="d-inline-flex align-items-center">{stars}</div>;
+  };
+
+  // Pagination UI component
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="d-flex justify-content-center my-4">
+        <Pagination>
+          <Pagination.First 
+            onClick={() => handlePageChange(1)} 
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev 
+            onClick={() => handlePageChange(currentPage - 1)} 
+            disabled={currentPage === 1}
+          />
+          
+          {/* Show limited number of page buttons */}
+          {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
+            // For simplicity, show pages around current page
+            let pageNum;
+            if (totalPages <= 5) {
+              // If 5 or fewer pages, show all
+              pageNum = idx + 1;
+            } else if (currentPage <= 3) {
+              // If near start, show first 5 pages
+              pageNum = idx + 1;
+            } else if (currentPage >= totalPages - 2) {
+              // If near end, show last 5 pages
+              pageNum = totalPages - 4 + idx;
+            } else {
+              // Show current page and 2 before/after
+              pageNum = currentPage - 2 + idx;
+            }
+            
+            return (
+              <Pagination.Item
+                key={pageNum}
+                active={pageNum === currentPage}
+                onClick={() => handlePageChange(pageNum)}
+              >
+                {pageNum}
+              </Pagination.Item>
+            );
+          })}
+          
+          <Pagination.Next 
+            onClick={() => handlePageChange(currentPage + 1)} 
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last 
+            onClick={() => handlePageChange(totalPages)} 
+            disabled={currentPage === totalPages}
+          />
+        </Pagination>
+      </div>
+    );
   };
 
   return (
@@ -6750,115 +6846,94 @@ const HomePage = () => {
       )}
       
       {!isLoading && !error && (
-        <Row className="g-2 my-3">
-          {products.length === 0 ? (
-            <Col>
-              <p>No products available at the moment.</p>
-            </Col>
-          ) : (
-            products.map((product) => (
-              <Col key={product.id} xs={6} md={4} lg={3} className="d-flex">
-                <Card className="w-100 shadow-sm">
-                  <Link to={`/product/${product.id}`} className="text-decoration-none text-reset">
-                    <div className="position-relative">
-                      {product.imageUrl ? (
-                        <Card.Img 
-                          variant="top" 
-                          src={`${API_BASE_URL}${product.imageUrl}`} 
-                          alt={product.name}
-                          style={{ height: '130px', objectFit: 'cover' }}
-                          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                            // Prevent infinite loop if placeholder itself fails
-                            if (e.currentTarget.src !== '/placeholder-image.svg') {
-                              e.currentTarget.onerror = null; // Remove handler after first error
-                              e.currentTarget.src = '/placeholder-image.svg';
-                            }
-                          }}
-                        />
-                      ) : (
-                        <Card.Img 
-                          variant="top" 
-                          src="/placeholder-image.svg"
-                          alt={product.name}
-                          style={{ height: '130px', objectFit: 'cover' }}
-                        />
-                      )}
-                      
-                      {/* Wishlist button */}
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="position-absolute top-0 end-0 m-2 rounded-circle p-1"
-                        style={{ width: '30px', height: '30px' }}
-                        onClick={(e) => handleToggleWishlist(e, product)}
-                        aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
-                      >
-                        {isWishlisted(product.id) ? (
-                          <FaHeart className="text-danger" />
-                        ) : (
-                          <FaRegHeart />
-                        )}
-                      </Button>
-                    </div>
-                    <Card.Body className="p-2 p-md-3">
-                      <Card.Title className="h6 text-dark mb-1 text-truncate">{product.name}</Card.Title>
-                      <Card.Subtitle className="mb-1 text-muted small">€{product.price.toFixed(2)}</Card.Subtitle>
-                      
-                      {/* Display Rating */}
-                      {product.averageRating !== undefined && product.averageRating !== null && (
-                        <div className="d-flex align-items-center mb-1">
-                          <StarRating rating={product.averageRating} />
-                          <small className="ms-1 text-muted">
-                            ({product.reviewCount ?? 0})
-                          </small>
-                        </div>
-                      )}
-                      
-                      <Card.Text className="text-muted small d-none d-sm-block text-truncate mb-0">
-                        {product.description || ''}
-                      </Card.Text>
-                    </Card.Body>
-                  </Link>
-                </Card>
-              </Col>
-            ))
+        <>
+          {totalProducts > 0 && (
+            <p className="text-muted mb-3">
+              {totalProducts === 1 
+                ? 'Found 1 product'
+                : `Found ${totalProducts} products`}
+              {searchTerm && ` matching "${searchTerm}"`}
+            </p>
           )}
-        </Row>
-      )}
-      
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-center mt-4">
-          <Pagination size="sm">
-            <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-            <Pagination.Prev onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} />
-            
-            {/* Generate page numbers with simplified logic for many pages */}
-            {[...Array(totalPages).keys()].map(num => {
-              const pageNum = num + 1;
-              // Basic logic to show limited page numbers around current page
-              if (pageNum === currentPage || pageNum <= 2 || pageNum >= totalPages - 1 || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)) {
-                return (
-                  <Pagination.Item key={pageNum} active={pageNum === currentPage} onClick={() => setCurrentPage(pageNum)}>
-                    {pageNum}
-                  </Pagination.Item>
-                );
-              } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-                return <Pagination.Ellipsis key={pageNum} disabled />;
-              }
-              return null;
-            })}
-            
-            <Pagination.Next onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} />
-            <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
-          </Pagination>
-        </div>
-      )}
-      
-      {totalProducts > 0 && (
-        <p className="text-center text-muted mt-2 small">
-          Showing {products.length} of {totalProducts} products
-        </p>
+          
+          <Row className="g-2 my-3">
+            {products.length === 0 ? (
+              <Col>
+                <p>No products available at the moment.</p>
+              </Col>
+            ) : (
+              products.map((product) => (
+                <Col key={product.id} xs={6} md={4} lg={3} className="d-flex">
+                  <Card className="w-100 shadow-sm">
+                    <Link to={`/product/${product.id}`} className="text-decoration-none text-reset">
+                      <div className="position-relative">
+                        {product.imageUrl ? (
+                          <Card.Img 
+                            variant="top" 
+                            src={`${API_BASE_URL}${product.imageUrl}`} 
+                            alt={product.name}
+                            style={{ height: '130px', objectFit: 'cover' }}
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                              // Prevent infinite loop if placeholder itself fails
+                              if (e.currentTarget.src !== '/placeholder-image.svg') {
+                                e.currentTarget.onerror = null; // Remove handler after first error
+                                e.currentTarget.src = '/placeholder-image.svg';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Card.Img 
+                            variant="top" 
+                            src="/placeholder-image.svg"
+                            alt={product.name}
+                            style={{ height: '130px', objectFit: 'cover' }}
+                          />
+                        )}
+                        
+                        {/* Wishlist button */}
+                        <Button
+                          variant="light"
+                          size="sm"
+                          className="position-absolute top-0 end-0 m-2 rounded-circle p-1"
+                          style={{ width: '30px', height: '30px' }}
+                          onClick={(e) => handleToggleWishlist(e, product)}
+                          aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                        >
+                          {isWishlisted(product.id) ? (
+                            <FaHeart className="text-danger" />
+                          ) : (
+                            <FaRegHeart />
+                          )}
+                        </Button>
+                      </div>
+                      <Card.Body className="p-2 p-md-3">
+                        <Card.Title className="h6 text-dark mb-1 text-truncate">{product.name}</Card.Title>
+                        <Card.Subtitle className="mb-1 text-muted small">€{product.price.toFixed(2)}</Card.Subtitle>
+                        
+                        {/* Display Rating */}
+                        {product.averageRating !== undefined && product.averageRating !== null && (
+                          <div className="d-flex align-items-center mb-1">
+                            <StarRating rating={product.averageRating} />
+                            <small className="ms-1 text-muted">
+                              ({product.reviewCount ?? 0})
+                            </small>
+                          </div>
+                        )}
+                        
+                        <Card.Text className="text-muted small d-none d-sm-block text-truncate mb-0">
+                          {product.description || ''}
+                        </Card.Text>
+                      </Card.Body>
+                    </Link>
+                  </Card>
+                </Col>
+              ))
+            )}
+          </Row>
+          
+          {/* Pagination Controls */}
+          <PaginationControls />
+        </>
       )}
     </Container>
   );
@@ -6878,7 +6953,7 @@ import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -7046,7 +7121,7 @@ interface UserOrder {
   createdAt: string; // ISO String
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Simple helper functions (can be moved to a utils file later)
 const formatDateTime = (isoString: string) => {
@@ -7168,9 +7243,9 @@ const OrderHistoryPage = () => {
               <FaList className="empty-state-icon" />
               <p className="empty-state-text">No Orders Yet</p>
               <p className="mb-4 text-muted">You haven't placed any orders yet. Start shopping to see your order history here.</p>
-              <Button as={Link} to="/" variant="primary" className="px-4">
+              <Link to="/" className="btn btn-primary px-4">
                 Start Shopping
-              </Button>
+              </Link>
             </div>
           ) : (
             <>
@@ -7568,7 +7643,15 @@ interface Review {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+// Define interface for paginated products response
+interface PaginatedProductsResponse {
+  products: Product[];
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const ProductDetailPage = () => {
   // State for product
@@ -7648,33 +7731,6 @@ const ProductDetailPage = () => {
     fetchProductDetails();
   }, [productId]);
   
-  // Fetch other related products
-  useEffect(() => {
-    const fetchOtherProducts = async () => {
-      if (!product) return; // Don't fetch if main product isn't loaded
-      
-      setIsLoadingOther(true);
-      try {
-        const response = await axios.get(`${API_BASE_URL}/products`);
-        const allProducts = response.data as Product[];
-        // Filter out current product and take first 4
-        const filteredProducts = allProducts
-          .filter(p => p.id !== product.id)
-          .slice(0, 4);
-        setOtherProducts(filteredProducts);
-      } catch (err) {
-        console.error("Failed to fetch other products", err);
-        // We don't set a specific error state to avoid affecting the main UI
-      } finally {
-        setIsLoadingOther(false);
-      }
-    };
-    
-    if (product) { // Fetch only when main product is loaded
-      fetchOtherProducts();
-    }
-  }, [product]);
-  
   // Fetch reviews
   useEffect(() => {
     const fetchReviews = async () => {
@@ -7718,6 +7774,34 @@ const ProductDetailPage = () => {
     
     fetchReviews();
   }, [productId, isAuthenticated, token]);
+  
+  // Fetch other similar products
+  useEffect(() => {
+    const fetchOtherProducts = async () => {
+      if (!product) return; // Don't fetch if main product isn't loaded
+
+      setIsLoadingOther(true);
+      try {
+        const response = await axios.get<PaginatedProductsResponse>(`${API_BASE_URL}/products`);
+        // The data now contains a products array instead of being the array directly
+        const products = response.data.products;
+        // Filter out current product and take first 4
+        const filteredProducts = products
+          .filter(p => p.id !== product.id)
+          .slice(0, 4);
+        setOtherProducts(filteredProducts);
+      } catch (err) {
+        console.error("Failed to fetch other products", err);
+        // We don't set error state here as it's not critical
+      } finally {
+        setIsLoadingOther(false);
+      }
+    };
+
+    if (product) { // Fetch only when main product is loaded
+      fetchOtherProducts();
+    }
+  }, [product]); // Dependency on main product state
   
   // Handle adding product to cart
   const handleAddToCartClick = async () => {
@@ -8184,30 +8268,30 @@ const ProductDetailPage = () => {
           </Row>
         </Col>
       </Row>
-      
+
       {/* You Might Also Like Section */}
-      {otherProducts.length > 0 && (
-        <Row className="mt-5">
-          <Col xs={12}>
-            <h3 className="mb-3">You Might Also Like</h3>
-            {isLoadingOther ? (
-              <div className="text-center py-3">
-                <Spinner animation="border" size="sm" role="status">
-                  <span className="visually-hidden">Loading recommendations...</span>
-                </Spinner>
-              </div>
-            ) : (
-              <Row xs={2} md={4} className="g-3">
-                {otherProducts.map(product => (
-                  <Col key={product.id}>
-                    <ProductCard product={product} />
-                  </Col>
-                ))}
-              </Row>
-            )}
-          </Col>
-        </Row>
-      )}
+      <Row className="mt-5">
+        <Col xs={12}>
+          <h3 className="mb-3">You Might Also Like</h3>
+          {isLoadingOther ? (
+            <div className="text-center py-3">
+              <Spinner animation="border" size="sm" role="status">
+                <span className="visually-hidden">Loading recommended products...</span>
+              </Spinner>
+            </div>
+          ) : otherProducts.length > 0 ? (
+            <Row xs={2} md={4} className="g-3">
+              {otherProducts.map(p => (
+                <Col key={p.id}>
+                  <ProductCard product={p} />
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <p className="text-muted">No similar products found.</p>
+          )}
+        </Col>
+      </Row>
     </Container>
   );
 };
@@ -8230,7 +8314,7 @@ interface UserProfile {
   email: string;
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -8484,7 +8568,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -8675,7 +8759,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:3001/api'; // Make sure this matches your backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'; // Make sure this matches your backend
 
 const RequestPasswordResetPage = () => {
   const [email, setEmail] = useState('');
@@ -8786,7 +8870,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useParams, Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const ResetPasswordPage = () => {
   const { token } = useParams<{ token: string }>();
@@ -8957,11 +9041,10 @@ export default ResetPasswordPage;
 
 ```tsx
 import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Spinner, Alert } from 'react-bootstrap';
 import { FaHeart, FaTrash, FaChevronLeft, FaRegHeart, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 import { useWishlist } from '../context/WishlistContext';
-import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
 
@@ -8979,22 +9062,12 @@ interface Product {
 
 const WishlistPage: React.FC = () => {
   const { wishlistItems, isLoading, error, fetchWishlist, removeFromWishlist } = useWishlist();
-  const { isAuthenticated, isAuthLoading } = useAuth();
-  const navigate = useNavigate();
 
-  // Check authentication and redirect if not authenticated
+  // Reload wishlist when the component mounts
   useEffect(() => {
-    // Wait for auth state to be determined
-    if (!isAuthLoading) {
-      if (!isAuthenticated) {
-        toast.error("You must be logged in to view your wishlist");
-        navigate('/login', { state: { returnUrl: '/wishlist' } });
-      } else {
-        // Only fetch wishlist if authenticated
-        fetchWishlist();
-      }
-    }
-  }, [isAuthenticated, isAuthLoading, navigate, fetchWishlist]);
+    fetchWishlist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only on mount
 
   const handleRemoveFromWishlist = async (e: React.MouseEvent, productId: number, productName: string) => {
     e.preventDefault(); // Prevent navigation to product detail
@@ -9026,25 +9099,6 @@ const WishlistPage: React.FC = () => {
     
     return <div className="d-inline-flex align-items-center">{stars}</div>;
   };
-
-  // Show loading state while auth is being determined
-  if (isAuthLoading) {
-    return (
-      <Container className="py-5">
-        <div className="text-center my-5">
-          <Spinner animation="border" role="status" variant="primary">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
-          <p className="mt-3">Checking authentication...</p>
-        </div>
-      </Container>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <Container className="py-5">
@@ -9910,7 +9964,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const AdminRequestPasswordResetPage = () => {
   const [email, setEmail] = useState('');
@@ -10019,7 +10073,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-b
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const AdminResetPasswordPage = () => {
   const { token } = useParams<{ token: string }>();
@@ -10217,7 +10271,7 @@ interface Category {
   imageUrl?: string;
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const CategoryManagementPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -10734,7 +10788,7 @@ interface AdminStats {
   }[];
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const DashboardPage = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -11502,7 +11556,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11719,7 +11773,7 @@ interface ServiceZone {
   geoJsonPolygon: string; // The raw GeoJSON string
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -12028,7 +12082,7 @@ interface AdminOrder {
   createdAt: string; // ISO 8601 date string
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Define allowed order statuses (must match backend)
 const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
@@ -12220,13 +12274,13 @@ const OrderManagementPage = () => {
               <Table hover responsive className="align-middle shadow-sm">
                 <thead>
                   <tr>
-                    <th width="80">ID</th>
+                    <th style={{ width: '80px' }}>ID</th>
                     <th>Customer</th>
                     <th>Items</th>
                     <th className="text-end">Total</th>
                     <th>Status</th>
                     <th>Date</th>
-                    <th width="180">Actions</th>
+                    <th style={{ width: '180px' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -12317,7 +12371,7 @@ interface PhoneNumber {
   status: 'Available' | 'Busy' | 'Offline';
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const PhoneManagementPage = () => {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
@@ -12749,7 +12803,7 @@ interface Product {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12884,9 +12938,10 @@ export default ProductDetailPage;
 ```tsx
 import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Card, Image, Row, Col, Toast, ToastContainer, Badge } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { BsImage, FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 
 interface Category {
@@ -12908,7 +12963,7 @@ interface Product {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -13237,7 +13292,7 @@ const ProductManagementPage: React.FC = () => {
     }
 
     if (adjustmentInt === 0) {
-        toast.info("No adjustment needed (value is 0).");
+        toast.success("No adjustment needed (value is 0).");
         setAdjustingProductId(null); // Close the input if adjustment is 0
         setAdjustmentValue('');
         return;
@@ -13376,13 +13431,13 @@ const ProductManagementPage: React.FC = () => {
               <Table hover responsive className="align-middle shadow-sm">
                 <thead>
                   <tr>
-                    <th width="60">ID</th>
-                    <th width="80">Image</th>
+                    <th style={{ width: '60px' }}>ID</th>
+                    <th style={{ width: '80px' }}>Image</th>
                     <th>Name</th>
                     <th>Category</th>
                     <th className="text-end">Price</th>
                     <th className="text-center">Stock</th>
-                    <th width="180" className="text-end">Actions</th>
+                    <th style={{ width: '180px' }} className="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -13692,7 +13747,7 @@ interface AdminUser {
   totalSpent: number;
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -13844,7 +13899,7 @@ interface ServiceZone {
   geoJsonPolygon: string; // The raw GeoJSON string
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Custom EditControl component to replace react-leaflet-draw
 interface EditControlProps {
@@ -13854,16 +13909,16 @@ interface EditControlProps {
   onDeleted: (e: any) => void;
   featureGroupRef?: React.RefObject<L.FeatureGroup>;
   draw?: {
-    polyline?: boolean | L.DrawOptions.PolylineOptions;
-    polygon?: boolean | L.DrawOptions.PolygonOptions;
-    rectangle?: boolean | L.DrawOptions.RectangleOptions;
-    circle?: boolean | L.DrawOptions.CircleOptions;
-    marker?: boolean | L.DrawOptions.MarkerOptions;
-    circlemarker?: boolean | L.DrawOptions.CircleMarkerOptions;
+    polyline?: false | L.DrawOptions.PolylineOptions;
+    polygon?: false | L.DrawOptions.PolygonOptions;
+    rectangle?: false | L.DrawOptions.RectangleOptions;
+    circle?: false | L.DrawOptions.CircleOptions;
+    marker?: false | L.DrawOptions.MarkerOptions;
+    circlemarker?: false | L.DrawOptions.CircleMarkerOptions;
   };
   edit?: {
     featureGroup?: L.FeatureGroup;
-    edit?: boolean | L.DrawOptions.EditHandlerOptions; 
+    edit?: boolean | any;
     remove?: boolean;
   };
 }
@@ -13873,18 +13928,18 @@ const EditControl: React.FC<EditControlProps> = (props) => {
   const map = useMap();
   
   useEffect(() => {
-    const featureGroup = edit?.featureGroup || featureGroupRef?.current;
+    const featureGroup = edit?.featureGroup || (featureGroupRef?.current as L.FeatureGroup | undefined);
     if (!featureGroup) return;
     
     // Initialize the draw control
     const drawControl = new L.Control.Draw({
       position,
-      draw,
+      draw: draw as any, // Use any to bypass type checking for now
       edit: featureGroup ? {
         featureGroup,
         edit: edit?.edit || false,
         remove: edit?.remove || false
-      } : false
+      } as any : undefined
     });
     
     // Add the draw control to the map
@@ -13922,7 +13977,7 @@ const ZoneManagementPage = () => {
   const [editableLayerGeoJson, setEditableLayerGeoJson] = useState<any>(null);
   
   // Ref for editable layer group
-  const editableFG = useRef<L.FeatureGroup>(null);
+  const editableFG = useRef<L.FeatureGroup | null>(null);
 
   // Map center coordinates (Addis Ababa)
   const mapCenter: LatLngExpression = [9.02, 38.75];
@@ -14178,7 +14233,7 @@ const ZoneManagementPage = () => {
                         onCreated={_onCreated}
                         onEdited={_onEdited}
                         onDeleted={_onDeleted}
-                        featureGroupRef={editableFG}
+                        featureGroupRef={editableFG as React.RefObject<L.FeatureGroup>}
                         draw={{
                           rectangle: false,
                           circle: false,
@@ -14248,6 +14303,41 @@ const ZoneManagementPage = () => {
 };
 
 export default ZoneManagementPage;
+```
+
+---
+### File: `packages/admin-frontend/src/utils/formatters.ts`
+
+```typescript
+/**
+ * Formats a number as currency (EUR)
+ * @param value The number to format
+ * @returns Formatted currency string
+ */
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-EU', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
+/**
+ * Formats a date to a readable string
+ * @param dateString The date string to format
+ * @returns Formatted date string
+ */
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
 ```
 
 ---

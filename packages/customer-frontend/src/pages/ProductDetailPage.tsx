@@ -8,6 +8,9 @@ import { useWishlist } from '../context/WishlistContext';
 import toast from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
+import StarRating from '../components/StarRating';
+import api from '../utils/api';
+import { formatCurrency } from '../utils/formatters';
 
 // Define interface for product data matching backend response
 interface Product {
@@ -74,7 +77,7 @@ const ProductDetailPage = () => {
   // Hooks
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const { addToCart, cartItems } = useCart();
+  const { addOrUpdateItemQuantity, cartItems } = useCart();
   const { isAuthenticated, token } = useAuth();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   
@@ -203,7 +206,7 @@ const ProductDetailPage = () => {
     setIsAddingToCart(true);
     
     try {
-      await addToCart(product);
+      await addOrUpdateItemQuantity(product.id, 1);
       // Success toast is handled by context
     } catch (error) {
       // Error is handled by context

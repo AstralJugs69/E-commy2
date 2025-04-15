@@ -4,6 +4,8 @@ import { Container, Alert, Spinner, Badge, Card, Row, Col, Button } from 'react-
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
+import api from '../utils/api';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
 
 interface UserOrder {
   id: number; 
@@ -13,42 +15,6 @@ interface UserOrder {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-// Simple helper functions (can be moved to a utils file later)
-const formatDateTime = (isoString: string) => {
-  if (!isoString) return 'N/A';
-  try {
-    return new Date(isoString).toLocaleString();
-  } catch (e) {
-    console.error("Error formatting date:", e);
-    return 'Invalid Date';
-  }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-const getStatusBadgeVariant = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'pending verification':
-      return 'warning';
-    case 'verified':
-      return 'info';
-    case 'processing':
-      return 'primary';
-    case 'shipped':
-      return 'secondary';
-    case 'delivered':
-      return 'success';
-    case 'cancelled':
-      return 'danger';
-    case 'failed verification':
-      return 'danger';
-    default:
-      return 'light';
-  }
-};
 
 const OrderHistoryPage = () => {
   const [orders, setOrders] = useState<UserOrder[]>([]);

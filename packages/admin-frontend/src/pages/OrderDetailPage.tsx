@@ -3,15 +3,8 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
-import L, { Icon, LatLngExpression } from 'leaflet';
-
-// Fix potentially broken default Leaflet icons
-delete (Icon.Default.prototype as any)._getIconUrl;
-Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import L, { LatLngExpression } from 'leaflet';
+import { formatCurrency, formatDateTime } from '../utils/formatters';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
@@ -99,7 +92,6 @@ const OrderDetailPage: React.FC = () => {
           }
         });
 
-        console.log('Order details received:', response.data);
         setOrder(response.data);
       } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
@@ -162,14 +154,6 @@ const OrderDetailPage: React.FC = () => {
       fetchServiceZones();
     }
   }, [isLoading, order]);
-
-  const formatDateTime = (isoString: string): string => {
-    return new Date(isoString).toLocaleString();
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return `€${amount.toFixed(2)}`;
-  };
 
   return (
     <Container className="mt-3">

@@ -16,6 +16,7 @@ import {
   Legend,
 } from 'chart.js';
 import { format, parseISO, subDays, subMonths } from 'date-fns';
+import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
 
 // Register Chart.js components
 ChartJS.register(
@@ -324,44 +325,6 @@ const DashboardPage = () => {
 
     fetchUsersChartData();
   }, [timePeriod]);
-
-  // Function to format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  // Function to format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
-  // Function to get badge variant based on status
-  const getStatusBadgeVariant = (status: string): string => {
-    switch (status) {
-      case 'Delivered':
-        return 'success';
-      case 'Shipped':
-        return 'info';
-      case 'Processing':
-        return 'warning';
-      case 'Verified':
-        return 'primary';
-      case 'Pending Call':
-        return 'secondary';
-      case 'Cancelled':
-        return 'danger';
-      default:
-        return 'secondary';
-    }
-  };
 
   // Prepare chart data for order status breakdown
   const chartData = {

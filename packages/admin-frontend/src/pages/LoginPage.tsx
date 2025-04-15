@@ -16,7 +16,6 @@ function LoginPage() {
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (token) {
-      console.log('Found existing token on login page, will be cleared');
       localStorage.removeItem('admin_token');
     }
   }, []);
@@ -36,23 +35,16 @@ function LoginPage() {
     }
     
     try {
-      console.log('Attempting login with:', { email, passwordLength: password.length });
-      console.log('Using API endpoint:', `${API_BASE_URL}/auth/login`);
-
       // Make API call to login endpoint
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password
       });
       
-      console.log('Login response received:', response.status);
-      
       // Check if token exists in response
       if (response.data && response.data.token) {
         // Store token in localStorage
-        console.log('Token received. First 10 chars:', response.data.token.substring(0, 10) + '...');
         localStorage.setItem('admin_token', response.data.token);
-        console.log('Login successful!');
         
         // Add a small delay to ensure token is stored before navigation
         setTimeout(() => {
@@ -61,7 +53,6 @@ function LoginPage() {
         }, 100);
       } else {
         // Handle unexpected response format
-        console.error('Server response format:', response.data);
         setErrorMessage('Invalid server response - token missing');
         console.error('Server response missing token', response.data);
       }

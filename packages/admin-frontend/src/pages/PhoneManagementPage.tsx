@@ -132,9 +132,6 @@ const PhoneManagementPage = () => {
     try {
       const token = localStorage.getItem('admin_token');
       
-      // Debug: Log the token to check its format
-      console.log('Token used for API call:', token ? `${token.substring(0, 15)}...` : 'No token');
-      
       if (!token) {
         setError('Authentication token not found. Please log in again.');
         handleAuthError();
@@ -144,16 +141,12 @@ const PhoneManagementPage = () => {
       // Ensure the token is properly formatted - it may or may not include 'Bearer ' prefix
       const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       
-      console.log('Making API request to:', `${API_BASE_URL}/admin/phonenumbers`);
-      console.log('With Authorization header:', formattedToken.substring(0, 20) + '...');
-      
       const response = await axios.get(`${API_BASE_URL}/admin/phonenumbers`, {
         headers: {
           Authorization: formattedToken
         }
       });
 
-      console.log('API response:', response.data);
       setPhoneNumbers(response.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {

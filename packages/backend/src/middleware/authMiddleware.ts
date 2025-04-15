@@ -85,4 +85,4 @@ export const isUser = (req: Request, res: Response, next: NextFunction) => {
     // No token provided
     res.status(401).json({ message: 'Unauthorized: Token required' });
   }
-}; 
+};

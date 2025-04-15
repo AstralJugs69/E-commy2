@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { FaImage, FaPlus, FaBox } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../utils/formatters';
 
 interface Category {
   id: number;
@@ -347,12 +348,12 @@ const ProductManagementPage: React.FC = () => {
   // Function to handle stock adjustment submission
   const handleAdjustStock = async (productId: number, adjustmentStr: string) => {
     const adjustmentInt = parseInt(adjustmentStr, 10);
-
+    
     if (isNaN(adjustmentInt)) {
-        toast.error("Adjustment value must be a valid integer.");
-        return;
+      toast.error("Adjustment value must be a valid integer.");
+      return;
     }
-
+    
     if (adjustmentInt === 0) {
         toast.success("No adjustment needed (value is 0).");
         setAdjustingProductId(null); // Close the input if adjustment is 0
@@ -367,9 +368,8 @@ const ProductManagementPage: React.FC = () => {
     }
 
     // Optimistic UI update can be added here later if desired
-
+  
     try {
-      console.log(`Adjusting stock for product ${productId} by ${adjustmentInt}`);
       const response = await axios.post(
         `${API_BASE_URL}/admin/products/${productId}/adjust-stock`,
         { adjustment: adjustmentInt },
@@ -405,10 +405,6 @@ const ProductManagementPage: React.FC = () => {
       // setAdjustingProductId(null);
       // setAdjustmentValue(''); 
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `€${amount.toFixed(2)}`;
   };
 
   const truncateText = (text: string, maxLength: number) => {

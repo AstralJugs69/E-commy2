@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
-import { format } from 'date-fns';
+import { formatDateTime, formatCurrency } from '../utils/formatters';
 
 // User interface with order count
 interface AdminUser {
@@ -60,23 +60,6 @@ const UserManagementPage: React.FC = () => {
 
     fetchUsers();
   }, []);
-
-  // Helper function to format dates
-  const formatDateTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  // Helper function to format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
 
   if (isLoading) {
     return (

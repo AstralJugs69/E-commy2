@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
@@ -38,8 +37,7 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const { addToCart } = useCart(); // Get addToCart function from context
-  const { wishlistItems, addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+  const { wishlistItems, isWishlisted, addToWishlist, removeFromWishlist } = useWishlist();
   
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -139,11 +137,6 @@ const HomePage = () => {
 
     fetchCategories();
   }, []);
-
-  const handleAddToCart = (product: Product) => {
-    addToCart(product);
-    toast.success(`${product.name} added to cart!`);
-  };
 
   const handleToggleWishlist = (e: React.MouseEvent, product: Product) => {
     e.preventDefault(); // Prevent navigation to product detail

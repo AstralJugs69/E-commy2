@@ -18,7 +18,6 @@ interface CartItem extends Product {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product) => Promise<void>;
   addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
   updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
@@ -85,31 +84,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         toast.error("Your session has expired. Please log in again.");
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Add an item to cart (with quantity 1)
-  const addToCart = async (product: Product): Promise<void> => {
-    try {
-      await addOrUpdateItemQuantity(product.id, 1);
-    } catch (err) {
-      console.error("Error adding product to cart:", err);
-      let errorMsg = "Failed to add item to cart.";
-      
-      if (axios.isAxiosError(err) && err.response) {
-        console.log('API Error details:', {
-          status: err.response?.status,
-          data: err.response?.data,
-          message: err.message
-        });
-        
-        errorMsg = err.response.data.message || errorMsg;
-      }
-      
-      toast.error(errorMsg);
-      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -276,7 +250,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addToCart, 
       addOrUpdateItemQuantity,
       updateCartItemQuantity: addOrUpdateItemQuantity,
       removeFromCart, 

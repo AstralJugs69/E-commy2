@@ -3,6 +3,9 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck } from 'react-icons/fa';
+import api from '../utils/api';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
 
 // Interfaces based on expected API response for GET /api/orders/:id
 interface OrderItem {
@@ -33,32 +36,6 @@ interface CustomerOrder {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-// Helper functions (consider moving to utils)
-const formatDateTime = (isoString: string) => {
-  if (!isoString) return 'N/A';
-  try {
-    return new Date(isoString).toLocaleString();
-  } catch (e) {
-    return 'Invalid Date';
-  }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-const getStatusBadgeVariant = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'pending verification': return 'warning';
-    case 'verified': return 'info';
-    case 'processing': return 'primary';
-    case 'shipped': return 'secondary';
-    case 'delivered': return 'success';
-    case 'cancelled': case 'failed verification': return 'danger';
-    default: return 'light';
-  }
-};
 
 const CustomerOrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();

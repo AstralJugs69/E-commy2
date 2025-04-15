@@ -199,4 +199,5 @@ router.get('/:productId/reviews', async (req: Request, res: Response) => {
   }
 });
 
-export default router; 
+// Export the router
+export default router;

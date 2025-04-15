@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
 
 interface OrderItem {
   id: number;
@@ -60,19 +61,20 @@ const OrderManagementPage = () => {
       const queryString = params.toString();
       const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
 
-      console.log(`Fetching orders from ${apiUrl}`);
-      const response = await axios.get(apiUrl, {
+      const response = await axios.get<AdminOrder[]>(apiUrl, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      console.log('Received orders data:', response.data);
-      response.data.forEach((order: AdminOrder) => {
-        console.log(`Order ${order.id} shipping details:`, order.shippingDetails);
-      });
+      const processedOrders = response.data.map(order => ({
+        ...order,
+        shippingDetails: typeof order.shippingDetails === 'string'
+          ? JSON.parse(order.shippingDetails)
+          : order.shippingDetails
+      }));
       
-      setOrders(response.data);
+      setOrders(processedOrders);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
@@ -95,26 +97,25 @@ const OrderManagementPage = () => {
   }, [statusFilter]);
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
+    setIsUpdating(true);
+    setError(null);
+    
     const token = localStorage.getItem('admin_token');
     if (!token) {
       setError('Authentication required. Please log in again.');
+      setIsUpdating(false);
       return;
     }
-
+    
     setUpdatingOrderIds(prev => [...prev, orderId]);
-    setError(null);
-
+    
     try {
-      console.log(`Attempting to update order ${orderId} status to ${newStatus}`);
-      console.log(`API URL: ${API_BASE_URL}/admin/orders/${orderId}/status`);
-      
       await axios.post(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`, 
-        { status: newStatus }, 
+        `${API_BASE_URL}/admin/orders/${orderId}/status`,
+        { status: newStatus },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`
           }
         }
       );
@@ -134,26 +135,7 @@ const OrderManagementPage = () => {
       }
     } finally {
       setUpdatingOrderIds(prev => prev.filter(id => id !== orderId));
-    }
-  };
-
-  const formatDateTime = (isoString: string): string => {
-    return new Date(isoString).toLocaleString();
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return `€${amount.toFixed(2)}`;
-  };
-
-  const getStatusBadgeVariant = (status: string): string => {
-    switch (status?.toLowerCase()) {
-      case 'pending call': return 'warning';
-      case 'verified': return 'primary';
-      case 'processing': return 'info';
-      case 'shipped': return 'secondary';
-      case 'delivered': return 'success';
-      case 'cancelled': case 'failed verification': return 'danger';
-      default: return 'light';
+      setIsUpdating(false);
     }
   };
 
