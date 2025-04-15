@@ -9,15 +9,20 @@
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #14B8A6;
-  --primary-rgb: 20, 184, 166;
-  --primary-dark: #0E9284;
-  --primary-light: #73E5D7;
-  --primary-bg-subtle: #E6FAF8;
+  --primary: #39FF14; /* Neon Green */
+  --primary-rgb: 57, 255, 20;
+  --primary-dark: #32E012; /* Slightly darker */
+  --primary-light: #7CFF5E;
+  --primary-bg-subtle: #E9FFDF;
+  --primary-text-on: #000000; /* Black text for contrast on neon green */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #64748B; /* Neutral 500 */
-  --secondary-color-rgb: 100, 116, 139;
+  --secondary-color: #343A40; /* Dark Gray */
+  --secondary-color-rgb: 52, 58, 64;
+  --secondary-hover: #23272B;
+  --secondary-active: #1D2124;
+  --secondary-text-on: #FFFFFF; /* White text on dark gray */
+  
   --light-bg: #F8FAFC; /* Neutral 50 */
   --subtle-border: #E2E8F0; /* Neutral 200 */
   --text-muted: #64748B; /* Neutral 500 */
@@ -47,6 +52,14 @@
   --warning: #F59E0B;
   --danger: #EF4444;
   --info: #3B82F6;
+
+  /* Bootstrap variable overrides */
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: var(--primary-rgb);
+  --bs-secondary: var(--secondary-color);
+  --bs-secondary-rgb: var(--secondary-color-rgb);
+  --bs-link-color-rgb: var(--primary-rgb);
+  --bs-link-hover-color-rgb: var(--primary-rgb);
 
   /* Font Settings */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -134,30 +147,39 @@ th {
 }
 
 .btn-primary {
+  --bs-btn-color: var(--primary-text-on);
   --bs-btn-bg: var(--primary);
   --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: #0F9D8A;
-  --bs-btn-hover-border-color: #0E9284;
-  --bs-btn-active-bg: #0E9284;
-  --bs-btn-active-border-color: #0C8174;
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-hover-bg: var(--primary-dark);
+  --bs-btn-hover-border-color: var(--primary-dark);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-active-bg: var(--primary-dark);
+  --bs-btn-active-border-color: var(--primary-dark);
+  --bs-btn-disabled-color: var(--primary-text-on);
   --bs-btn-disabled-bg: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
 }
 
 .btn-secondary {
+  --bs-btn-color: var(--secondary-text-on);
   --bs-btn-bg: var(--secondary-color);
   --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-bg: var(--neutral-600);
-  --bs-btn-hover-border-color: var(--neutral-600);
-  --bs-btn-active-bg: var(--neutral-700);
-  --bs-btn-active-border-color: var(--neutral-700);
+  --bs-btn-hover-color: var(--secondary-text-on);
+  --bs-btn-hover-bg: var(--secondary-hover);
+  --bs-btn-hover-border-color: var(--secondary-hover);
+  --bs-btn-active-color: var(--secondary-text-on);
+  --bs-btn-active-bg: var(--secondary-active);
+  --bs-btn-active-border-color: var(--secondary-active);
 }
 
 .btn-outline-secondary {
   --bs-btn-color: var(--secondary-color);
   --bs-btn-border-color: var(--secondary-color);
+  --bs-btn-hover-color: var(--secondary-text-on);
   --bs-btn-hover-bg: var(--secondary-color);
   --bs-btn-hover-border-color: var(--secondary-color);
+  --bs-btn-active-color: var(--secondary-text-on);
   --bs-btn-active-bg: var(--secondary-color);
   --bs-btn-active-border-color: var(--secondary-color);
 }
@@ -165,30 +187,46 @@ th {
 .btn-success {
   --bs-btn-bg: var(--success);
   --bs-btn-border-color: var(--success);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-danger {
   --bs-btn-bg: var(--danger);
   --bs-btn-border-color: var(--danger);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-warning {
   --bs-btn-bg: var(--warning);
   --bs-btn-border-color: var(--warning);
+  --bs-btn-color: var(--neutral-900);
+  --bs-btn-hover-color: var(--neutral-900);
+  --bs-btn-active-color: var(--neutral-900);
 }
 
 .btn-info {
   --bs-btn-bg: var(--info);
   --bs-btn-border-color: var(--info);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-outline-primary {
   --bs-btn-color: var(--primary);
   --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-color: var(--primary-text-on);
   --bs-btn-hover-bg: var(--primary);
   --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-active-color: var(--primary-text-on);
   --bs-btn-active-bg: var(--primary);
   --bs-btn-active-border-color: var(--primary);
+  --bs-btn-disabled-color: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary);
 }
 
 .btn-link {

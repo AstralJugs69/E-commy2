@@ -59,14 +59,15 @@ const WishlistPage: React.FC = () => {
   };
 
   return (
-    <Container className="py-5">
-      <div className="d-flex align-items-center mb-4">
-        <Link to="/" className="text-decoration-none me-3">
+    <Container className="py-4">
+      <h2 className="mb-4">My Wishlist</h2>
+      
+      <div className="mb-4">
+        <Link to="/" className="text-decoration-none">
           <Button variant="outline-secondary" size="sm">
             <FaChevronLeft className="me-1" /> Back to Shopping
           </Button>
         </Link>
-        <h1>My Wishlist</h1>
       </div>
 
       {isLoading ? (

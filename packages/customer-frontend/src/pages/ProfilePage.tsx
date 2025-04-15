@@ -1,12 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Card, Alert, Spinner, Form, Button } from 'react-bootstrap';
+import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { FaUserEdit } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface UserProfile {
   id: number;
   email: string;
+  name?: string | null;
+  createdAt?: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
@@ -15,6 +19,12 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Edit profile state
+  const [isEditing, setIsEditing] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -45,6 +55,7 @@ const ProfilePage = () => {
         });
         
         setProfile(response.data);
+        setFormName(response.data.name || '');
       } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
@@ -64,6 +75,72 @@ const ProfilePage = () => {
 
     fetchProfile();
   }, [token, isAuthenticated, isAuthLoading]);
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // If canceling edit, reset form values to current profile values
+      if (profile) {
+        setFormName(profile.name || '');
+      }
+      setEditError(null);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleProfileUpdate = async (event: FormEvent) => {
+    event.preventDefault();
+    setIsSavingEdit(true);
+    setEditError(null);
+
+    if (!token) {
+      setEditError("You're not logged in. Please login and try again.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    // Only include fields that changed
+    const updateData: { name?: string } = {};
+    if (profile?.name !== formName) {
+      updateData.name = formName;
+    }
+
+    // If nothing to update, show message and return
+    if (Object.keys(updateData).length === 0) {
+      setEditError("No changes to save.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${API_BASE_URL}/users/me`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Update profile with the response data
+      setProfile(response.data);
+      setIsEditing(false);
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setEditError(err.response.data.message || 'Failed to update profile.');
+        console.error('Error updating profile:', err.response.data);
+        toast.error("Failed to update profile");
+      } else {
+        setEditError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+        toast.error("Network error");
+      }
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleChangePassword = async (event: FormEvent) => {
     event.preventDefault();
@@ -166,13 +243,86 @@ const ProfilePage = () => {
         <>
           <Card className="mb-4">
             <Card.Body>
-              <Card.Title>Account Information</Card.Title>
-              <Card.Text>
-                <strong>Email:</strong> {profile.email}
-              </Card.Text>
-              <Card.Text>
-                <strong>User ID:</strong> {profile.id}
-              </Card.Text>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <Card.Title>Account Information</Card.Title>
+                {!isEditing && (
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm"
+                    onClick={handleEditToggle}
+                  >
+                    <FaUserEdit className="me-1" /> Edit Profile
+                  </Button>
+                )}
+              </div>
+              
+              {!isEditing ? (
+                <>
+                  <Card.Text>
+                    <strong>Name:</strong> {profile.name || '(Not Set)'}
+                  </Card.Text>
+                  <Card.Text>
+                    <strong>Email:</strong> {profile.email}
+                  </Card.Text>
+                  <Card.Text>
+                    <strong>User ID:</strong> {profile.id}
+                  </Card.Text>
+                  {profile.createdAt && (
+                    <Card.Text>
+                      <strong>Member Since:</strong> {new Date(profile.createdAt).toLocaleDateString()}
+                    </Card.Text>
+                  )}
+                </>
+              ) : (
+                <Form onSubmit={handleProfileUpdate}>
+                  {editError && (
+                    <Alert variant="danger" className="mb-3">
+                      {editError}
+                    </Alert>
+                  )}
+                  
+                  <Form.Group className="mb-3" controlId="formName">
+                    <Form.Label>Name</Form.Label>
+                    <InputGroup>
+                      <Form.Control 
+                        type="text" 
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        placeholder="Enter your name"
+                      />
+                    </InputGroup>
+                  </Form.Group>
+                  
+                  <div className="d-flex gap-2">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={isSavingEdit}
+                    >
+                      {isSavingEdit ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Saving...
+                        </>
+                      ) : 'Save Changes'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      onClick={handleEditToggle}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </Form>
+              )}
             </Card.Body>
           </Card>
           
@@ -241,6 +391,17 @@ const ProfilePage = () => {
                   ) : 'Update Password'}
                 </Button>
               </Form>
+            </Card.Body>
+          </Card>
+          
+          <Card className="mb-4">
+            <Card.Body>
+              <Card.Title>My Account</Card.Title>
+              <ListGroup variant="flush">
+                <ListGroup.Item action as={Link} to="/orders">My Orders</ListGroup.Item>
+                <ListGroup.Item action as={Link} to="/wishlist">My Wishlist</ListGroup.Item>
+                {/* Add more account management links later */}
+              </ListGroup>
             </Card.Body>
           </Card>
         </>
