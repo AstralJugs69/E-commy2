@@ -1,4 +1,4 @@
-# Project Code Context (2025-04-15 16:52:24)
+# Project Code Context (2025-04-15 23:18:01)
 
 ## Key Configuration Files
 
@@ -166,7 +166,9 @@ Focuses on the absolute core flow: Online Order -> Location Capture -> Backend L
     "start": "node dist/index.js",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "generate-token": "node generate-token.js"
+    "generate-token": "node generate-token.js",
+    "kill-server-win": "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :3001') do taskkill /F /PID %a",
+    "kill-server": "node -e \"try{require('child_process').execSync(process.platform === 'win32' ? 'for /f \\\"tokens=5\\\" %a in (\\'netstat -ano ^| findstr :3001\\') do taskkill /F /PID %a' : 'lsof -ti:3001,3002 | xargs kill -9')}catch(e){console.log('No processes found')}\""
   },
   "keywords": [],
   "author": "",
@@ -313,6 +315,7 @@ model User {
   id                   Int       @id @default(autoincrement())
   email                String    @unique
   passwordHash         String
+  name                 String?   // Add optional name field
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   passwordResetExpires DateTime?
@@ -337,6 +340,7 @@ model Product {
   id            Int         @id @default(autoincrement())
   name          String
   price         Float
+  costPrice     Float?      // Optional: Cost of the product
   description   String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -502,6 +506,7 @@ import adminRoutes from './routes/adminRoutes';
 import productAdminRoutes from './routes/productAdminRoutes';
 import orderRoutes from './routes/orderRoutes';
 import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
 import categoryAdminRoutes from './routes/categoryAdminRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import uploadRoutes from './routes/uploadRoutes';
@@ -530,6 +535,7 @@ app.get('/', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
@@ -543,78 +549,20 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 
 // Start Server
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Backend server listening on http://localhost:${port}`);
+}).on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${port} is already in use. Trying alternative port...`);
+    // Try an alternative port by incrementing the current port
+    const alternativePort = Number(port) + 1;
+    app.listen(alternativePort, () => {
+      console.log(`Backend server listening on alternative port http://localhost:${alternativePort}`);
+    });
+  } else {
+    console.error('Server error:', err.message);
+  }
 });
-```
-
----
-### File: `packages/backend/src/middleware/authMiddleware.js`
-
-```javascript
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.isUser = exports.isAdmin = void 0;
-// Replace the problematic import with direct require
-var jwt = require('jsonwebtoken');
-var JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only'; // Use environment variable or default for development
-// Admin authentication middleware
-var isAdmin = function (req, res, next) {
-    console.log('isAdmin middleware called');
-    var authHeader = req.headers.authorization;
-    // Check if Authorization header exists and starts with 'Bearer '
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        var token = authHeader.split(' ')[1]; // Extract token
-        console.log('Token found, verifying...');
-        console.log('JWT_SECRET exists:', !!JWT_SECRET);
-        try {
-            // Verify the token
-            var decoded = jwt.verify(token, JWT_SECRET);
-            console.log('Token verified successfully:', decoded);
-            // Attach decoded payload to request object
-            req.user = decoded;
-            // TODO (Future): Check if the decoded payload corresponds to an admin user in the DB.
-            // For MVP V1, just verifying the token is enough to proceed.
-            next(); // Token is valid (for MVP), proceed to the route handler
-        }
-        catch (error) {
-            // Token verification failed (invalid or expired)
-            console.error('Token verification failed:', error);
-            res.status(401).json({ message: 'Unauthorized: Invalid token' });
-        }
-    }
-    else {
-        // No token provided
-        console.log('No auth token provided in request');
-        res.status(401).json({ message: 'Unauthorized: Token required' });
-    }
-};
-exports.isAdmin = isAdmin;
-// User authentication middleware - identical to isAdmin for now
-// Will be differentiated in future for role-based access
-var isUser = function (req, res, next) {
-    var authHeader = req.headers.authorization;
-    // Check if Authorization header exists and starts with 'Bearer '
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        var token = authHeader.split(' ')[1]; // Extract token
-        try {
-            // Verify the token
-            var decoded = jwt.verify(token, JWT_SECRET);
-            // Attach decoded payload to request object
-            req.user = decoded;
-            next(); // Token is valid, proceed to the route handler
-        }
-        catch (error) {
-            // Token verification failed (invalid or expired)
-            res.status(401).json({ message: 'Unauthorized: Invalid token' });
-        }
-    }
-    else {
-        // No token provided
-        res.status(401).json({ message: 'Unauthorized: Token required' });
-    }
-};
-exports.isUser = isUser;
 ```
 
 ---
@@ -636,6 +584,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only';
 interface UserPayload {
   userId: number;
   email: string;
+  name?: string;
   role?: string;
   exp?: number;
 }
@@ -833,19 +782,55 @@ router.get('/stats', isAdmin, async (req: Request, res: Response) => {
 
 // GET /api/admin/orders - Fetch all orders for admin view (now with status filter)
 router.get('/orders', isAdmin, async (req: Request, res: Response) => {
-  // Get optional status query parameter
-  const statusFilter = req.query.status as string | undefined;
-  console.log(`GET /api/admin/orders route hit. Status filter: ${statusFilter}`);
+  // Parse status filter - can be a single string or an array of strings
+  const statusParam = req.query.status;
+  const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
+  
+  // Convert status parameter to array regardless of input type
+  let statusFilters: string[] = [];
+  
+  if (statusParam) {
+    if (Array.isArray(statusParam)) {
+      // If it's already an array (e.g., ?status=Verified&status=Processing)
+      statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
+    } else {
+      // If it's a single string (e.g., ?status=Verified)
+      const statusString = statusParam as string;
+      if (statusString.trim() !== '') {
+        statusFilters = [statusString.trim()];
+      }
+    }
+  }
+  
+  console.log(`GET /api/admin/orders route hit. Status filters: ${statusFilters.join(', ')}, DateFilter: ${dateFilter}`);
 
   try {
     // Build dynamic where clause
     const whereClause: Prisma.OrderWhereInput = {}; // Initialize empty where clause
 
-    if (statusFilter && statusFilter.trim() !== '') {
-        // Add status condition if filter is provided and not empty
-        whereClause.status = statusFilter.trim();
-        console.log(`Applying status filter: ${whereClause.status}`);
+    if (statusFilters.length > 0) {
+      // Add status condition if filters are provided
+      whereClause.status = {
+        in: statusFilters
+      };
+      console.log(`Applying status filters: ${statusFilters.join(', ')}`);
     }
+
+    // Add date filtering
+    if (dateFilter === 'today') {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+
+        whereClause.createdAt = {
+            gte: todayStart,
+            lte: todayEnd,
+        };
+        console.log(`Applying date filter: today (${todayStart.toISOString()} to ${todayEnd.toISOString()})`);
+    }
+    // Add 'all' case or specific date range handling later if needed
+    // Default behavior (if no dateFilter or dateFilter=='all') is no date filtering
 
     // Fetch orders from the database with relevant fields
     console.log('Fetching orders from database with where clause:', whereClause);
@@ -859,6 +844,8 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
         latitude: true,
         longitude: true,
         createdAt: true,
+        updatedAt: true,
+        userId: true,
         user: {
           select: {
             email: true
@@ -878,19 +865,25 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       }
     });
 
-    // Process orders to ensure consistent shippingDetails format
+    // Process orders to ensure consistent shippingDetails format and extract customer name
     const processedOrders = orders.map(order => {
       // Ensure shippingDetails exists and is properly formatted
       let formattedShippingDetails = order.shippingDetails;
+      let customerName = '(N/A)';
       
       // If shippingDetails is a string (JSON), parse it
       if (typeof order.shippingDetails === 'string') {
         try {
           formattedShippingDetails = JSON.parse(order.shippingDetails);
+          if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
+            customerName = (formattedShippingDetails as any).fullName || customerName;
+          }
         } catch (e) {
           console.warn(`Could not parse shippingDetails for order ${order.id}`);
           formattedShippingDetails = {};
         }
+      } else if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
+        customerName = (formattedShippingDetails as any).fullName || customerName;
       }
       
       // If shippingDetails doesn't exist or is null, provide an empty object
@@ -900,13 +893,14 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       
       return {
         ...order,
-        shippingDetails: formattedShippingDetails
+        shippingDetails: formattedShippingDetails,
+        customerName: customerName
       };
     });
 
     console.log(`Found ${orders.length} orders matching filter.`);
-    // Return the processed list as JSON
-    res.status(200).json(processedOrders);
+    // Return the processed list within an object with 'orders' property
+    res.status(200).json({ orders: processedOrders });
   } catch (error) {
     // Handle potential database errors
     console.error("Error fetching orders for admin:", error);
@@ -914,7 +908,63 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/orders/:orderId/status - Update an order's status
+// POST & PUT /api/admin/orders/:orderId/status - Update an order's status
+// Support both POST and PUT methods for backward compatibility
+router.put('/orders/:orderId/status', isAdmin, async (req: Request, res: Response) => {
+  // Define allowed statuses
+  const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
+  
+  // Define validation schema using Zod
+  const updateOrderStatusSchema = z.object({
+    status: z.string().refine(val => allowedOrderStatuses.includes(val), {
+      message: `Status must be one of: ${allowedOrderStatuses.join(', ')}`
+    })
+  });
+
+  // 1. Validate orderId param (convert to int, check NaN)
+  const orderIdInt = parseInt(req.params.orderId, 10);
+  if (isNaN(orderIdInt)) {
+    res.status(400).json({ message: 'Invalid order ID' });
+    return;
+  }
+
+  // 2. Validate request body using Zod schema
+  const validationResult = updateOrderStatusSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    res.status(400).json({ 
+      message: 'Validation failed', 
+      errors: validationResult.error.errors 
+    });
+    return;
+  }
+  
+  const { status: newStatus } = validationResult.data;
+
+  try {
+    // 3. Use Prisma `update` to change the status of the specified order
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderIdInt },
+      data: { status: newStatus },
+      select: { // Return updated order status and ID
+        id: true,
+        status: true
+      }
+    });
+    
+    // 4. Return 200 OK with updated status
+    res.status(200).json(updatedOrder);
+  } catch (error: any) {
+    // 5. Handle errors (Prisma P2025 for Not Found -> return 404, other errors -> 500)
+    if (error.code === 'P2025') {
+      res.status(404).json({ message: `Order with ID ${orderIdInt} not found` });
+      return;
+    }
+    console.error(`Error updating order ${orderIdInt} status:`, error);
+    res.status(500).json({ message: 'An error occurred while updating the order status' });
+  }
+});
+
+// Also keep the original POST endpoint for backward compatibility
 router.post('/orders/:orderId/status', isAdmin, async (req: Request, res: Response) => {
   // Define allowed statuses
   const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
@@ -965,7 +1015,7 @@ router.post('/orders/:orderId/status', isAdmin, async (req: Request, res: Respon
       return;
     }
     console.error(`Error updating order ${orderIdInt} status:`, error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An error occurred while updating the order status' });
   }
 });
 
@@ -1264,6 +1314,46 @@ router.get('/users', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/users/:userId - Fetch user details with order history
+router.get('/users/:userId', isAdmin, async (req: Request, res: Response) => {
+  // Validate userId param (convert to int, check NaN)
+  const userIdInt = parseInt(req.params.userId, 10);
+  if (isNaN(userIdInt)) {
+    return res.status(400).json({ message: 'Invalid user ID' });
+  }
+
+  try {
+    // Fetch user details with their order history
+    const userDetails = await prisma.user.findUnique({
+      where: { id: userIdInt },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+        orders: { // Include related orders
+          select: {
+            id: true,
+            status: true,
+            totalAmount: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+        // Do NOT select passwordHash or reset tokens!
+      }
+    });
+
+    if (!userDetails) {
+      return res.status(404).json({ message: `User with ID ${userIdInt} not found.` });
+    }
+    
+    res.status(200).json(userDetails);
+  } catch (error) {
+    console.error(`Error fetching user ${userIdInt} details:`, error);
+    res.status(500).json({ message: 'An error occurred while fetching user details' });
+  }
+});
+
 // Simple test route to verify the admin routes are accessible
 router.get('/test', (req: Request, res: Response) => {
   console.log('GET /api/admin/test route hit');
@@ -1291,6 +1381,13 @@ const prisma = new PrismaClient();
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'hybrid_ecommerce_secret_key_for_development_only';
 const SALT_ROUNDS = 10;
+
+// Zod schema for registration
+const registerSchema = z.object({
+  email: z.string().email({ message: "Invalid email format" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
+  name: z.string().optional()
+});
 
 // Zod schema for password reset request
 const requestResetSchema = z.object({
@@ -1320,26 +1417,17 @@ const changePasswordSchema = z.object({
 // POST /api/auth/register - Register new user
 router.post('/register', (async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    
-    // Basic validation
-    if (!email || !password) {
-      res.status(400).json({ message: 'Email and password are required' });
+    // Validate request body
+    const validationResult = registerSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: validationResult.error.flatten().fieldErrors 
+      });
       return;
     }
     
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      res.status(400).json({ message: 'Invalid email format' });
-      return;
-    }
-    
-    // Validate password length
-    if (password.length < 6) {
-      res.status(400).json({ message: 'Password must be at least 6 characters long' });
-      return;
-    }
+    const { email, password, name } = validationResult.data;
     
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -1358,7 +1446,8 @@ router.post('/register', (async (req: Request, res: Response) => {
     const newUser = await prisma.user.create({
       data: {
         email,
-        passwordHash: passwordHash
+        passwordHash,
+        name // Include name if provided
       }
     });
     
@@ -1386,7 +1475,13 @@ router.post('/login', (async (req: Request, res: Response) => {
     
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true
+      }
     });
     
     if (!user) {
@@ -1405,7 +1500,11 @@ router.post('/login', (async (req: Request, res: Response) => {
     
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { 
+        userId: user.id, 
+        email: user.email,
+        name: user.name || undefined // Include name in token if it exists
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -1613,14 +1712,33 @@ router.get('/me', isUser, (async (req: Request, res: Response) => {
     return;
   }
 
-  // Return only necessary, non-sensitive info from the token payload
-  const userInfo = {
-    id: req.user.userId,
-    email: req.user.email
-    // Add other safe fields from token if needed later (e.g., name if added to token)
-  };
+  const userId = req.user.userId;
+  if (!userId) {
+    res.status(400).json({ message: 'User ID not found in token' });
+    return;
+  }
 
-  res.status(200).json(userInfo);
+  try {
+    // Fetch user details from database
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
 }) as RequestHandler);
 
 // GET /api/auth/validate-token - Validate token and get user info
@@ -2671,6 +2789,7 @@ const productSchema = z.object({
   price: z.number().positive({ message: "Price must be a positive number" }),
   description: z.string().optional(),
   stock: z.number().int().min(0, { message: "Stock cannot be negative" }).optional(),
+  costPrice: z.number().positive({ message: "Cost Price must be a positive number" }).optional().nullable(),
   imageUrl: z.string().url({ message: "Invalid image URL" }).optional().or(z.literal('')), // Allow empty string
   categoryId: z.number().int().positive().optional().nullable(), // Allow null or positive int
 });
@@ -2687,13 +2806,24 @@ const adjustStockSchema = z.object({
 router.get('/', isAdmin, async (req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        costPrice: true,
+        description: true,
+        imageUrl: true,
+        stock: true,
         category: {
           select: {
-            id: true, // Include category ID
+            id: true,
             name: true
           }
-        }
+        },
+        createdAt: true,
+        updatedAt: true,
+        reviewCount: true,
+        averageRating: true
       },
       orderBy: {
         id: 'desc' // Or name: 'asc' etc.
@@ -2720,12 +2850,13 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare data, ensuring optional fields are handled correctly
-  const { categoryId, stock, imageUrl, description, ...restData } = validationResult.data;
+  const { categoryId, stock, imageUrl, description, costPrice, ...restData } = validationResult.data;
   const productData: Prisma.ProductCreateInput = {
       ...restData,
       description: description || null, // Set to null if undefined/empty
       imageUrl: imageUrl || null, // Set to null if undefined/empty
       stock: stock ?? 0, // Default stock to 0 if not provided
+      costPrice: costPrice ?? null, // Set to null if undefined/null
       // Connect to category only if categoryId is provided and valid
       ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
   };
@@ -2783,13 +2914,18 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare update data carefully
-  const { categoryId, ...restData } = validationResult.data;
+  const { categoryId, costPrice, ...restData } = validationResult.data;
   const updateData: Prisma.ProductUpdateInput = { ...restData };
 
   // Handle optional fields explicitly setting null if empty string passed
   if ('description' in updateData) updateData.description = updateData.description || null;
   if ('imageUrl' in updateData) updateData.imageUrl = updateData.imageUrl || null;
   if ('stock' in updateData && updateData.stock === undefined) delete updateData.stock; // Don't update stock if undefined
+  
+  // Handle costPrice explicitly
+  if (costPrice !== undefined) {
+    updateData.costPrice = costPrice ?? null; // Allow setting costPrice to null
+  }
 
   // Handle category connection/disconnection
   if (categoryId !== undefined) { // Check if categoryId was provided in the update request
@@ -3081,6 +3217,7 @@ router.get('/:productId', async (req: Request, res: Response) => {
         id: true,
         name: true,
         price: true,
+        costPrice: true,
         description: true,
         imageUrl: true,
         stock: true,
@@ -3756,6 +3893,91 @@ export default router;
 ```
 
 ---
+### File: `packages/backend/src/routes/userRoutes.ts`
+
+```typescript
+import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
+import { isUser } from '../middleware/authMiddleware';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// Zod schema for updating user profile
+const updateProfileSchema = z.object({
+    name: z.string().min(1).optional(), // Allow updating name
+    // Add other editable fields later if needed
+});
+
+/**
+ * PUT /api/users/me - Update authenticated user's profile
+ * Protected route - requires valid JWT token
+ */
+router.put('/me', isUser, async (req: Request, res: Response) => {
+    // Get user ID from token (isUser middleware adds user to req)
+    if (!req.user || !req.user.userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+    }
+    
+    const userId = req.user.userId;
+    
+    try {
+        // Validate request body
+        const validationResult = updateProfileSchema.safeParse(req.body);
+        if (!validationResult.success) {
+            return res.status(400).json({
+                message: 'Validation failed',
+                errors: validationResult.error.flatten().fieldErrors
+            });
+        }
+        
+        const { name } = validationResult.data;
+        
+        // Prepare update data (only include fields that are present in the request)
+        const updateData: { name?: string } = {};
+        if (name !== undefined) {
+            updateData.name = name;
+        }
+        
+        // Check if there's anything to update
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: 'No valid fields to update' });
+        }
+        
+        // Update user in database
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                createdAt: true
+            }
+        });
+        
+        // Return updated user profile
+        return res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        
+        // Check for Prisma errors
+        if (error instanceof Error) {
+            // Handle common Prisma errors
+            if (error.message.includes('Record to update not found')) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+        }
+        
+        return res.status(500).json({ message: 'An internal server error occurred' });
+    }
+});
+
+export default router;
+```
+
+---
 ### File: `packages/backend/src/routes/wishlistRoutes.ts`
 
 ```typescript
@@ -3965,23 +4187,13 @@ import ResetPasswordPage from './pages/ResetPasswordPage'; // Import the new pag
 import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage'; // Import the new page
 import ProfilePage from './pages/ProfilePage'; // Import the profile page
 import WishlistPage from './pages/WishlistPage'; // Import the wishlist page
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import { WishlistProvider } from './context/WishlistContext'; // Import WishlistProvider
-import { Toaster } from 'react-hot-toast';
+import { useAuth } from './context/AuthContext';
 // Import other pages as needed
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <Toaster position="bottom-center" />
-            <AppRoutes />
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
+      <AppRoutes />
     </BrowserRouter>
   );
 }
@@ -4043,18 +4255,20 @@ export default App;
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #14B8A6;
-  --primary-rgb: 20, 184, 166;
-  --primary-hover: #119A88; /* Slightly Darker Teal */
-  --primary-active: #0E8171; /* Even Darker Teal */
-  --primary-light: #73E5D7;
-  --primary-bg-subtle: #E6FAF8;
+  --primary: #39FF14; /* Neon Green */
+  --primary-rgb: 57, 255, 20;
+  --primary-hover: #32E012; /* Slightly Darker */
+  --primary-active: #2BC210; /* Even Darker */
+  --primary-light: #7CFF5E;
+  --primary-bg-subtle: #E9FFDF;
+  --primary-text-on: #000000; /* Black text for contrast on neon green */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #64748B; /* Neutral 500 */
-  --secondary-rgb: 100, 116, 139;
-  --secondary-hover: #475569; /* Neutral 600 */
-  --secondary-active: #334155; /* Neutral 700 */
+  --secondary-color: #343A40; /* Dark Gray */
+  --secondary-rgb: 52, 58, 64;
+  --secondary-hover: #23272B; /* Neutral 600 */
+  --secondary-active: #1D2124; /* Neutral 700 */
+  --secondary-text-on: #FFFFFF; /* White text on dark background */
   --light-bg: #F8FAFC; /* Neutral 50 */
   --subtle-border: #E2E8F0; /* Neutral 200 */
   --text-muted: #64748B; /* Neutral 500 */
@@ -4094,6 +4308,10 @@ export default App;
   --info-active: #1D4ED8;
 
   /* Bootstrap Variables */
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: var(--primary-rgb);
+  --bs-secondary: var(--secondary-color);
+  --bs-secondary-rgb: var(--secondary-rgb);
   --bs-link-color-rgb: var(--primary-rgb);
   --bs-link-hover-color-rgb: var(--primary-rgb); /* Handled via filter below */
 
@@ -4205,9 +4423,10 @@ th {
   --bs-btn-active-border-color: var(--primary-active);
   --bs-btn-disabled-bg: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
-  --bs-btn-color: white;
-  --bs-btn-hover-color: white;
-  --bs-btn-active-color: white;
+  --bs-btn-color: var(--primary-text-on);
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-disabled-color: var(--primary-text-on);
 }
 
 .btn-secondary {
@@ -4217,9 +4436,10 @@ th {
   --bs-btn-hover-border-color: var(--secondary-hover);
   --bs-btn-active-bg: var(--secondary-active);
   --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-color: white;
-  --bs-btn-hover-color: white;
-  --bs-btn-active-color: white;
+  --bs-btn-color: var(--secondary-text-on);
+  --bs-btn-hover-color: var(--secondary-text-on);
+  --bs-btn-active-color: var(--secondary-text-on);
+  --bs-btn-disabled-color: var(--secondary-text-on);
 }
 
 .btn-outline-primary {
@@ -4227,10 +4447,10 @@ th {
   --bs-btn-border-color: var(--primary);
   --bs-btn-hover-bg: var(--primary);
   --bs-btn-hover-border-color: var(--primary);
-  --bs-btn-hover-color: white;
+  --bs-btn-hover-color: var(--primary-text-on);
   --bs-btn-active-bg: var(--primary-active);
   --bs-btn-active-border-color: var(--primary-active);
-  --bs-btn-active-color: white;
+  --bs-btn-active-color: var(--primary-text-on);
   --bs-btn-disabled-color: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
 }
@@ -4240,10 +4460,10 @@ th {
   --bs-btn-border-color: var(--secondary-color);
   --bs-btn-hover-bg: var(--secondary-color);
   --bs-btn-hover-border-color: var(--secondary-color);
-  --bs-btn-hover-color: white;
+  --bs-btn-hover-color: var(--secondary-text-on);
   --bs-btn-active-bg: var(--secondary-active);
   --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-active-color: white;
+  --bs-btn-active-color: var(--secondary-text-on);
   --bs-btn-disabled-color: var(--secondary-color);
   --bs-btn-disabled-border-color: var(--secondary-color);
 }
@@ -4422,49 +4642,59 @@ th {
 /* Backgrounds */
 .bg-primary {
   background-color: var(--primary) !important;
+  color: var(--primary-text-on) !important;
 }
 
 .bg-secondary {
-  background-color: var(--neutral-500) !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-on) !important;
 }
 
 .bg-success {
   background-color: var(--success) !important;
+  color: #fff !important;
 }
 
 .bg-danger {
   background-color: var(--danger) !important;
+  color: #fff !important;
 }
 
 .bg-warning {
   background-color: var(--warning) !important;
+  color: #212529 !important;
 }
 
 .bg-info {
   background-color: var(--info) !important;
+  color: #fff !important;
 }
 
 .bg-light {
-  background-color: var(--neutral-50) !important;
+  background-color: var(--neutral-100) !important;
 }
 
 .bg-dark {
   background-color: var(--neutral-900) !important;
+  color: #fff !important;
 }
 
 /* Badges */
 .badge {
   font-weight: var(--font-weight-medium);
+  border-radius: 0.25rem;
   padding: 0.35em 0.65em;
-  border-radius: 0.375rem;
+  font-size: 0.75em;
 }
 
 .badge.bg-primary {
   background-color: var(--primary) !important;
+  color: var(--primary-text-on) !important;
 }
 
 .badge.bg-secondary {
-  background-color: var(--neutral-500) !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-on) !important;
 }
 
 .badge.bg-success {
@@ -4477,6 +4707,7 @@ th {
 
 .badge.bg-warning {
   background-color: var(--warning) !important;
+  color: #212529;
 }
 
 .badge.bg-info {
@@ -4823,14 +5054,17 @@ import App from './App.tsx'
 import './index.css' // Your custom CSS (optional overrides)
 import { AuthProvider } from './context/AuthContext'; // Import
 import { CartProvider } from './context/CartContext'; // Import
+import { WishlistProvider } from './context/WishlistContext'; // Import
 import { Toaster } from 'react-hot-toast';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider> {/* Wrap App */}
       <CartProvider> {/* Wrap App */}
-        <Toaster position="top-right" />
-        <App />
+        <WishlistProvider> {/* Wrap App */}
+          <Toaster position="bottom-center" />
+          <App />
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   </React.StrictMode>,
@@ -4878,7 +5112,7 @@ const Layout = () => {
 
   return (
     <div className="app-wrapper d-flex flex-column min-vh-100">
-      <Navbar bg="white" expand={false} fixed="top" className="shadow-sm py-2 border-bottom">
+      <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-2 border-bottom">
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none">
             <FaStore className="me-2 text-primary" size={22} />
@@ -4888,7 +5122,7 @@ const Layout = () => {
           <div className="d-flex align-items-center">
             {isAuthenticated && (
               <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none">
-                <FaHeart size={20} className="text-danger" />
+                <FaHeart size={20} className="text-secondary" />
                 {wishlistCount > 0 && (
                   <Badge pill bg="primary" className="position-absolute top-0 start-100 translate-middle badge-sm">
                     {wishlistCount}
@@ -4897,7 +5131,7 @@ const Layout = () => {
               </Link>
             )}
             <Link to="/cart" className="position-relative me-3 d-flex align-items-center text-decoration-none">
-              <FaShoppingCart size={20} className="text-primary" />
+              <FaShoppingCart size={20} className="text-secondary" />
               {itemCount > 0 && (
                 <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle badge-sm">
                   {itemCount}
@@ -4920,40 +5154,40 @@ const Layout = () => {
           >
             <Offcanvas.Header closeButton className="border-bottom">
               <Offcanvas.Title id="offcanvasNavbarLabel-expand-false" className="fw-bold d-flex align-items-center">
-                <FaStore className="me-2 text-primary" />
+                <FaStore className="me-2 text-secondary" />
                 Menu
               </Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body>
               <Nav className="justify-content-end flex-grow-1">
                 <Nav.Link as={Link} to="/" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
-                  <FaHome className="me-2 text-primary" /> Home
+                  <FaHome className="me-2 text-secondary" /> Home
                 </Nav.Link>
                 <Nav.Link as={Link} to="/cart" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative">
-                  <FaShoppingCart className="me-2 text-primary" /> Cart 
+                  <FaShoppingCart className="me-2 text-secondary" /> Cart 
                   {itemCount > 0 && <Badge pill bg="danger" className="ms-2">{itemCount}</Badge>}
                 </Nav.Link>
                 
                 {isAuthenticated ? (
                   <>
                     <Nav.Link as={Link} to="/wishlist" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative">
-                      <FaHeart className="me-2 text-danger" /> My Wishlist
+                      <FaHeart className="me-2 text-secondary" /> My Wishlist
                       {wishlistCount > 0 && <Badge pill bg="primary" className="ms-2">{wishlistCount}</Badge>}
                     </Nav.Link>
                     <Nav.Link as={Link} to="/profile" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
-                      <FaUser className="me-2 text-primary" /> My Profile
+                      <FaUser className="me-2 text-secondary" /> My Profile
                     </Nav.Link>
                     <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
-                      <FaList className="me-2 text-primary" /> My Orders
+                      <FaList className="me-2 text-secondary" /> My Orders
                     </Nav.Link>
-                    <Nav.Link onClick={handleLogout} style={{ cursor: 'pointer' }} className="py-3 border-bottom d-flex align-items-center">
-                      <FaSignOutAlt className="me-2 text-danger" /> Logout
-                    </Nav.Link>
+                    <Button variant="link" onClick={handleLogout} className="py-3 border-bottom d-flex align-items-center w-100 text-danger text-decoration-none">
+                      <FaSignOutAlt className="me-2" /> Logout
+                    </Button>
                   </>
                 ) : (
                   <>
                     <Nav.Link as={Link} to="/login" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
-                      <FaUser className="me-2 text-primary" /> Login / Register
+                      <FaUser className="me-2 text-secondary" /> Login / Register
                     </Nav.Link>
                   </>
                 )}
@@ -4967,42 +5201,42 @@ const Layout = () => {
         <Outlet />
       </main>
       
-      <footer className="footer bg-dark text-white py-5 mt-5">
+      <footer className="footer bg-dark text-white py-3 mt-4">
         <Container>
-          <Row className="gy-4">
-            <Col md={4} className="mb-4 mb-md-0">
-              <div className="d-flex align-items-center mb-3">
-                <FaStore className="me-2 text-primary" size={24} />
+          <Row className="gy-3">
+            <Col md={4} className="mb-3 mb-md-0">
+              <div className="d-flex align-items-center mb-2">
+                <FaStore className="me-2 text-primary" size={22} />
                 <h5 className="fw-bold mb-0">
                   <span style={{ color: 'var(--primary)' }}>Hybrid</span>Store
                 </h5>
               </div>
-              <p className="text-light">Your one-stop destination for quality products with convenient pickup and delivery options.</p>
+              <p className="text-light small">Your one-stop destination for quality products with convenient pickup and delivery options.</p>
             </Col>
-            <Col md={2} className="mb-4 mb-md-0 d-none d-md-block">
-              <h6 className="fw-semibold mb-3">Shop</h6>
+            <Col md={2} className="mb-3 mb-md-0 d-none d-md-block">
+              <h6 className="fw-semibold mb-2">Shop</h6>
               <ul className="list-unstyled">
-                <li className="mb-2"><Link to="/" className="text-decoration-none text-light">Products</Link></li>
-                <li className="mb-2"><Link to="/cart" className="text-decoration-none text-light">Cart</Link></li>
+                <li className="mb-1"><Link to="/" className="text-decoration-none text-light small">Products</Link></li>
+                <li className="mb-1"><Link to="/cart" className="text-decoration-none text-light small">Cart</Link></li>
               </ul>
             </Col>
-            <Col md={2} className="mb-4 mb-md-0 d-none d-md-block">
-              <h6 className="fw-semibold mb-3">Account</h6>
+            <Col md={2} className="mb-3 mb-md-0 d-none d-md-block">
+              <h6 className="fw-semibold mb-2">Account</h6>
               <ul className="list-unstyled">
-                <li className="mb-2"><Link to="/profile" className="text-decoration-none text-light">My Profile</Link></li>
-                <li className="mb-2"><Link to="/orders" className="text-decoration-none text-light">Orders</Link></li>
+                <li className="mb-1"><Link to="/profile" className="text-decoration-none text-light small">My Profile</Link></li>
+                <li className="mb-1"><Link to="/orders" className="text-decoration-none text-light small">Orders</Link></li>
               </ul>
             </Col>
             <Col md={4} className="d-none d-md-block">
-              <h6 className="fw-semibold mb-3">Contact</h6>
-              <p className="mb-1 text-light">Email: support@hybridstore.com</p>
-              <p className="mb-1 text-light">Phone: (123) 456-7890</p>
-              <p className="mb-1 text-light">Address: 123 Commerce St, Business City</p>
+              <h6 className="fw-semibold mb-2">Contact</h6>
+              <p className="mb-1 text-light small">Email: support@hybridstore.com</p>
+              <p className="mb-1 text-light small">Phone: (123) 456-7890</p>
+              <p className="mb-1 text-light small">Address: 123 Commerce St, Business City</p>
             </Col>
           </Row>
-          <hr className="my-4 border-light" />
+          <hr className="my-3 border-light" />
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <p className="mb-2 mb-md-0 text-light small text-center text-md-start">© {new Date().getFullYear()} Hybrid Store. All rights reserved.</p>
+            <p className="mb-0 text-light small text-center text-md-start">© {new Date().getFullYear()} Hybrid Store. All rights reserved.</p>
             <div className="d-none d-md-flex gap-2">
               <Button variant="outline-light" size="sm">Terms of Service</Button>
               <Button variant="outline-light" size="sm">Privacy Policy</Button>
@@ -5217,7 +5451,6 @@ interface CartItem extends Product {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product) => Promise<void>;
   addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
   updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
@@ -5284,31 +5517,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         toast.error("Your session has expired. Please log in again.");
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Add an item to cart (with quantity 1)
-  const addToCart = async (product: Product): Promise<void> => {
-    try {
-      await addOrUpdateItemQuantity(product.id, 1);
-    } catch (err) {
-      console.error("Error adding product to cart:", err);
-      let errorMsg = "Failed to add item to cart.";
-      
-      if (axios.isAxiosError(err) && err.response) {
-        console.log('API Error details:', {
-          status: err.response?.status,
-          data: err.response?.data,
-          message: err.message
-        });
-        
-        errorMsg = err.response.data.message || errorMsg;
-      }
-      
-      toast.error(errorMsg);
-      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -5475,7 +5683,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addToCart, 
       addOrUpdateItemQuantity,
       updateCartItemQuantity: addOrUpdateItemQuantity,
       removeFromCart, 
@@ -6280,6 +6487,9 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck } from 'react-icons/fa';
+import api from '../utils/api';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
 
 // Interfaces based on expected API response for GET /api/orders/:id
 interface OrderItem {
@@ -6310,32 +6520,6 @@ interface CustomerOrder {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-// Helper functions (consider moving to utils)
-const formatDateTime = (isoString: string) => {
-  if (!isoString) return 'N/A';
-  try {
-    return new Date(isoString).toLocaleString();
-  } catch (e) {
-    return 'Invalid Date';
-  }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-const getStatusBadgeVariant = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'pending verification': return 'warning';
-    case 'verified': return 'info';
-    case 'processing': return 'primary';
-    case 'shipped': return 'secondary';
-    case 'delivered': return 'success';
-    case 'cancelled': case 'failed verification': return 'danger';
-    default: return 'light';
-  }
-};
 
 const CustomerOrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -6498,7 +6682,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
@@ -6534,8 +6717,7 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const { addToCart } = useCart(); // Get addToCart function from context
-  const { wishlistItems, addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+  const { wishlistItems, isWishlisted, addToWishlist, removeFromWishlist } = useWishlist();
   
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -6635,11 +6817,6 @@ const HomePage = () => {
 
     fetchCategories();
   }, []);
-
-  const handleAddToCart = (product: Product) => {
-    addToCart(product);
-    toast.success(`${product.name} added to cart!`);
-  };
 
   const handleToggleWishlist = (e: React.MouseEvent, product: Product) => {
     e.preventDefault(); // Prevent navigation to product detail
@@ -7113,6 +7290,8 @@ import { Container, Alert, Spinner, Badge, Card, Row, Col, Button } from 'react-
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
+import api from '../utils/api';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
 
 interface UserOrder {
   id: number; 
@@ -7122,42 +7301,6 @@ interface UserOrder {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-// Simple helper functions (can be moved to a utils file later)
-const formatDateTime = (isoString: string) => {
-  if (!isoString) return 'N/A';
-  try {
-    return new Date(isoString).toLocaleString();
-  } catch (e) {
-    console.error("Error formatting date:", e);
-    return 'Invalid Date';
-  }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount);
-};
-
-const getStatusBadgeVariant = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'pending verification':
-      return 'warning';
-    case 'verified':
-      return 'info';
-    case 'processing':
-      return 'primary';
-    case 'shipped':
-      return 'secondary';
-    case 'delivered':
-      return 'success';
-    case 'cancelled':
-      return 'danger';
-    case 'failed verification':
-      return 'danger';
-    default:
-      return 'light';
-  }
-};
 
 const OrderHistoryPage = () => {
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -7302,7 +7445,7 @@ export default OrderHistoryPage;
 ### File: `packages/customer-frontend/src/pages/OrderSuccessPage.tsx`
 
 ```tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Container, Card, Alert, Spinner } from 'react-bootstrap';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -7334,6 +7477,9 @@ interface Order {
   };
 }
 
+const MAX_RETRIES = 5; // Max number of retry attempts
+const RETRY_DELAY_MS = 10000; // 10 seconds
+
 const OrderSuccessPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { token } = useAuth();
@@ -7343,6 +7489,8 @@ const OrderSuccessPage = () => {
   const [verificationNumber, setVerificationNumber] = useState<string | null>(null);
   const [numberLoading, setNumberLoading] = useState(true);
   const [numberError, setNumberError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
   
   const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -7375,21 +7523,30 @@ const OrderSuccessPage = () => {
     }
   };
 
-  const fetchVerificationNumber = async () => {
-    if (!orderId) {
+  const fetchVerificationNumber = async (currentRetry = 0) => { // Pass currentRetry
+    if (!orderId || !token) {
       setNumberError('Order ID is missing');
       setNumberLoading(false);
       return;
     }
     
-    if (!token) {
-      setNumberError('Authentication error. Cannot fetch details.');
-      setNumberLoading(false);
-      return;
+    // Clear previous specific number error *if* retrying
+    if (currentRetry > 0) {
+      setNumberError(null);
+    } else {
+      // Only set loading true on the first attempt
+      setNumberLoading(true);
+      setNumberError(null);
+      setRetryCount(0); // Reset retry count on initial call
     }
     
-    setNumberLoading(true);
-    setNumberError(null);
+    // Clear previous timeout if any
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    console.log(`Attempt ${currentRetry + 1} to fetch verification number for order ${orderId}...`);
     
     try {
       const response = await axios.get(
@@ -7403,46 +7560,84 @@ const OrderSuccessPage = () => {
       
       if (response.data && response.data.verificationPhoneNumber) {
         setVerificationNumber(response.data.verificationPhoneNumber);
+        setNumberError(null); // Clear any previous retry messages
+        setNumberLoading(false); // Success, stop loading
+        console.log("Verification number retrieved successfully.");
       } else {
-        setNumberError('Could not retrieve verification number.');
+        // Should not happen if backend sends correct data on 200
+        setNumberError("Could not retrieve verification number (invalid response).");
+        setNumberLoading(false);
       }
     } catch (err) {
-      console.error('Error fetching verification number:', err);
-      let errMsg = 'Failed to get verification number.';
+      console.error(`Attempt ${currentRetry + 1} failed:`, err);
+      let errorMsg = "Failed to get verification number.";
+      let canRetry = false;
       
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        const responseMessage = err.response?.data?.message;
-        
-        if (status === 401) {
-          errMsg = 'Authentication error: ' + (responseMessage || 'Unauthorized');
-        } else if (status === 403) {
-          errMsg = 'Access denied: ' + (responseMessage || 'Forbidden');
-        } else if (status === 404) {
-          errMsg = 'Order not found or no number available';
-        } else if (status === 409) {
-          errMsg = 'Conflict: ' + (responseMessage || 'Number could not be assigned');
-        } else if (status === 503) {
-          errMsg = 'Verification service unavailable. Please try again later.';
-        } else {
-          errMsg = responseMessage || 'Unknown error occurred';
+      if (axios.isAxiosError(err) && err.response) {
+        // --- Check for specific "No lines available" error ---
+        // Option A: Check status code (if backend returns 503 specifically for this)
+        if (err.response.status === 503) {
+          canRetry = true;
+          errorMsg = `No verification lines currently available. Retrying in ${RETRY_DELAY_MS / 1000}s... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
         }
+        // Option B: Check specific message (if backend returns consistent message)
+        // else if (err.response.data?.message?.includes("No verification phone lines")) {
+        //     canRetry = true;
+        //     errorMsg = `No lines available, retrying... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
+        // }
+        else {
+          // Handle other errors (401, 404, 500 etc.) - Do not retry these
+          errorMsg = err.response.data?.message || `Error: ${err.response.status}`;
+          if (err.response.status === 401) errorMsg = "Authentication error.";
+          if (err.response.status === 404) errorMsg = "Order details not found for number assignment.";
+        }
+      } else {
+        // Network error - Maybe allow retry? Or maybe not? Let's not retry network errors for now.
+        errorMsg = "Network error while fetching number.";
       }
       
-      setNumberError(errMsg);
-    } finally {
-      setNumberLoading(false);
+      // --- Handle Retry Logic ---
+      if (canRetry && currentRetry < MAX_RETRIES) {
+        setRetryCount(currentRetry + 1);
+        setNumberError(errorMsg); // Show temporary retry message
+        // Set timeout for next retry
+        timeoutRef.current = setTimeout(() => {
+          fetchVerificationNumber(currentRetry + 1);
+        }, RETRY_DELAY_MS);
+        // Keep numberLoading as true while retrying
+        setNumberLoading(true);
+      } else {
+        // Max retries reached or non-retryable error
+        if (canRetry) { // If it failed after max retries
+          setNumberError(`Still no lines available after ${MAX_RETRIES + 1} attempts. Please contact support.`);
+        } else { // Other error
+          setNumberError(errorMsg);
+        }
+        setNumberLoading(false); // Stop loading on final failure
+      }
     }
+    // Removed finally block - loading state is handled within try/catch now
   };
 
   useEffect(() => {
     fetchOrderDetails();
+    
+    // Clear previous timeouts when component unmounts or dependencies change
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [orderId, token, API_BASE_URL]);
 
   useEffect(() => {
     if (orderId && token) {
-      fetchVerificationNumber();
+      fetchVerificationNumber(0); // Start initial fetch (attempt 0)
+    } else if (!token) {
+      setNumberError("Authentication error. Cannot fetch details.");
+      setNumberLoading(false);
     }
+    // Dependency array remains [orderId, token] - fetch runs when these change
   }, [orderId, token, API_BASE_URL]);
 
   if (loading) {
@@ -7494,42 +7689,6 @@ const OrderSuccessPage = () => {
         <p>Your Order ID is: <strong>{orderId}</strong></p>
       </div>
 
-      {numberLoading && (
-        <div className="text-center mb-4">
-          <Spinner animation="border" size="sm" className="me-2" />
-          <span>Retrieving verification information...</span>
-        </div>
-      )}
-
-      {numberError && (
-        <Alert variant="danger" className="mb-4">
-          {numberError}
-        </Alert>
-      )}
-
-      {!numberLoading && !numberError && verificationNumber && (
-        <Card bg="warning" text="dark" className="text-center my-4">
-          <Card.Body>
-            <Card.Title>ACTION REQUIRED: Verify Your Order</Card.Title>
-            <Card.Text>
-              To complete your order, please call the following number immediately for verification:
-            </Card.Text>
-            <h3 className="display-6 my-3">
-              <a href={`tel:${verificationNumber}`}>{verificationNumber}</a>
-            </h3>
-            <Card.Text>
-              <small>Failure to call may result in order cancellation.</small>
-            </Card.Text>
-          </Card.Body>
-        </Card>
-      )}
-
-      {!numberLoading && !numberError && !verificationNumber && (
-        <Alert variant="warning" className="mb-4">
-          Could not retrieve the verification phone number. Please contact support with your Order ID: {orderId}.
-        </Alert>
-      )}
-
       <Card className="mb-4">
         <Card.Header as="h5">Order Summary</Card.Header>
         <Card.Body>
@@ -7545,6 +7704,49 @@ const OrderSuccessPage = () => {
           <div className="mb-3">
             <strong>Total Amount:</strong> €{order.totalAmount.toFixed(2)}
           </div>
+        </Card.Body>
+      </Card>
+
+      {/* --- Verification Number Section --- */}
+      <Card bg="light" className="text-center my-4 shadow-sm">
+        <Card.Header as="h5">Order Verification</Card.Header>
+        <Card.Body>
+          {numberLoading && (
+            <div>
+              <Spinner animation="border" size="sm" className="me-2" />
+              <span>Checking verification line availability...</span>
+              {/* Display retry message if applicable */}
+              {retryCount > 0 && <p className="text-muted small mt-2">{numberError}</p>}
+            </div>
+          )}
+
+          {!numberLoading && numberError && (
+            <Alert variant={retryCount >= MAX_RETRIES ? "danger" : "warning"}>
+              {numberError}
+            </Alert>
+          )}
+
+          {!numberLoading && !numberError && verificationNumber && (
+            // Display only on final success
+            <>
+              <Card.Title className="text-danger">ACTION REQUIRED</Card.Title>
+              <Card.Text>
+                To complete your order, please call the following number immediately for verification:
+              </Card.Text>
+              <h3 className="display-6 my-3">
+                <a href={`tel:${verificationNumber}`}>{verificationNumber}</a>
+              </h3>
+              <Card.Text>
+                <small className="text-danger">Failure to call may result in order cancellation.</small>
+              </Card.Text>
+            </>
+          )}
+          
+          {!numberLoading && !numberError && !verificationNumber && (
+            <Alert variant="warning">
+              Could not retrieve the verification phone number. Please contact support with your Order ID: {orderId}.
+            </Alert>
+          )}
         </Card.Body>
       </Card>
 
@@ -7617,6 +7819,9 @@ import { useWishlist } from '../context/WishlistContext';
 import toast from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
+import StarRating from '../components/StarRating';
+import api from '../utils/api';
+import { formatCurrency } from '../utils/formatters';
 
 // Define interface for product data matching backend response
 interface Product {
@@ -7683,7 +7888,7 @@ const ProductDetailPage = () => {
   // Hooks
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const { addToCart, cartItems } = useCart();
+  const { addOrUpdateItemQuantity, cartItems } = useCart();
   const { isAuthenticated, token } = useAuth();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   
@@ -7812,7 +8017,7 @@ const ProductDetailPage = () => {
     setIsAddingToCart(true);
     
     try {
-      await addToCart(product);
+      await addOrUpdateItemQuantity(product.id, 1);
       // Success toast is handled by context
     } catch (error) {
       // Error is handled by context
@@ -8305,13 +8510,17 @@ export default ProductDetailPage;
 ```tsx
 import { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Card, Alert, Spinner, Form, Button } from 'react-bootstrap';
+import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { FaUserEdit } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface UserProfile {
   id: number;
   email: string;
+  name?: string | null;
+  createdAt?: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
@@ -8320,6 +8529,12 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Edit profile state
+  const [isEditing, setIsEditing] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -8350,6 +8565,7 @@ const ProfilePage = () => {
         });
         
         setProfile(response.data);
+        setFormName(response.data.name || '');
       } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
@@ -8369,6 +8585,72 @@ const ProfilePage = () => {
 
     fetchProfile();
   }, [token, isAuthenticated, isAuthLoading]);
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // If canceling edit, reset form values to current profile values
+      if (profile) {
+        setFormName(profile.name || '');
+      }
+      setEditError(null);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleProfileUpdate = async (event: FormEvent) => {
+    event.preventDefault();
+    setIsSavingEdit(true);
+    setEditError(null);
+
+    if (!token) {
+      setEditError("You're not logged in. Please login and try again.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    // Only include fields that changed
+    const updateData: { name?: string } = {};
+    if (profile?.name !== formName) {
+      updateData.name = formName;
+    }
+
+    // If nothing to update, show message and return
+    if (Object.keys(updateData).length === 0) {
+      setEditError("No changes to save.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${API_BASE_URL}/users/me`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Update profile with the response data
+      setProfile(response.data);
+      setIsEditing(false);
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setEditError(err.response.data.message || 'Failed to update profile.');
+        console.error('Error updating profile:', err.response.data);
+        toast.error("Failed to update profile");
+      } else {
+        setEditError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+        toast.error("Network error");
+      }
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleChangePassword = async (event: FormEvent) => {
     event.preventDefault();
@@ -8471,13 +8753,86 @@ const ProfilePage = () => {
         <>
           <Card className="mb-4">
             <Card.Body>
-              <Card.Title>Account Information</Card.Title>
-              <Card.Text>
-                <strong>Email:</strong> {profile.email}
-              </Card.Text>
-              <Card.Text>
-                <strong>User ID:</strong> {profile.id}
-              </Card.Text>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <Card.Title>Account Information</Card.Title>
+                {!isEditing && (
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm"
+                    onClick={handleEditToggle}
+                  >
+                    <FaUserEdit className="me-1" /> Edit Profile
+                  </Button>
+                )}
+              </div>
+              
+              {!isEditing ? (
+                <>
+                  <Card.Text>
+                    <strong>Name:</strong> {profile.name || '(Not Set)'}
+                  </Card.Text>
+                  <Card.Text>
+                    <strong>Email:</strong> {profile.email}
+                  </Card.Text>
+                  <Card.Text>
+                    <strong>User ID:</strong> {profile.id}
+                  </Card.Text>
+                  {profile.createdAt && (
+                    <Card.Text>
+                      <strong>Member Since:</strong> {new Date(profile.createdAt).toLocaleDateString()}
+                    </Card.Text>
+                  )}
+                </>
+              ) : (
+                <Form onSubmit={handleProfileUpdate}>
+                  {editError && (
+                    <Alert variant="danger" className="mb-3">
+                      {editError}
+                    </Alert>
+                  )}
+                  
+                  <Form.Group className="mb-3" controlId="formName">
+                    <Form.Label>Name</Form.Label>
+                    <InputGroup>
+                      <Form.Control 
+                        type="text" 
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        placeholder="Enter your name"
+                      />
+                    </InputGroup>
+                  </Form.Group>
+                  
+                  <div className="d-flex gap-2">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={isSavingEdit}
+                    >
+                      {isSavingEdit ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Saving...
+                        </>
+                      ) : 'Save Changes'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      onClick={handleEditToggle}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </Form>
+              )}
             </Card.Body>
           </Card>
           
@@ -8546,6 +8901,17 @@ const ProfilePage = () => {
                   ) : 'Update Password'}
                 </Button>
               </Form>
+            </Card.Body>
+          </Card>
+          
+          <Card className="mb-4">
+            <Card.Body>
+              <Card.Title>My Account</Card.Title>
+              <ListGroup variant="flush">
+                <ListGroup.Item action as={Link} to="/orders">My Orders</ListGroup.Item>
+                <ListGroup.Item action as={Link} to="/wishlist">My Wishlist</ListGroup.Item>
+                {/* Add more account management links later */}
+              </ListGroup>
             </Card.Body>
           </Card>
         </>
@@ -9101,14 +9467,15 @@ const WishlistPage: React.FC = () => {
   };
 
   return (
-    <Container className="py-5">
-      <div className="d-flex align-items-center mb-4">
-        <Link to="/" className="text-decoration-none me-3">
+    <Container className="py-4">
+      <h2 className="mb-4">My Wishlist</h2>
+      
+      <div className="mb-4">
+        <Link to="/" className="text-decoration-none">
           <Button variant="outline-secondary" size="sm">
             <FaChevronLeft className="me-1" /> Back to Shopping
           </Button>
         </Link>
-        <h1>My Wishlist</h1>
       </div>
 
       {isLoading ? (
@@ -9211,18 +9578,57 @@ export default WishlistPage;
 
 ```typescript
 /**
- * Format a number as a currency string with the specified currency symbol
- * @param value The numeric value to format
- * @param currencyCode The currency code (default: USD)
+ * Utility functions for formatting data throughout the application
+ */
+
+/**
+ * Format a date string into a localized date and time string
+ * @param isoString ISO date string to format
+ * @returns Formatted date and time string
+ */
+export const formatDateTime = (dateString: string | Date): string => {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+/**
+ * Format a number as currency (USD)
+ * @param amount Amount to format
  * @returns Formatted currency string
  */
-export const formatCurrency = (value: number, currencyCode = 'USD'): string => {
+export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
+    currency: 'USD',
+  }).format(amount);
+};
+
+/**
+ * Get the appropriate Bootstrap badge variant based on order status
+ * @param status Order status string
+ * @returns Bootstrap variant name
+ */
+export const getStatusBadgeVariant = (status: string): string => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'warning';
+    case 'processing':
+      return 'info';
+    case 'shipped':
+      return 'primary';
+    case 'delivered':
+      return 'success';
+    case 'cancelled':
+      return 'danger';
+    default:
+      return 'secondary';
+  }
 };
 
 /**
@@ -9259,6 +9665,8 @@ import ProductManagementPage from './pages/ProductManagementPage';
 import ZoneManagementPage from './pages/ZoneManagementPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
 import UserManagementPage from './pages/UserManagementPage';
+import UserDetailPage from './pages/UserDetailPage';
+import StatisticsPage from './pages/StatisticsPage';
 import AdminRequestPasswordResetPage from './pages/AdminRequestPasswordResetPage';
 import AdminResetPasswordPage from './pages/AdminResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -9291,6 +9699,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             {/* Nested Admin Pages */}
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="statistics" element={<StatisticsPage />} />
             <Route path="phones" element={<PhoneManagementPage />} />
             <Route path="orders" element={<OrderManagementPage />} />
             <Route path="orders/:orderId" element={<OrderDetailPage />} />
@@ -9298,6 +9707,7 @@ function App() {
             <Route path="categories" element={<CategoryManagementPage />} />
             <Route path="zones" element={<ZoneManagementPage />} />
             <Route path="users" element={<UserManagementPage />} />
+            <Route path="users/:userId" element={<UserDetailPage />} />
           </Route>
         </Route>
 
@@ -9329,15 +9739,20 @@ export default App;
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #14B8A6;
-  --primary-rgb: 20, 184, 166;
-  --primary-dark: #0E9284;
-  --primary-light: #73E5D7;
-  --primary-bg-subtle: #E6FAF8;
+  --primary: #39FF14; /* Neon Green */
+  --primary-rgb: 57, 255, 20;
+  --primary-dark: #32E012; /* Slightly darker */
+  --primary-light: #7CFF5E;
+  --primary-bg-subtle: #E9FFDF;
+  --primary-text-on: #000000; /* Black text for contrast on neon green */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #64748B; /* Neutral 500 */
-  --secondary-color-rgb: 100, 116, 139;
+  --secondary-color: #343A40; /* Dark Gray */
+  --secondary-color-rgb: 52, 58, 64;
+  --secondary-hover: #23272B;
+  --secondary-active: #1D2124;
+  --secondary-text-on: #FFFFFF; /* White text on dark gray */
+  
   --light-bg: #F8FAFC; /* Neutral 50 */
   --subtle-border: #E2E8F0; /* Neutral 200 */
   --text-muted: #64748B; /* Neutral 500 */
@@ -9367,6 +9782,14 @@ export default App;
   --warning: #F59E0B;
   --danger: #EF4444;
   --info: #3B82F6;
+
+  /* Bootstrap variable overrides */
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: var(--primary-rgb);
+  --bs-secondary: var(--secondary-color);
+  --bs-secondary-rgb: var(--secondary-color-rgb);
+  --bs-link-color-rgb: var(--primary-rgb);
+  --bs-link-hover-color-rgb: var(--primary-rgb);
 
   /* Font Settings */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -9454,30 +9877,39 @@ th {
 }
 
 .btn-primary {
+  --bs-btn-color: var(--primary-text-on);
   --bs-btn-bg: var(--primary);
   --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: #0F9D8A;
-  --bs-btn-hover-border-color: #0E9284;
-  --bs-btn-active-bg: #0E9284;
-  --bs-btn-active-border-color: #0C8174;
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-hover-bg: var(--primary-dark);
+  --bs-btn-hover-border-color: var(--primary-dark);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-active-bg: var(--primary-dark);
+  --bs-btn-active-border-color: var(--primary-dark);
+  --bs-btn-disabled-color: var(--primary-text-on);
   --bs-btn-disabled-bg: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
 }
 
 .btn-secondary {
+  --bs-btn-color: var(--secondary-text-on);
   --bs-btn-bg: var(--secondary-color);
   --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-bg: var(--neutral-600);
-  --bs-btn-hover-border-color: var(--neutral-600);
-  --bs-btn-active-bg: var(--neutral-700);
-  --bs-btn-active-border-color: var(--neutral-700);
+  --bs-btn-hover-color: var(--secondary-text-on);
+  --bs-btn-hover-bg: var(--secondary-hover);
+  --bs-btn-hover-border-color: var(--secondary-hover);
+  --bs-btn-active-color: var(--secondary-text-on);
+  --bs-btn-active-bg: var(--secondary-active);
+  --bs-btn-active-border-color: var(--secondary-active);
 }
 
 .btn-outline-secondary {
   --bs-btn-color: var(--secondary-color);
   --bs-btn-border-color: var(--secondary-color);
+  --bs-btn-hover-color: var(--secondary-text-on);
   --bs-btn-hover-bg: var(--secondary-color);
   --bs-btn-hover-border-color: var(--secondary-color);
+  --bs-btn-active-color: var(--secondary-text-on);
   --bs-btn-active-bg: var(--secondary-color);
   --bs-btn-active-border-color: var(--secondary-color);
 }
@@ -9485,30 +9917,46 @@ th {
 .btn-success {
   --bs-btn-bg: var(--success);
   --bs-btn-border-color: var(--success);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-danger {
   --bs-btn-bg: var(--danger);
   --bs-btn-border-color: var(--danger);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-warning {
   --bs-btn-bg: var(--warning);
   --bs-btn-border-color: var(--warning);
+  --bs-btn-color: var(--neutral-900);
+  --bs-btn-hover-color: var(--neutral-900);
+  --bs-btn-active-color: var(--neutral-900);
 }
 
 .btn-info {
   --bs-btn-bg: var(--info);
   --bs-btn-border-color: var(--info);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
 }
 
 .btn-outline-primary {
   --bs-btn-color: var(--primary);
   --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-color: var(--primary-text-on);
   --bs-btn-hover-bg: var(--primary);
   --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-active-color: var(--primary-text-on);
   --bs-btn-active-bg: var(--primary);
   --bs-btn-active-border-color: var(--primary);
+  --bs-btn-disabled-color: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary);
 }
 
 .btn-link {
@@ -9822,6 +10270,17 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'leaflet/dist/leaflet.css'; // Required for Leaflet map components
 import 'leaflet-draw/dist/leaflet.draw.css'; // Import leaflet-draw CSS
 import './index.css'
+
+import L, { Icon } from 'leaflet'; // Import Icon
+
+// Fix potentially broken default Leaflet icons
+delete (Icon.Default.prototype as any)._getIconUrl;
+Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 import App from './App.tsx'
 import { Toaster } from 'react-hot-toast'
 
@@ -9858,7 +10317,7 @@ declare module '*.gif';
 import React from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
-import { FiHome, FiSmartphone, FiShoppingCart, FiBox, FiTag, FiMap, FiUsers, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiSmartphone, FiShoppingCart, FiBox, FiTag, FiMap, FiUsers, FiLogOut, FiBarChart2 } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
 
 const AdminLayout = () => {
@@ -9873,17 +10332,20 @@ const AdminLayout = () => {
 
   return (
     <div className="admin-layout d-flex flex-column min-vh-100">
-      <Navbar bg="primary" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
+      <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
         <Container>
           <Navbar.Brand as={Link} to="dashboard" className="fw-bolder text-decoration-none">
-            <FaStore className="me-2" size={22} />
-            <span style={{ fontWeight: 'bold' }}>Hybrid</span>Store Admin
+            <FaStore className="me-2 text-primary" size={22} />
+            <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Hybrid</span>Store Admin
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link as={Link} to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2">
                 <FiHome size={16} /> Dashboard
+              </Nav.Link>
+              <Nav.Link as={Link} to="statistics" className="px-3 py-2 d-flex align-items-center gap-2">
+                <FiBarChart2 size={16} /> Statistics
               </Nav.Link>
               <Nav.Link as={Link} to="phones" className="px-3 py-2 d-flex align-items-center gap-2">
                 <FiSmartphone size={16} /> Phones
@@ -9905,7 +10367,7 @@ const AdminLayout = () => {
               </Nav.Link>
             </Nav>
             <Button 
-              variant="outline-light" 
+              variant="outline-primary" 
               size="sm" 
               onClick={handleLogout} 
               className="px-3 d-flex align-items-center gap-2"
@@ -10734,51 +11196,13 @@ export default CategoryManagementPage;
 ### File: `packages/admin-frontend/src/pages/DashboardPage.tsx`
 
 ```tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge, Form } from 'react-bootstrap';
-import { FaUsers, FaShoppingCart, FaBox, FaDollarSign, FaCalendarAlt } from 'react-icons/fa';
+import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { format, parseISO, subDays, subMonths } from 'date-fns';
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
 
 interface AdminStats {
-  totalOrders: number;
-  totalProducts: number;
-  totalUsers: number;
-  pendingOrders: number;
-  verifiedOrders: number;
-  processingOrders: number;
-  shippedOrders: number;
-  deliveredOrders: number;
-  cancelledOrders: number;
-  availablePhones: number;
-  totalZones: number;
-  totalRevenue: number;
-  ordersLast7Days: number;
   recentOrders: {
     id: number;
     customerName: string;
@@ -10788,24 +11212,40 @@ interface AdminStats {
   }[];
 }
 
+interface ShippingDetails {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  country: string;
+}
+
+interface AdminOrder {
+  id: number;
+  userId: number;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  shippingDetails: ShippingDetails;
+  customerName: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
 const DashboardPage = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  
-  // Sales chart state
-  const [salesChartData, setSalesChartData] = useState<any>(null);
-  const [salesChartError, setSalesChartError] = useState<string | null>(null);
-  const [isSalesChartLoading, setIsSalesChartLoading] = useState(true);
-  const [timePeriod, setTimePeriod] = useState<string>('30d');
-  
-  // Users chart state
-  const [usersChartData, setUsersChartData] = useState<any>(null);
-  const [usersChartError, setUsersChartError] = useState<string | null>(null);
-  const [isUsersChartLoading, setIsUsersChartLoading] = useState(true);
+
+  // Live order view states
+  const [activeOrders, setActiveOrders] = useState<AdminOrder[]>([]);
+  const [isLoadingActive, setIsLoadingActive] = useState(true);
+  const [activeError, setActiveError] = useState<string | null>(null);
+  const refreshIntervalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -10863,362 +11303,113 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  // Fetch sales data for chart
-  useEffect(() => {
-    const fetchSalesChartData = async () => {
-      setIsSalesChartLoading(true);
-      setSalesChartError(null);
+  const fetchActiveOrders = async () => {
+    setIsLoadingActive(true);
+    setActiveError(null);
+    
+    try {
+      const admin_token = localStorage.getItem('admin_token');
       
-      try {
-        const admin_token = localStorage.getItem('admin_token');
-        
-        if (!admin_token) {
-          setSalesChartError('Authentication token not found.');
-          return;
-        }
+      if (!admin_token) {
+        setActiveError('Authentication token not found. Please log in again.');
+        return;
+      }
 
-        // Calculate date range based on selected period
-        let startDate;
-        const endDate = new Date();
-        
-        switch (timePeriod) {
-          case '7d':
-            startDate = subDays(endDate, 7);
-            break;
-          case '30d':
-            startDate = subDays(endDate, 30);
-            break;
-          case '90d':
-            startDate = subDays(endDate, 90);
-            break;
-          case '6m':
-            startDate = subMonths(endDate, 6);
-            break;
-          default:
-            startDate = subDays(endDate, 30);
+      // Ensure the token is properly formatted
+      const formattedToken = admin_token.startsWith('Bearer ') 
+        ? admin_token 
+        : `Bearer ${admin_token}`;
+      
+      // Fetch orders with Pending Call or Verified status
+      const response = await axios.get(
+        `${API_BASE_URL}/admin/orders?status=Pending+Call&status=Verified`, 
+        {
+          headers: {
+            Authorization: formattedToken
+          }
         }
-        
-        // Format dates for API
-        const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-        const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+      );
+      
+      // Update state with fetched orders
+      if (response.data && Array.isArray(response.data.orders)) {
+        setActiveOrders(response.data.orders);
+      } else {
+        setActiveError('Invalid data format received from server.');
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setActiveError('Your session has expired. Please log in again.');
+        } else if (err.response) {
+          setActiveError(err.response.data.message || 'Failed to fetch active orders');
+          console.error('Error fetching active orders:', err.response.data);
+        } else {
+          setActiveError('Network error. Please check your connection.');
+          console.error('Network error:', err);
+        }
+      } else {
+        setActiveError('An unexpected error occurred.');
+        console.error('Error fetching active orders:', err);
+      }
+    } finally {
+      setIsLoadingActive(false);
+    }
+  };
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
-          ? admin_token 
-          : `Bearer ${admin_token}`;
-        
-        // Fetch sales data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
+  const handleStatusChange = async (orderId: number, newStatus: string) => {
+    try {
+      const admin_token = localStorage.getItem('admin_token');
+      
+      if (!admin_token) {
+        setActiveError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      // Ensure the token is properly formatted
+      const formattedToken = admin_token.startsWith('Bearer ') 
+        ? admin_token 
+        : `Bearer ${admin_token}`;
+      
+      // Update the order status
+      await axios.put(
+        `${API_BASE_URL}/admin/orders/${orderId}/status`,
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: formattedToken,
+            'Content-Type': 'application/json'
           }
-        );
-        
-        // Transform the data for chartjs
-        if (response.data && Array.isArray(response.data)) {
-          const labels = response.data.map(item => format(parseISO(item.date), 'MMM dd'));
-          const salesValues = response.data.map(item => item.totalSales || 0);
-          
-          setSalesChartData({
-            labels,
-            datasets: [
-              {
-                label: 'Total Sales (€)',
-                data: salesValues,
-                borderColor: 'rgba(25, 135, 84, 1)', // success green
-                backgroundColor: 'rgba(25, 135, 84, 0.2)',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true,
-              }
-            ]
-          });
-        } else {
-          setSalesChartError('Invalid data format received from server.');
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
-            setSalesChartError('Your session has expired.');
-          } else if (err.response) {
-            setSalesChartError(err.response.data.message || 'Failed to fetch sales data');
-            console.error('Error fetching sales data:', err.response.data);
-          } else {
-            setSalesChartError('Network error. Please check your connection.');
-            console.error('Network error:', err);
-          }
-        } else {
-          setSalesChartError('An unexpected error occurred.');
-          console.error('Error fetching sales data:', err);
-        }
-      } finally {
-        setIsSalesChartLoading(false);
+      );
+      
+      // Refresh the orders after status update
+      fetchActiveOrders();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setActiveError(err.response?.data?.message || 'Failed to update order status');
+        console.error('Error updating order status:', err);
+      } else {
+        setActiveError('An unexpected error occurred.');
+        console.error('Error updating order status:', err);
+      }
+    }
+  };
+
+  // Set up auto-refresh for active orders
+  useEffect(() => {
+    // Initial fetch
+    fetchActiveOrders();
+    
+    // Set up interval for refreshing
+    refreshIntervalIdRef.current = window.setInterval(fetchActiveOrders, REFRESH_INTERVAL_MS);
+    
+    // Clean up on component unmount
+    return () => {
+      if (refreshIntervalIdRef.current) {
+        window.clearInterval(refreshIntervalIdRef.current);
       }
     };
-
-    fetchSalesChartData();
-  }, [timePeriod]);
-
-  // Fetch users data for chart
-  useEffect(() => {
-    const fetchUsersChartData = async () => {
-      setIsUsersChartLoading(true);
-      setUsersChartError(null);
-      
-      try {
-        const admin_token = localStorage.getItem('admin_token');
-        
-        if (!admin_token) {
-          setUsersChartError('Authentication token not found.');
-          return;
-        }
-
-        // Calculate date range based on selected period
-        let startDate;
-        const endDate = new Date();
-        
-        switch (timePeriod) {
-          case '7d':
-            startDate = subDays(endDate, 7);
-            break;
-          case '30d':
-            startDate = subDays(endDate, 30);
-            break;
-          case '90d':
-            startDate = subDays(endDate, 90);
-            break;
-          case '6m':
-            startDate = subMonths(endDate, 6);
-            break;
-          default:
-            startDate = subDays(endDate, 30);
-        }
-        
-        // Format dates for API
-        const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-        const formattedEndDate = format(endDate, 'yyyy-MM-dd');
-
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
-          ? admin_token 
-          : `Bearer ${admin_token}`;
-        
-        // Fetch users data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
-          }
-        );
-        
-        // Transform the data for chartjs
-        if (response.data && Array.isArray(response.data)) {
-          const labels = response.data.map(item => format(parseISO(item.date), 'MMM dd'));
-          const userValues = response.data.map(item => item.newUsers || 0);
-          
-          setUsersChartData({
-            labels,
-            datasets: [
-              {
-                label: 'New Users',
-                data: userValues,
-                borderColor: 'rgba(13, 110, 253, 1)', // primary blue
-                backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true,
-              }
-            ]
-          });
-        } else {
-          setUsersChartError('Invalid data format received from server.');
-        }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
-            setUsersChartError('Your session has expired.');
-          } else if (err.response) {
-            setUsersChartError(err.response.data.message || 'Failed to fetch user data');
-            console.error('Error fetching user data:', err.response.data);
-          } else {
-            setUsersChartError('Network error. Please check your connection.');
-            console.error('Network error:', err);
-          }
-        } else {
-          setUsersChartError('An unexpected error occurred.');
-          console.error('Error fetching user data:', err);
-        }
-      } finally {
-        setIsUsersChartLoading(false);
-      }
-    };
-
-    fetchUsersChartData();
-  }, [timePeriod]);
-
-  // Function to format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  // Function to format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
-  // Function to get badge variant based on status
-  const getStatusBadgeVariant = (status: string): string => {
-    switch (status) {
-      case 'Delivered':
-        return 'success';
-      case 'Shipped':
-        return 'info';
-      case 'Processing':
-        return 'warning';
-      case 'Verified':
-        return 'primary';
-      case 'Pending Call':
-        return 'secondary';
-      case 'Cancelled':
-        return 'danger';
-      default:
-        return 'secondary';
-    }
-  };
-
-  // Prepare chart data for order status breakdown
-  const chartData = {
-    labels: ['Pending', 'Verified', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-    datasets: [
-      {
-        label: 'Orders by Status',
-        data: stats ? [
-          stats.pendingOrders,
-          stats.verifiedOrders,
-          stats.processingOrders,
-          stats.shippedOrders,
-          stats.deliveredOrders,
-          stats.cancelledOrders
-        ] : [],
-        backgroundColor: [
-          'rgba(108, 117, 125, 0.6)', // secondary
-          'rgba(13, 110, 253, 0.6)',  // primary
-          'rgba(255, 193, 7, 0.6)',   // warning
-          'rgba(13, 202, 240, 0.6)',  // info
-          'rgba(25, 135, 84, 0.6)',   // success
-          'rgba(220, 53, 69, 0.6)'    // danger
-        ],
-        borderColor: [
-          'rgba(108, 117, 125, 1)',
-          'rgba(13, 110, 253, 1)',
-          'rgba(255, 193, 7, 1)',
-          'rgba(13, 202, 240, 1)',
-          'rgba(25, 135, 84, 1)',
-          'rgba(220, 53, 69, 1)'
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'Order Status Distribution',
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          precision: 0 // Only show whole numbers
-        }
-      }
-    }
-  };
-
-  // Sales chart options
-  const salesChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'Sales Over Time',
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: any) => {
-            let label = context.dataset.label || '';
-            if (label) {
-              label += ': ';
-            }
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-EU', {
-                style: 'currency',
-                currency: 'EUR'
-              }).format(context.parsed.y);
-            }
-            return label;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: (value: any) => {
-            return '€' + value;
-          }
-        }
-      }
-    }
-  };
-
-  // Users chart options
-  const usersChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'User Registrations',
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          precision: 0 // Only show whole numbers
-        }
-      }
-    }
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -11249,244 +11440,92 @@ const DashboardPage = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Dashboard</h2>
-        <Button variant="outline-primary" onClick={() => window.location.reload()}>Refresh Data</Button>
+        <div>
+          <Link to="/admin/statistics" className="me-2">
+            <Button variant="primary">View Statistics</Button>
+          </Link>
+          <Button variant="outline-primary" onClick={() => window.location.reload()}>Refresh Data</Button>
+        </div>
       </div>
       
-      {/* Revenue and Orders Stats - First Row */}
-      <Row className="mb-4 g-3">
-        <Col md={6} lg={3}>
-          <Card className="h-100 shadow-sm dashboard-stat-card">
-            <Card.Body className="p-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="text-muted mb-1">Total Revenue</h6>
-                  <h3 className="mb-0">{stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : '€0.00'}</h3>
-                </div>
-                <div className="bg-success bg-opacity-10 p-3 rounded">
-                  <FaDollarSign className="text-success" size={24} />
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+      {/* Live Order View */}
+      <div className="mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h3 className="mb-0">Live Order View</h3>
+          <Button 
+            variant="outline-success" 
+            size="sm" 
+            onClick={fetchActiveOrders}
+            disabled={isLoadingActive}
+          >
+            {isLoadingActive ? (
+              <>
+                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                Refreshing...
+              </>
+            ) : (
+              'Refresh Now'
+            )}
+          </Button>
+        </div>
         
-        <Col md={6} lg={3}>
-          <Link to="/admin/orders" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="text-muted mb-1">Total Orders</h6>
-                    <h3 className="mb-0">{stats?.totalOrders ?? '-'}</h3>
-                  </div>
-                  <div className="bg-primary bg-opacity-10 p-3 rounded">
-                    <FaShoppingCart className="text-primary" size={24} />
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
+        {activeError && (
+          <Alert variant="danger" className="mb-3">
+            {activeError}
+          </Alert>
+        )}
         
-        <Col md={6} lg={3}>
-          <Link to="/admin/orders" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="text-muted mb-1">Last 7 Days</h6>
-                    <h3 className="mb-0">{stats?.ordersLast7Days ?? '-'}</h3>
-                  </div>
-                  <div className="bg-info bg-opacity-10 p-3 rounded">
-                    <FaCalendarAlt className="text-info" size={24} />
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-        
-        <Col md={6} lg={3}>
-          <Link to="/admin/products" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="text-muted mb-1">Total Products</h6>
-                    <h3 className="mb-0">{stats?.totalProducts ?? '-'}</h3>
-                  </div>
-                  <div className="bg-warning bg-opacity-10 p-3 rounded">
-                    <FaBox className="text-warning" size={24} />
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-      </Row>
+        {isLoadingActive && activeOrders.length === 0 ? (
+          <div className="text-center my-4">
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">Loading active orders...</span>
+            </Spinner>
+          </div>
+        ) : (
+          <>
+            {activeOrders.length === 0 ? (
+              <Alert variant="info">No active orders requiring attention (Pending Call / Verified).</Alert>
+            ) : (
+              <Row xs={1} md={2} lg={3} className="g-3">
+                {activeOrders.map(order => (
+                  <Col key={order.id}>
+                    <Card className="h-100 shadow-sm">
+                      <Card.Header className="d-flex justify-content-between align-items-center">
+                        <Link to={`/admin/orders/${order.id}`} className="fw-bold text-decoration-none">Order #{order.id}</Link>
+                        <Badge bg={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                      </Card.Header>
+                      <Card.Body>
+                        <Card.Text>
+                          <strong>Customer:</strong> {order.shippingDetails?.fullName ?? order.customerName ?? '(N/A)'}<br/>
+                          <strong>Phone:</strong> {order.shippingDetails?.phone ?? '(N/A)'}<br/>
+                          <strong>Time:</strong> {formatDate(order.createdAt)}<br/>
+                          <strong>Total:</strong> {formatCurrency(order.totalAmount)}
+                        </Card.Text>
+                      </Card.Body>
+                      <Card.Footer className="text-end">
+                        {order.status === 'Pending Call' && (
+                          <Button variant="success" size="sm" onClick={() => handleStatusChange(order.id, 'Verified')} className="me-2">
+                            Mark Verified
+                          </Button>
+                        )}
+                        {order.status === 'Verified' && (
+                          <Button variant="warning" size="sm" onClick={() => handleStatusChange(order.id, 'Processing')} className="me-2">
+                            Mark Processing
+                          </Button>
+                        )}
+                        <Link to={`/admin/orders/${order.id}`}>
+                          <Button variant="outline-secondary" size="sm">Details</Button>
+                        </Link>
+                      </Card.Footer>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </>
+        )}
+      </div>
       
-      {/* Order Status Stats - Second Row */}
-      <Row className="mb-4 g-3">
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Pending+Call" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Pending</h6>
-                <h3 className="mb-0">{stats?.pendingOrders ?? '-'}</h3>
-                <Badge bg="secondary" className="mt-2">Pending Call</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-        
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Verified" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Verified</h6>
-                <h3 className="mb-0">{stats?.verifiedOrders ?? '-'}</h3>
-                <Badge bg="primary" className="mt-2">Verified</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-        
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Processing" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Processing</h6>
-                <h3 className="mb-0">{stats?.processingOrders ?? '-'}</h3>
-                <Badge bg="warning" className="mt-2">Processing</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Shipped" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Shipped</h6>
-                <h3 className="mb-0">{stats?.shippedOrders ?? '-'}</h3>
-                <Badge bg="info" className="mt-2">Shipped</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Delivered" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Delivered</h6>
-                <h3 className="mb-0">{stats?.deliveredOrders ?? '-'}</h3>
-                <Badge bg="success" className="mt-2">Delivered</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-
-        <Col md={6} lg={2}>
-          <Link to="/admin/orders?status=Cancelled" className="text-decoration-none text-reset">
-            <Card className="h-100 shadow-sm dashboard-stat-card">
-              <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Cancelled</h6>
-                <h3 className="mb-0">{stats?.cancelledOrders ?? '-'}</h3>
-                <Badge bg="danger" className="mt-2">Cancelled</Badge>
-              </Card.Body>
-            </Card>
-          </Link>
-        </Col>
-      </Row>
-      
-      {/* Order Status Chart */}
-      <Row className="mb-4">
-        <Col lg={12}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-transparent py-3">
-              <h5 className="mb-0">Order Status Distribution</h5>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ height: '300px' }}>
-                {stats && <Bar data={chartData} options={chartOptions} />}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Sales Over Time Chart */}
-      <Row className="mb-4">
-        <Col lg={12}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-transparent py-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Sales Over Time</h5>
-                <Form.Select 
-                  className="w-auto" 
-                  value={timePeriod}
-                  onChange={(e) => setTimePeriod(e.target.value)}
-                  aria-label="Select time period"
-                >
-                  <option value="7d">Last 7 Days</option>
-                  <option value="30d">Last 30 Days</option>
-                  <option value="90d">Last 90 Days</option>
-                  <option value="6m">Last 6 Months</option>
-                </Form.Select>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {isSalesChartLoading ? (
-                <div className="text-center py-5">
-                  <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading chart data...</span>
-                  </Spinner>
-                </div>
-              ) : salesChartError ? (
-                <Alert variant="danger">{salesChartError}</Alert>
-              ) : salesChartData ? (
-                <div style={{ height: '300px' }}>
-                  <Line data={salesChartData} options={salesChartOptions} />
-                </div>
-              ) : (
-                <div className="text-center py-3">No sales data available.</div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* User Registrations Chart */}
-      <Row className="mb-4">
-        <Col lg={12}>
-          <Card className="shadow-sm">
-            <Card.Header className="bg-transparent py-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">User Registrations</h5>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {isUsersChartLoading ? (
-                <div className="text-center py-5">
-                  <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading chart data...</span>
-                  </Spinner>
-                </div>
-              ) : usersChartError ? (
-                <Alert variant="danger">{usersChartError}</Alert>
-              ) : usersChartData ? (
-                <div style={{ height: '300px' }}>
-                  <Line data={usersChartData} options={usersChartOptions} />
-                </div>
-              ) : (
-                <div className="text-center py-3">No user data available.</div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
       {/* Recent Orders */}
       <Row className="mb-4">
         <Col lg={12}>
@@ -11569,7 +11608,6 @@ function LoginPage() {
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (token) {
-      console.log('Found existing token on login page, will be cleared');
       localStorage.removeItem('admin_token');
     }
   }, []);
@@ -11589,23 +11627,16 @@ function LoginPage() {
     }
     
     try {
-      console.log('Attempting login with:', { email, passwordLength: password.length });
-      console.log('Using API endpoint:', `${API_BASE_URL}/auth/login`);
-
       // Make API call to login endpoint
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password
       });
       
-      console.log('Login response received:', response.status);
-      
       // Check if token exists in response
       if (response.data && response.data.token) {
         // Store token in localStorage
-        console.log('Token received. First 10 chars:', response.data.token.substring(0, 10) + '...');
         localStorage.setItem('admin_token', response.data.token);
-        console.log('Login successful!');
         
         // Add a small delay to ensure token is stored before navigation
         setTimeout(() => {
@@ -11614,7 +11645,6 @@ function LoginPage() {
         }, 100);
       } else {
         // Handle unexpected response format
-        console.error('Server response format:', response.data);
         setErrorMessage('Invalid server response - token missing');
         console.error('Server response missing token', response.data);
       }
@@ -11717,15 +11747,8 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
-import L, { Icon, LatLngExpression } from 'leaflet';
-
-// Fix potentially broken default Leaflet icons
-delete (Icon.Default.prototype as any)._getIconUrl;
-Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import L, { LatLngExpression } from 'leaflet';
+import { formatCurrency, formatDateTime } from '../utils/formatters';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
@@ -11813,7 +11836,6 @@ const OrderDetailPage: React.FC = () => {
           }
         });
 
-        console.log('Order details received:', response.data);
         setOrder(response.data);
       } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
@@ -11876,14 +11898,6 @@ const OrderDetailPage: React.FC = () => {
       fetchServiceZones();
     }
   }, [isLoading, order]);
-
-  const formatDateTime = (isoString: string): string => {
-    return new Date(isoString).toLocaleString();
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return `€${amount.toFixed(2)}`;
-  };
 
   return (
     <Container className="mt-3">
@@ -12053,9 +12067,10 @@ export default OrderDetailPage;
 ```tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button } from 'react-bootstrap';
+import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
+import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
 
 interface OrderItem {
   id: number;
@@ -12092,7 +12107,9 @@ const OrderManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]); // Changed to array
+  const [dateFilter, setDateFilter] = useState<string>('today'); // Default to 'today'
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -12107,25 +12124,41 @@ const OrderManagementPage = () => {
 
     try {
       const params = new URLSearchParams();
-      if (statusFilter) {
-        params.append('status', statusFilter);
+      
+      // Add multiple status filters if any are selected
+      statusFilters.forEach(status => {
+        params.append('status', status);
+      });
+      
+      if (dateFilter) {
+        params.append('dateFilter', dateFilter);
       }
       const queryString = params.toString();
       const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
 
-      console.log(`Fetching orders from ${apiUrl}`);
       const response = await axios.get(apiUrl, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      console.log('Received orders data:', response.data);
-      response.data.forEach((order: AdminOrder) => {
-        console.log(`Order ${order.id} shipping details:`, order.shippingDetails);
-      });
+      // Check if response.data is an array or has an 'orders' property
+      const ordersArray = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.orders || [];
       
-      setOrders(response.data);
+      if (!Array.isArray(ordersArray)) {
+        throw new Error('Invalid response format: expected an array of orders');
+      }
+      
+      const processedOrders = ordersArray.map(order => ({
+        ...order,
+        shippingDetails: typeof order.shippingDetails === 'string'
+          ? JSON.parse(order.shippingDetails)
+          : order.shippingDetails
+      }));
+      
+      setOrders(processedOrders);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
@@ -12145,29 +12178,28 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+  }, [statusFilters, dateFilter]); // Re-fetch when filters change
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
+    setIsUpdating(true);
+    setError(null);
+    
     const token = localStorage.getItem('admin_token');
     if (!token) {
       setError('Authentication required. Please log in again.');
+      setIsUpdating(false);
       return;
     }
-
+    
     setUpdatingOrderIds(prev => [...prev, orderId]);
-    setError(null);
-
+    
     try {
-      console.log(`Attempting to update order ${orderId} status to ${newStatus}`);
-      console.log(`API URL: ${API_BASE_URL}/admin/orders/${orderId}/status`);
-      
-      await axios.post(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`, 
-        { status: newStatus }, 
+      await axios.put(
+        `${API_BASE_URL}/admin/orders/${orderId}/status`,
+        { status: newStatus },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`
           }
         }
       );
@@ -12187,59 +12219,107 @@ const OrderManagementPage = () => {
       }
     } finally {
       setUpdatingOrderIds(prev => prev.filter(id => id !== orderId));
+      setIsUpdating(false);
     }
   };
 
-  const formatDateTime = (isoString: string): string => {
-    return new Date(isoString).toLocaleString();
+  // Toggle a status filter on/off
+  const toggleStatusFilter = (status: string) => {
+    setStatusFilters(prev => 
+      prev.includes(status)
+        ? prev.filter(s => s !== status) // Remove if already selected
+        : [...prev, status] // Add if not selected
+    );
   };
-
-  const formatCurrency = (amount: number): string => {
-    return `€${amount.toFixed(2)}`;
-  };
-
-  const getStatusBadgeVariant = (status: string): string => {
-    switch (status?.toLowerCase()) {
-      case 'pending call': return 'warning';
-      case 'verified': return 'primary';
-      case 'processing': return 'info';
-      case 'shipped': return 'secondary';
-      case 'delivered': return 'success';
-      case 'cancelled': case 'failed verification': return 'danger';
-      default: return 'light';
-    }
+  
+  // Clear all status filters
+  const clearStatusFilters = () => {
+    setStatusFilters([]);
   };
 
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Order Management</h2>
+        <h2>
+          {dateFilter === 'today' ? "Today's Orders" : "Order Management"}
+          {statusFilters.length > 0 && ` (Filtered)`}
+        </h2>
       </div>
       
-      <Row className="mb-4 align-items-center">
-        <Col md={4} lg={3}>
-          <Form.Group controlId="statusFilter">
-            <Form.Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filter orders by status"
-              className="shadow-sm border"
-            >
-              <option value="">All Statuses</option>
-              {allowedOrderStatuses.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </Col>
+      <Row className="mb-3 align-items-center">
         <Col>
-          {statusFilter && (
-            <Badge bg="primary" className="py-2 px-3">
-              <FaFilter className="me-1" /> Filtering: {statusFilter}
-            </Badge>
-          )}
+          <ButtonGroup size="sm" className="mb-3">
+            <Button
+              variant={dateFilter === 'today' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('today')}
+            >
+              Today's Orders
+            </Button>
+            <Button
+              variant={dateFilter === 'all' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('all')}
+            >
+              All Orders
+            </Button>
+            {/* Add more date range buttons later if needed */}
+          </ButtonGroup>
         </Col>
       </Row>
+      
+      <Row className="mb-4">
+        <Col md={6} lg={8}>
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            {allowedOrderStatuses.map(status => (
+              <Button
+                key={status}
+                size="sm"
+                variant={statusFilters.includes(status) ? 'primary' : 'outline-secondary'}
+                onClick={() => toggleStatusFilter(status)}
+                className="d-inline-flex align-items-center"
+              >
+                {status}
+                {statusFilters.includes(status) && <FaTimes className="ms-2" />}
+              </Button>
+            ))}
+            
+            {statusFilters.length > 0 && (
+              <Button 
+                variant="outline-danger" 
+                size="sm"
+                onClick={clearStatusFilters}
+                className="ms-2"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </Col>
+      </Row>
+      
+      {statusFilters.length > 0 && (
+        <div className="mb-3">
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <span className="text-muted me-2">Active filters:</span>
+            {statusFilters.map(status => (
+              <Badge 
+                key={status} 
+                bg={getStatusBadgeVariant(status)} 
+                className="py-2 px-3 d-flex align-items-center"
+              >
+                {status}
+                <Button 
+                  variant="link" 
+                  className="p-0 ms-2 text-white" 
+                  onClick={() => toggleStatusFilter(status)}
+                  aria-label={`Remove ${status} filter`}
+                >
+                  <FaTimes size={12} />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
       
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       
@@ -12255,17 +12335,17 @@ const OrderManagementPage = () => {
               <FaShoppingBag className="empty-state-icon" />
               <p className="empty-state-text">No Orders Found</p>
               <p className="mb-4 text-muted">
-                {statusFilter 
-                  ? `No orders match the "${statusFilter}" status filter.` 
+                {statusFilters.length > 0
+                  ? `No orders match the selected status filters.` 
                   : "You don't have any customer orders yet."}
               </p>
-              {statusFilter && (
+              {statusFilters.length > 0 && (
                 <Button 
                   variant="primary" 
-                  onClick={() => setStatusFilter('')}
+                  onClick={clearStatusFilters}
                   className="px-4 d-flex align-items-center gap-2 mx-auto"
                 >
-                  Clear Filter
+                  Clear Filters
                 </Button>
               )}
             </div>
@@ -12493,9 +12573,6 @@ const PhoneManagementPage = () => {
     try {
       const token = localStorage.getItem('admin_token');
       
-      // Debug: Log the token to check its format
-      console.log('Token used for API call:', token ? `${token.substring(0, 15)}...` : 'No token');
-      
       if (!token) {
         setError('Authentication token not found. Please log in again.');
         handleAuthError();
@@ -12505,16 +12582,12 @@ const PhoneManagementPage = () => {
       // Ensure the token is properly formatted - it may or may not include 'Bearer ' prefix
       const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       
-      console.log('Making API request to:', `${API_BASE_URL}/admin/phonenumbers`);
-      console.log('With Authorization header:', formattedToken.substring(0, 20) + '...');
-      
       const response = await axios.get(`${API_BASE_URL}/admin/phonenumbers`, {
         headers: {
           Authorization: formattedToken
         }
       });
 
-      console.log('API response:', response.data);
       setPhoneNumbers(response.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -12943,6 +13016,7 @@ import toast from 'react-hot-toast';
 import { FaImage, FaPlus, FaBox } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../utils/formatters';
 
 interface Category {
   id: number;
@@ -12953,6 +13027,7 @@ interface Product {
   id: number;
   name: string;
   price: number;
+  costPrice?: number | null;
   description?: string;
   stock?: number;
   imageUrl?: string;
@@ -12985,6 +13060,7 @@ const ProductManagementPage: React.FC = () => {
   // Form state
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState('');
+  const [formCostPrice, setFormCostPrice] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStock, setFormStock] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('');
@@ -13124,6 +13200,7 @@ const ProductManagementPage: React.FC = () => {
     setEditingProduct(null);
     setFormName('');
     setFormPrice('');
+    setFormCostPrice('');
     setFormDescription('');
     setFormStock('');
     setFormImageUrl('');
@@ -13138,6 +13215,7 @@ const ProductManagementPage: React.FC = () => {
     setEditingProduct(product);
     setFormName(product.name);
     setFormPrice(product.price.toString());
+    setFormCostPrice(product.costPrice?.toString() || '');
     setFormDescription(product.description || '');
     setFormStock(product.stock?.toString() || '');
     setFormImageUrl(product.imageUrl || '');
@@ -13173,6 +13251,16 @@ const ProductManagementPage: React.FC = () => {
     if (isNaN(priceValue) || priceValue <= 0) {
       setModalError('Price must be a positive number.');
       return;
+    }
+
+    // Validate cost price if provided
+    let costValue = null;
+    if (formCostPrice) {
+      costValue = parseFloat(formCostPrice);
+      if (isNaN(costValue) || costValue < 0) {
+        setModalError('Cost Price must be a valid positive number or empty.');
+        return;
+      }
     }
 
     setIsModalLoading(true);
@@ -13228,6 +13316,7 @@ const ProductManagementPage: React.FC = () => {
     const productData = {
       name: formName.trim(),
       price: priceValue,
+      costPrice: costValue,
       description: formDescription.trim() || undefined,
       stock: formStock ? parseInt(formStock, 10) : undefined,
       imageUrl: formImageUrl.trim() || undefined,
@@ -13285,12 +13374,12 @@ const ProductManagementPage: React.FC = () => {
   // Function to handle stock adjustment submission
   const handleAdjustStock = async (productId: number, adjustmentStr: string) => {
     const adjustmentInt = parseInt(adjustmentStr, 10);
-
+    
     if (isNaN(adjustmentInt)) {
-        toast.error("Adjustment value must be a valid integer.");
-        return;
+      toast.error("Adjustment value must be a valid integer.");
+      return;
     }
-
+    
     if (adjustmentInt === 0) {
         toast.success("No adjustment needed (value is 0).");
         setAdjustingProductId(null); // Close the input if adjustment is 0
@@ -13305,9 +13394,8 @@ const ProductManagementPage: React.FC = () => {
     }
 
     // Optimistic UI update can be added here later if desired
-
+  
     try {
-      console.log(`Adjusting stock for product ${productId} by ${adjustmentInt}`);
       const response = await axios.post(
         `${API_BASE_URL}/admin/products/${productId}/adjust-stock`,
         { adjustment: adjustmentInt },
@@ -13343,10 +13431,6 @@ const ProductManagementPage: React.FC = () => {
       // setAdjustingProductId(null);
       // setAdjustmentValue(''); 
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `€${amount.toFixed(2)}`;
   };
 
   const truncateText = (text: string, maxLength: number) => {
@@ -13436,6 +13520,7 @@ const ProductManagementPage: React.FC = () => {
                     <th>Name</th>
                     <th>Category</th>
                     <th className="text-end">Price</th>
+                    <th className="text-end">Cost Price</th>
                     <th className="text-center">Stock</th>
                     <th style={{ width: '180px' }} className="text-end">Actions</th>
                   </tr>
@@ -13469,6 +13554,7 @@ const ProductManagementPage: React.FC = () => {
                         )}
                       </td>
                       <td className="text-end fw-medium">{formatCurrency(product.price)}</td>
+                      <td className="text-end">{product.costPrice != null ? formatCurrency(product.costPrice) : 'N/A'}</td>
                       <td className="text-center">
                         <Badge 
                           bg={product.stock === undefined || product.stock === null ? 'secondary' : 
@@ -13551,6 +13637,19 @@ const ProductManagementPage: React.FC = () => {
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
                   required
+                />
+              </InputGroup>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Cost Price (Optional)</Form.Label>
+              <InputGroup>
+                <InputGroup.Text>$</InputGroup.Text>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formCostPrice}
+                  onChange={(e) => setFormCostPrice(e.target.value)}
                 />
               </InputGroup>
             </Form.Group>
@@ -13728,13 +13827,938 @@ export default ProductManagementPage;
 ```
 
 ---
+### File: `packages/admin-frontend/src/pages/StatisticsPage.tsx`
+
+```tsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Container, Row, Col, Card, Alert, Spinner, Form, Badge } from 'react-bootstrap';
+import { FaUsers, FaShoppingCart, FaBox, FaDollarSign, FaCalendarAlt } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bar, Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { format, parseISO, subDays, subMonths } from 'date-fns';
+import { formatCurrency } from '../utils/formatters';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface AdminStats {
+  totalOrders: number;
+  totalProducts: number;
+  totalUsers: number;
+  pendingOrders: number;
+  verifiedOrders: number;
+  processingOrders: number;
+  shippedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  availablePhones: number;
+  totalZones: number;
+  totalRevenue: number;
+  ordersLast7Days: number;
+  recentOrders: {
+    id: number;
+    customerName: string;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+  }[];
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
+const StatisticsPage = () => {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  
+  // Sales chart state
+  const [salesChartData, setSalesChartData] = useState<any>(null);
+  const [salesChartError, setSalesChartError] = useState<string | null>(null);
+  const [isSalesChartLoading, setIsSalesChartLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<string>('30d');
+  
+  // Users chart state
+  const [usersChartData, setUsersChartData] = useState<any>(null);
+  const [usersChartError, setUsersChartError] = useState<string | null>(null);
+  const [isUsersChartLoading, setIsUsersChartLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const admin_token = localStorage.getItem('admin_token');
+        
+        if (!admin_token) {
+          setError('Authentication token not found. Please log in again.');
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
+          return;
+        }
+
+        // Ensure the token is properly formatted
+        const formattedToken = admin_token.startsWith('Bearer ') 
+          ? admin_token 
+          : `Bearer ${admin_token}`;
+        
+        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+          headers: {
+            Authorization: formattedToken
+          }
+        });
+        
+        setStats(response.data);
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 401) {
+            // Handle unauthorized error
+            localStorage.removeItem('admin_token');
+            setError('Your session has expired. Please log in again.');
+            setTimeout(() => {
+              navigate('/login');
+            }, 3000);
+          } else if (err.response) {
+            setError(err.response.data.message || 'Failed to fetch dashboard data');
+            console.error('Error fetching dashboard data:', err.response.data);
+          } else {
+            setError('Network error. Please check your connection.');
+            console.error('Network error:', err);
+          }
+        } else {
+          setError('An unexpected error occurred.');
+          console.error('Error fetching dashboard data:', err);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [navigate]);
+
+  // Fetch sales data for chart
+  useEffect(() => {
+    const fetchSalesChartData = async () => {
+      setIsSalesChartLoading(true);
+      setSalesChartError(null);
+      
+      try {
+        const admin_token = localStorage.getItem('admin_token');
+        
+        if (!admin_token) {
+          setSalesChartError('Authentication token not found.');
+          return;
+        }
+
+        // Calculate date range based on selected period
+        let startDate;
+        const endDate = new Date();
+        
+        switch (timePeriod) {
+          case '7d':
+            startDate = subDays(endDate, 7);
+            break;
+          case '30d':
+            startDate = subDays(endDate, 30);
+            break;
+          case '90d':
+            startDate = subDays(endDate, 90);
+            break;
+          case '6m':
+            startDate = subMonths(endDate, 6);
+            break;
+          default:
+            startDate = subDays(endDate, 30);
+        }
+        
+        // Format dates for API
+        const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+        const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+
+        // Ensure the token is properly formatted
+        const formattedToken = admin_token.startsWith('Bearer ') 
+          ? admin_token 
+          : `Bearer ${admin_token}`;
+        
+        // Fetch sales data from the reports API
+        const response = await axios.get(
+          `${API_BASE_URL}/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
+          {
+            headers: {
+              Authorization: formattedToken
+            }
+          }
+        );
+        
+        // Transform the data for chartjs
+        if (response.data && Array.isArray(response.data)) {
+          const labels = response.data.map(item => format(parseISO(item.date), 'MMM dd'));
+          const salesValues = response.data.map(item => item.totalSales || 0);
+          
+          setSalesChartData({
+            labels,
+            datasets: [
+              {
+                label: 'Total Sales (€)',
+                data: salesValues,
+                borderColor: 'rgba(25, 135, 84, 1)', // success green
+                backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+              }
+            ]
+          });
+        } else {
+          setSalesChartError('Invalid data format received from server.');
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 401) {
+            setSalesChartError('Your session has expired.');
+          } else if (err.response) {
+            setSalesChartError(err.response.data.message || 'Failed to fetch sales data');
+            console.error('Error fetching sales data:', err.response.data);
+          } else {
+            setSalesChartError('Network error. Please check your connection.');
+            console.error('Network error:', err);
+          }
+        } else {
+          setSalesChartError('An unexpected error occurred.');
+          console.error('Error fetching sales data:', err);
+        }
+      } finally {
+        setIsSalesChartLoading(false);
+      }
+    };
+
+    fetchSalesChartData();
+  }, [timePeriod]);
+
+  // Fetch users data for chart
+  useEffect(() => {
+    const fetchUsersChartData = async () => {
+      setIsUsersChartLoading(true);
+      setUsersChartError(null);
+      
+      try {
+        const admin_token = localStorage.getItem('admin_token');
+        
+        if (!admin_token) {
+          setUsersChartError('Authentication token not found.');
+          return;
+        }
+
+        // Calculate date range based on selected period
+        let startDate;
+        const endDate = new Date();
+        
+        switch (timePeriod) {
+          case '7d':
+            startDate = subDays(endDate, 7);
+            break;
+          case '30d':
+            startDate = subDays(endDate, 30);
+            break;
+          case '90d':
+            startDate = subDays(endDate, 90);
+            break;
+          case '6m':
+            startDate = subMonths(endDate, 6);
+            break;
+          default:
+            startDate = subDays(endDate, 30);
+        }
+        
+        // Format dates for API
+        const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+        const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+
+        // Ensure the token is properly formatted
+        const formattedToken = admin_token.startsWith('Bearer ') 
+          ? admin_token 
+          : `Bearer ${admin_token}`;
+        
+        // Fetch users data from the reports API
+        const response = await axios.get(
+          `${API_BASE_URL}/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
+          {
+            headers: {
+              Authorization: formattedToken
+            }
+          }
+        );
+        
+        // Transform the data for chartjs
+        if (response.data && Array.isArray(response.data)) {
+          const labels = response.data.map(item => format(parseISO(item.date), 'MMM dd'));
+          const userValues = response.data.map(item => item.newUsers || 0);
+          
+          setUsersChartData({
+            labels,
+            datasets: [
+              {
+                label: 'New Users',
+                data: userValues,
+                borderColor: 'rgba(13, 110, 253, 1)', // primary blue
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+              }
+            ]
+          });
+        } else {
+          setUsersChartError('Invalid data format received from server.');
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 401) {
+            setUsersChartError('Your session has expired.');
+          } else if (err.response) {
+            setUsersChartError(err.response.data.message || 'Failed to fetch user data');
+            console.error('Error fetching user data:', err.response.data);
+          } else {
+            setUsersChartError('Network error. Please check your connection.');
+            console.error('Network error:', err);
+          }
+        } else {
+          setUsersChartError('An unexpected error occurred.');
+          console.error('Error fetching user data:', err);
+        }
+      } finally {
+        setIsUsersChartLoading(false);
+      }
+    };
+
+    fetchUsersChartData();
+  }, [timePeriod]);
+
+  // Prepare chart data for order status breakdown
+  const chartData = {
+    labels: ['Pending', 'Verified', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+    datasets: [
+      {
+        label: 'Orders by Status',
+        data: stats ? [
+          stats.pendingOrders,
+          stats.verifiedOrders,
+          stats.processingOrders,
+          stats.shippedOrders,
+          stats.deliveredOrders,
+          stats.cancelledOrders
+        ] : [],
+        backgroundColor: [
+          'rgba(108, 117, 125, 0.6)', // secondary
+          'rgba(13, 110, 253, 0.6)',  // primary
+          'rgba(255, 193, 7, 0.6)',   // warning
+          'rgba(13, 202, 240, 0.6)',  // info
+          'rgba(25, 135, 84, 0.6)',   // success
+          'rgba(220, 53, 69, 0.6)'    // danger
+        ],
+        borderColor: [
+          'rgba(108, 117, 125, 1)',
+          'rgba(13, 110, 253, 1)',
+          'rgba(255, 193, 7, 1)',
+          'rgba(13, 202, 240, 1)',
+          'rgba(25, 135, 84, 1)',
+          'rgba(220, 53, 69, 1)'
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Order Status Distribution',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0 // Only show whole numbers
+        }
+      }
+    }
+  };
+
+  // Sales chart options
+  const salesChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Sales Over Time',
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += new Intl.NumberFormat('en-EU', {
+                style: 'currency',
+                currency: 'EUR'
+              }).format(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value: any) => {
+            return '€' + value;
+          }
+        }
+      }
+    }
+  };
+
+  // Users chart options
+  const usersChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'User Registrations',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0 // Only show whole numbers
+        }
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Container className="py-4">
+        <div className="text-center my-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading statistics...</span>
+          </Spinner>
+        </div>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="py-4">
+        <Alert variant="danger" className="my-4">
+          {error}
+        </Alert>
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">Statistics & Reports</h2>
+      </div>
+      
+      {/* Revenue and Orders Stats - First Row */}
+      <Row className="mb-4 g-3">
+        <Col md={6} lg={3}>
+          <Card className="h-100 shadow-sm dashboard-stat-card">
+            <Card.Body className="p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="text-muted mb-1">Total Revenue</h6>
+                  <h3 className="mb-0">{stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : '€0.00'}</h3>
+                </div>
+                <div className="bg-success bg-opacity-10 p-3 rounded">
+                  <FaDollarSign className="text-success" size={24} />
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={6} lg={3}>
+          <Link to="/admin/orders" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="text-muted mb-1">Total Orders</h6>
+                    <h3 className="mb-0">{stats?.totalOrders ?? '-'}</h3>
+                  </div>
+                  <div className="bg-primary bg-opacity-10 p-3 rounded">
+                    <FaShoppingCart className="text-primary" size={24} />
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+        
+        <Col md={6} lg={3}>
+          <Link to="/admin/orders" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="text-muted mb-1">Last 7 Days</h6>
+                    <h3 className="mb-0">{stats?.ordersLast7Days ?? '-'}</h3>
+                  </div>
+                  <div className="bg-info bg-opacity-10 p-3 rounded">
+                    <FaCalendarAlt className="text-info" size={24} />
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+        
+        <Col md={6} lg={3}>
+          <Link to="/admin/products" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="text-muted mb-1">Total Products</h6>
+                    <h3 className="mb-0">{stats?.totalProducts ?? '-'}</h3>
+                  </div>
+                  <div className="bg-warning bg-opacity-10 p-3 rounded">
+                    <FaBox className="text-warning" size={24} />
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+      </Row>
+      
+      {/* Order Status Stats - Second Row */}
+      <Row className="mb-4 g-3">
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Pending+Call" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Pending</h6>
+                <h3 className="mb-0">{stats?.pendingOrders ?? '-'}</h3>
+                <Badge bg="secondary" className="mt-2">Pending Call</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+        
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Verified" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Verified</h6>
+                <h3 className="mb-0">{stats?.verifiedOrders ?? '-'}</h3>
+                <Badge bg="primary" className="mt-2">Verified</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+        
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Processing" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Processing</h6>
+                <h3 className="mb-0">{stats?.processingOrders ?? '-'}</h3>
+                <Badge bg="warning" className="mt-2">Processing</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Shipped" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Shipped</h6>
+                <h3 className="mb-0">{stats?.shippedOrders ?? '-'}</h3>
+                <Badge bg="info" className="mt-2">Shipped</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Delivered" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Delivered</h6>
+                <h3 className="mb-0">{stats?.deliveredOrders ?? '-'}</h3>
+                <Badge bg="success" className="mt-2">Delivered</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+
+        <Col md={6} lg={2}>
+          <Link to="/admin/orders?status=Cancelled" className="text-decoration-none text-reset">
+            <Card className="h-100 shadow-sm dashboard-stat-card">
+              <Card.Body className="p-3">
+                <h6 className="text-muted mb-0">Cancelled</h6>
+                <h3 className="mb-0">{stats?.cancelledOrders ?? '-'}</h3>
+                <Badge bg="danger" className="mt-2">Cancelled</Badge>
+              </Card.Body>
+            </Card>
+          </Link>
+        </Col>
+      </Row>
+      
+      {/* Order Status Chart */}
+      <Row className="mb-4">
+        <Col lg={12}>
+          <Card className="shadow-sm">
+            <Card.Header className="bg-transparent py-3">
+              <h5 className="mb-0">Order Status Distribution</h5>
+            </Card.Header>
+            <Card.Body>
+              <div style={{ height: '300px' }}>
+                {stats && <Bar data={chartData} options={chartOptions} />}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Sales Over Time Chart */}
+      <Row className="mb-4">
+        <Col lg={12}>
+          <Card className="shadow-sm">
+            <Card.Header className="bg-transparent py-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Sales Over Time</h5>
+                <Form.Select 
+                  className="w-auto" 
+                  value={timePeriod}
+                  onChange={(e) => setTimePeriod(e.target.value)}
+                  aria-label="Select time period"
+                >
+                  <option value="7d">Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="90d">Last 90 Days</option>
+                  <option value="6m">Last 6 Months</option>
+                </Form.Select>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {isSalesChartLoading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading chart data...</span>
+                  </Spinner>
+                </div>
+              ) : salesChartError ? (
+                <Alert variant="danger">{salesChartError}</Alert>
+              ) : salesChartData ? (
+                <div style={{ height: '300px' }}>
+                  <Line data={salesChartData} options={salesChartOptions} />
+                </div>
+              ) : (
+                <div className="text-center py-3">No sales data available.</div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* User Registrations Chart */}
+      <Row className="mb-4">
+        <Col lg={12}>
+          <Card className="shadow-sm">
+            <Card.Header className="bg-transparent py-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">User Registrations</h5>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {isUsersChartLoading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading chart data...</span>
+                  </Spinner>
+                </div>
+              ) : usersChartError ? (
+                <Alert variant="danger">{usersChartError}</Alert>
+              ) : usersChartData ? (
+                <div style={{ height: '300px' }}>
+                  <Line data={usersChartData} options={usersChartOptions} />
+                </div>
+              ) : (
+                <div className="text-center py-3">No user data available.</div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default StatisticsPage;
+```
+
+---
+### File: `packages/admin-frontend/src/pages/UserDetailPage.tsx`
+
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import axios from 'axios';
+import { Container, Card, Row, Col, Table, Spinner, Alert, Badge, Button } from 'react-bootstrap';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
+
+// Interfaces for the API response data
+interface UserOrderDetail {
+  id: number;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+}
+
+interface AdminUserDetail {
+  id: number;
+  email: string;
+  createdAt: string;
+  orders: UserOrderDetail[];
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
+const UserDetailPage: React.FC = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+          setError('Authentication required. Please log in again.');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/admin/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setUser(response.data);
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
+            setError('Your session has expired. Please log in again.');
+          } else if (err.response.status === 404) {
+            setError(`User with ID ${userId} not found.`);
+          } else {
+            setError(err.response.data.message || 'Failed to fetch user details.');
+          }
+          console.error('Error fetching user details:', err.response.data);
+        } else {
+          setError('Network error. Please check your connection.');
+          console.error('Network error:', err);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userId) {
+      fetchUserDetails();
+    }
+  }, [userId]);
+
+  if (isLoading) {
+    return (
+      <Container className="py-4">
+        <div className="text-center my-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading user details...</span>
+          </Spinner>
+        </div>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="py-4">
+        <Alert variant="danger" className="my-3">
+          {error}
+        </Alert>
+        <div className="text-center">
+          <Button as={Link} to="/admin/users" variant="secondary">
+            Back to User List
+          </Button>
+        </div>
+      </Container>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Container className="py-4">
+        <Alert variant="warning">
+          No user data available.
+        </Alert>
+        <div className="text-center">
+          <Button as={Link} to="/admin/users" variant="secondary">
+            Back to User List
+          </Button>
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>User Details</h2>
+        <Button as={Link} to="/admin/users" variant="outline-secondary">
+          Back to User List
+        </Button>
+      </div>
+
+      <Row className="mb-4">
+        <Col>
+          <Card className="shadow-sm">
+            <Card.Header>
+              <h5 className="mb-0">User Information</h5>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+                <Col md={6}>
+                  <p><strong>User ID:</strong> {user.id}</p>
+                  <p><strong>Email:</strong> {user.email}</p>
+                </Col>
+                <Col md={6}>
+                  <p><strong>Registration Date:</strong> {formatDateTime(user.createdAt)}</p>
+                  <p><strong>Total Orders:</strong> {user.orders.length}</p>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row>
+        <Col>
+          <Card className="shadow-sm">
+            <Card.Header>
+              <h5 className="mb-0">User Order History</h5>
+            </Card.Header>
+            <Card.Body>
+              {user.orders.length > 0 ? (
+                <Table responsive hover>
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th className="text-end">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {user.orders.map(order => (
+                      <tr key={order.id}>
+                        <td>
+                          <Link to={`/admin/orders/${order.id}`}>
+                            #{order.id}
+                          </Link>
+                        </td>
+                        <td>{formatDateTime(order.createdAt)}</td>
+                        <td>
+                          <Badge bg={getStatusBadgeVariant(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </td>
+                        <td className="text-end">{formatCurrency(order.totalAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <div className="text-center p-4">
+                  <p className="text-muted mb-0">This user has not placed any orders yet.</p>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default UserDetailPage;
+```
+
+---
 ### File: `packages/admin-frontend/src/pages/UserManagementPage.tsx`
 
 ```tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
-import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { formatDateTime, formatCurrency } from '../utils/formatters';
 
 // User interface with order count
 interface AdminUser {
@@ -13794,23 +14818,6 @@ const UserManagementPage: React.FC = () => {
     fetchUsers();
   }, []);
 
-  // Helper function to format dates
-  const formatDateTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  // Helper function to format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
   if (isLoading) {
     return (
       <Container className="py-4">
@@ -13855,7 +14862,7 @@ const UserManagementPage: React.FC = () => {
                     users.map(user => (
                       <tr key={user.id}>
                         <td>{user.id}</td>
-                        <td>{user.email}</td>
+                        <td><Link to={`/admin/users/${user.id}`}>{user.email}</Link></td>
                         <td>{formatDateTime(user.createdAt)}</td>
                         <td className="text-center">{user._count?.orders ?? 0}</td>
                         <td className="text-end">{formatCurrency(user.totalSpent ?? 0)}</td>
@@ -13985,14 +14992,6 @@ const ZoneManagementPage = () => {
 
   useEffect(() => {
     fetchZones();
-    
-    // Fix Leaflet icon issue
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    });
   }, []);
 
   const fetchZones = async () => {
@@ -14310,17 +15309,57 @@ export default ZoneManagementPage;
 
 ```typescript
 /**
- * Formats a number as currency (EUR)
- * @param value The number to format
+ * Utility functions for formatting data throughout the application
+ */
+
+/**
+ * Format a date string into a localized date and time string
+ * @param isoString ISO date string to format
+ * @returns Formatted date and time string
+ */
+export const formatDateTime = (dateString: string | Date): string => {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+/**
+ * Format a number as currency
+ * @param amount - The amount to format
  * @returns Formatted currency string
  */
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-EU', {
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
+    currency: 'USD',
+  }).format(amount);
+};
+
+/**
+ * Get the appropriate Bootstrap badge variant based on order status
+ * @param status Order status string
+ * @returns Bootstrap variant name
+ */
+export const getStatusBadgeVariant = (status: string): string => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'warning';
+    case 'processing':
+      return 'info';
+    case 'shipped':
+      return 'primary';
+    case 'delivered':
+      return 'success';
+    case 'cancelled':
+      return 'danger';
+    default:
+      return 'secondary';
+  }
 };
 
 /**

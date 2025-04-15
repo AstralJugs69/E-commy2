@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response, RequestHandler } from 'express';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
  * @description Get all products with optional search and filtering
  * @access Public
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', (async (req: Request, res: Response) => {
   try {
     console.log('GET /api/products route hit');
     console.log('Query params:', req.query);
@@ -94,14 +94,14 @@ router.get('/', async (req: Request, res: Response) => {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Error retrieving products' });
   }
-});
+}) as RequestHandler);
 
 /**
  * @route GET /api/products/:productId
  * @description Get a single product by ID
  * @access Public
  */
-router.get('/:productId', async (req: Request, res: Response) => {
+router.get('/:productId', (async (req: Request, res: Response) => {
   // Validate productId param (convert to int, check NaN)
   const productId = parseInt(req.params.productId, 10);
   if (isNaN(productId)) {
@@ -117,6 +117,7 @@ router.get('/:productId', async (req: Request, res: Response) => {
         id: true,
         name: true,
         price: true,
+        costPrice: true,
         description: true,
         imageUrl: true,
         stock: true,
@@ -139,14 +140,14 @@ router.get('/:productId', async (req: Request, res: Response) => {
     console.error(`Error fetching product ${productId}:`, error);
     res.status(500).json({ message: 'Error retrieving product details.' });
   }
-});
+}) as RequestHandler);
 
 /**
  * @route GET /api/products/:productId/reviews
  * @description Get all reviews for a product
  * @access Public
  */
-router.get('/:productId/reviews', async (req: Request, res: Response) => {
+router.get('/:productId/reviews', (async (req: Request, res: Response) => {
   try {
     console.log(`GET /api/products/${req.params.productId}/reviews route hit`);
     console.log('Request params:', req.params);
@@ -197,7 +198,7 @@ router.get('/:productId/reviews', async (req: Request, res: Response) => {
     console.error('Error in product reviews route:', error);
     res.status(500).json({ message: 'Error retrieving product reviews.', error: String(error) });
   }
-});
+}) as RequestHandler);
 
 // Export the router
 export default router;

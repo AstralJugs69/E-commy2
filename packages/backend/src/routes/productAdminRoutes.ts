@@ -12,6 +12,7 @@ const productSchema = z.object({
   price: z.number().positive({ message: "Price must be a positive number" }),
   description: z.string().optional(),
   stock: z.number().int().min(0, { message: "Stock cannot be negative" }).optional(),
+  costPrice: z.number().positive({ message: "Cost Price must be a positive number" }).optional().nullable(),
   imageUrl: z.string().url({ message: "Invalid image URL" }).optional().or(z.literal('')), // Allow empty string
   categoryId: z.number().int().positive().optional().nullable(), // Allow null or positive int
 });
@@ -28,13 +29,24 @@ const adjustStockSchema = z.object({
 router.get('/', isAdmin, async (req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        costPrice: true,
+        description: true,
+        imageUrl: true,
+        stock: true,
         category: {
           select: {
-            id: true, // Include category ID
+            id: true,
             name: true
           }
-        }
+        },
+        createdAt: true,
+        updatedAt: true,
+        reviewCount: true,
+        averageRating: true
       },
       orderBy: {
         id: 'desc' // Or name: 'asc' etc.
@@ -61,12 +73,13 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare data, ensuring optional fields are handled correctly
-  const { categoryId, stock, imageUrl, description, ...restData } = validationResult.data;
+  const { categoryId, stock, imageUrl, description, costPrice, ...restData } = validationResult.data;
   const productData: Prisma.ProductCreateInput = {
       ...restData,
       description: description || null, // Set to null if undefined/empty
       imageUrl: imageUrl || null, // Set to null if undefined/empty
       stock: stock ?? 0, // Default stock to 0 if not provided
+      costPrice: costPrice ?? null, // Set to null if undefined/null
       // Connect to category only if categoryId is provided and valid
       ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
   };
@@ -84,11 +97,13 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
     // Check for specific Prisma errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') { // Unique constraint violation
-            return res.status(409).json({ message: 'A product with this name/details might already exist.' });
+            res.status(409).json({ message: 'A product with this name/details might already exist.' });
+            return;
         }
         if (error.code === 'P2003' || error.code === 'P2025') { // Foreign key constraint or related record not found (Category)
              console.error("Foreign key error:", error.meta);
-             return res.status(400).json({ message: 'Invalid Category ID provided.' });
+             res.status(400).json({ message: 'Invalid Category ID provided.' });
+             return;
         }
     }
 
@@ -124,13 +139,18 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare update data carefully
-  const { categoryId, ...restData } = validationResult.data;
+  const { categoryId, costPrice, ...restData } = validationResult.data;
   const updateData: Prisma.ProductUpdateInput = { ...restData };
 
   // Handle optional fields explicitly setting null if empty string passed
   if ('description' in updateData) updateData.description = updateData.description || null;
   if ('imageUrl' in updateData) updateData.imageUrl = updateData.imageUrl || null;
   if ('stock' in updateData && updateData.stock === undefined) delete updateData.stock; // Don't update stock if undefined
+  
+  // Handle costPrice explicitly
+  if (costPrice !== undefined) {
+    updateData.costPrice = costPrice ?? null; // Allow setting costPrice to null
+  }
 
   // Handle category connection/disconnection
   if (categoryId !== undefined) { // Check if categoryId was provided in the update request
@@ -158,12 +178,14 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         // Handle "Not Found" error
         if (error.code === 'P2025') {
-            return res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
+            res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
+            return;
         }
         // Handle foreign key constraint violation (invalid categoryId)
         if (error.code === 'P2003' || (error.code === 'P2025' && error.message.includes('constraint'))) {
              console.error("Foreign key error on update:", error.meta);
-             return res.status(400).json({ message: 'Invalid Category ID provided for update.' });
+             res.status(400).json({ message: 'Invalid Category ID provided for update.' });
+             return;
         }
     }
 
@@ -273,21 +295,25 @@ router.delete('/:productId', isAdmin, async (req: Request, res: Response) => {
       where: { id: productIdInt }
     });
 
-    // Return 204 No Content on successful deletion
-    res.status(204).send();
+    // Return success message
+    res.status(200).json({ message: `Product with ID ${productIdInt} deleted successfully.` });
+
   } catch (error: any) {
+    // Handle errors (e.g., Product not found or related OrderItems exist)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        // Handle "Not Found" error
-        if (error.code === 'P2025') {
-            return res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
-        }
-        // Handle foreign key constraint violations (product referenced in OrderItem)
-        if (error.code === 'P2003') {
-             console.warn(`Attempted to delete product ${productIdInt} referenced in orders.`);
-             return res.status(409).json({
-                message: 'Cannot delete product because it is referenced in existing orders. Consider marking it as inactive instead.'
-             });
-        }
+      if (error.code === 'P2025') {
+        res.status(404).json({ message: `Product with ID ${productIdInt} not found.` });
+        return;
+      }
+      // Prisma error P2003 indicates a foreign key constraint failure
+      // This usually means there are OrderItems referencing this Product
+      if (error.code === 'P2003') {
+        res.status(409).json({
+          message: `Cannot delete product ${productIdInt}. It is associated with existing orders.`,
+          details: "Please remove the product from all orders before deleting."
+        });
+        return;
+      }
     }
 
     console.error(`Error deleting product ${productIdInt}:`, error);

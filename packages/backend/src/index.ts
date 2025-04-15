@@ -7,6 +7,7 @@ import adminRoutes from './routes/adminRoutes';
 import productAdminRoutes from './routes/productAdminRoutes';
 import orderRoutes from './routes/orderRoutes';
 import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
 import categoryAdminRoutes from './routes/categoryAdminRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import uploadRoutes from './routes/uploadRoutes';
@@ -14,6 +15,7 @@ import reviewRoutes from './routes/reviewRoutes';
 import reportsAdminRoutes from './routes/reportsAdminRoutes';
 import cartRoutes from './routes/cartRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
+import addressRoutes from './routes/addressRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -35,6 +37,7 @@ app.get('/', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
@@ -46,8 +49,20 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/addresses', addressRoutes);
 
 // Start Server
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Backend server listening on http://localhost:${port}`);
+}).on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${port} is already in use. Trying alternative port...`);
+    // Try an alternative port by incrementing the current port
+    const alternativePort = Number(port) + 1;
+    app.listen(alternativePort, () => {
+      console.log(`Backend server listening on alternative port http://localhost:${alternativePort}`);
+    });
+  } else {
+    console.error('Server error:', err.message);
+  }
 }); 

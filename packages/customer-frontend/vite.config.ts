@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+/// <reference types="vitest" />
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -42,6 +43,12 @@ export default defineConfig(({ mode }) => {
     define: {
       // Make env variables available in the client
       'process.env': env
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+      css: true,
     },
   }
 })

@@ -12,6 +12,7 @@ model User {
   id                   Int       @id @default(autoincrement())
   email                String    @unique
   passwordHash         String
+  name                 String?   // Add optional name field
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   passwordResetExpires DateTime?
@@ -20,6 +21,7 @@ model User {
   reviews              Review[]
   cartItems            CartItem[]
   wishlistItems        WishlistItem[]
+  addresses            Address[]
 }
 
 model Category {
@@ -36,6 +38,7 @@ model Product {
   id            Int         @id @default(autoincrement())
   name          String
   price         Float
+  costPrice     Float?      // Optional: Cost of the product
   description   String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -131,4 +134,21 @@ model WishlistItem {
   createdAt DateTime @default(now())
 
   @@unique([userId, productId]) // User can only wishlist a product once
+}
+
+model Address {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Cascade delete addresses if user is deleted
+  fullName    String
+  phone       String
+  address     String
+  city        String
+  zipCode     String
+  country     String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId]) // Index for faster lookups by user
 }

@@ -8,7 +8,12 @@
     "start": "node dist/index.js",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "generate-token": "node generate-token.js"
+    "test": "npx vitest run",
+    "test:watch": "npx vitest",
+    "coverage": "npx vitest run --coverage",
+    "generate-token": "node generate-token.js",
+    "kill-server-win": "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :3001') do taskkill /F /PID %a",
+    "kill-server": "node -e \"try{require('child_process').execSync(process.platform === 'win32' ? 'for /f \\\"tokens=5\\\" %a in (\\'netstat -ano ^| findstr :3001\\') do taskkill /F /PID %a' : 'lsof -ti:3001,3002 | xargs kill -9')}catch(e){console.log('No processes found')}\""
   },
   "keywords": [],
   "author": "",
@@ -36,6 +41,7 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.14.1",
     "@types/turf": "^3.5.32",
+    "@vitest/coverage-v8": "^3.1.1",
     "nodemon": "^3.1.9",
     "prisma": "^6.6.0",
     "ts-node": "^10.9.2",

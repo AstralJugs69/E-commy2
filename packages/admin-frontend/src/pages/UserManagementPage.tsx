@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { formatDateTime, formatCurrency } from '../utils/formatters';
 
 // User interface with order count
@@ -105,7 +106,7 @@ const UserManagementPage: React.FC = () => {
                     users.map(user => (
                       <tr key={user.id}>
                         <td>{user.id}</td>
-                        <td>{user.email}</td>
+                        <td><Link to={`/admin/users/${user.id}`}>{user.email}</Link></td>
                         <td>{formatDateTime(user.createdAt)}</td>
                         <td className="text-center">{user._count?.orders ?? 0}</td>
                         <td className="text-end">{formatCurrency(user.totalSpent ?? 0)}</td>

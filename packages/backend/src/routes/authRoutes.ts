@@ -13,6 +13,13 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'hybrid_ecommerce_secret_key_for_development_only';
 const SALT_ROUNDS = 10;
 
+// Zod schema for registration
+const registerSchema = z.object({
+  email: z.string().email({ message: "Invalid email format" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
+  name: z.string().optional()
+});
+
 // Zod schema for password reset request
 const requestResetSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -41,26 +48,17 @@ const changePasswordSchema = z.object({
 // POST /api/auth/register - Register new user
 router.post('/register', (async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    
-    // Basic validation
-    if (!email || !password) {
-      res.status(400).json({ message: 'Email and password are required' });
+    // Validate request body
+    const validationResult = registerSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: validationResult.error.flatten().fieldErrors 
+      });
       return;
     }
     
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      res.status(400).json({ message: 'Invalid email format' });
-      return;
-    }
-    
-    // Validate password length
-    if (password.length < 6) {
-      res.status(400).json({ message: 'Password must be at least 6 characters long' });
-      return;
-    }
+    const { email, password, name } = validationResult.data;
     
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -79,7 +77,8 @@ router.post('/register', (async (req: Request, res: Response) => {
     const newUser = await prisma.user.create({
       data: {
         email,
-        passwordHash: passwordHash
+        passwordHash,
+        name // Include name if provided
       }
     });
     
@@ -107,7 +106,13 @@ router.post('/login', (async (req: Request, res: Response) => {
     
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true
+      }
     });
     
     if (!user) {
@@ -126,7 +131,11 @@ router.post('/login', (async (req: Request, res: Response) => {
     
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { 
+        userId: user.id, 
+        email: user.email,
+        name: user.name || undefined // Include name in token if it exists
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -334,14 +343,33 @@ router.get('/me', isUser, (async (req: Request, res: Response) => {
     return;
   }
 
-  // Return only necessary, non-sensitive info from the token payload
-  const userInfo = {
-    id: req.user.userId,
-    email: req.user.email
-    // Add other safe fields from token if needed later (e.g., name if added to token)
-  };
+  const userId = req.user.userId;
+  if (!userId) {
+    res.status(400).json({ message: 'User ID not found in token' });
+    return;
+  }
 
-  res.status(200).json(userInfo);
+  try {
+    // Fetch user details from database
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
 }) as RequestHandler);
 
 // GET /api/auth/validate-token - Validate token and get user info

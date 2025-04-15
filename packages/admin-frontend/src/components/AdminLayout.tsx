@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
-import { FiHome, FiSmartphone, FiShoppingCart, FiBox, FiTag, FiMap, FiUsers, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiSmartphone, FiShoppingCart, FiBox, FiTag, FiMap, FiUsers, FiLogOut, FiBarChart2 } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
 
 const AdminLayout = () => {
@@ -16,17 +16,20 @@ const AdminLayout = () => {
 
   return (
     <div className="admin-layout d-flex flex-column min-vh-100">
-      <Navbar bg="primary" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
+      <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
         <Container>
           <Navbar.Brand as={Link} to="dashboard" className="fw-bolder text-decoration-none">
-            <FaStore className="me-2" size={22} />
-            <span style={{ fontWeight: 'bold' }}>Hybrid</span>Store Admin
+            <FaStore className="me-2 text-primary" size={22} />
+            <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Hybrid</span>Store Admin
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link as={Link} to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2">
                 <FiHome size={16} /> Dashboard
+              </Nav.Link>
+              <Nav.Link as={Link} to="statistics" className="px-3 py-2 d-flex align-items-center gap-2">
+                <FiBarChart2 size={16} /> Statistics
               </Nav.Link>
               <Nav.Link as={Link} to="phones" className="px-3 py-2 d-flex align-items-center gap-2">
                 <FiSmartphone size={16} /> Phones
@@ -48,7 +51,7 @@ const AdminLayout = () => {
               </Nav.Link>
             </Nav>
             <Button 
-              variant="outline-light" 
+              variant="outline-primary" 
               size="sm" 
               onClick={handleLogout} 
               className="px-3 d-flex align-items-center gap-2"

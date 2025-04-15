@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button } from 'react-bootstrap';
+import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
 import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
 
 interface OrderItem {
@@ -40,7 +40,9 @@ const OrderManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]); // Changed to array
+  const [dateFilter, setDateFilter] = useState<string>('today'); // Default to 'today'
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -55,19 +57,34 @@ const OrderManagementPage = () => {
 
     try {
       const params = new URLSearchParams();
-      if (statusFilter) {
-        params.append('status', statusFilter);
+      
+      // Add multiple status filters if any are selected
+      statusFilters.forEach(status => {
+        params.append('status', status);
+      });
+      
+      if (dateFilter) {
+        params.append('dateFilter', dateFilter);
       }
       const queryString = params.toString();
       const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
 
-      const response = await axios.get<AdminOrder[]>(apiUrl, {
+      const response = await axios.get(apiUrl, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      const processedOrders = response.data.map(order => ({
+      // Check if response.data is an array or has an 'orders' property
+      const ordersArray = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.orders || [];
+      
+      if (!Array.isArray(ordersArray)) {
+        throw new Error('Invalid response format: expected an array of orders');
+      }
+      
+      const processedOrders = ordersArray.map(order => ({
         ...order,
         shippingDetails: typeof order.shippingDetails === 'string'
           ? JSON.parse(order.shippingDetails)
@@ -94,7 +111,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+  }, [statusFilters, dateFilter]); // Re-fetch when filters change
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     setIsUpdating(true);
@@ -110,7 +127,7 @@ const OrderManagementPage = () => {
     setUpdatingOrderIds(prev => [...prev, orderId]);
     
     try {
-      await axios.post(
+      await axios.put(
         `${API_BASE_URL}/admin/orders/${orderId}/status`,
         { status: newStatus },
         {
@@ -139,36 +156,103 @@ const OrderManagementPage = () => {
     }
   };
 
+  // Toggle a status filter on/off
+  const toggleStatusFilter = (status: string) => {
+    setStatusFilters(prev => 
+      prev.includes(status)
+        ? prev.filter(s => s !== status) // Remove if already selected
+        : [...prev, status] // Add if not selected
+    );
+  };
+  
+  // Clear all status filters
+  const clearStatusFilters = () => {
+    setStatusFilters([]);
+  };
+
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Order Management</h2>
+        <h2>
+          {dateFilter === 'today' ? "Today's Orders" : "Order Management"}
+          {statusFilters.length > 0 && ` (Filtered)`}
+        </h2>
       </div>
       
-      <Row className="mb-4 align-items-center">
-        <Col md={4} lg={3}>
-          <Form.Group controlId="statusFilter">
-            <Form.Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filter orders by status"
-              className="shadow-sm border"
-            >
-              <option value="">All Statuses</option>
-              {allowedOrderStatuses.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </Col>
+      <Row className="mb-3 align-items-center">
         <Col>
-          {statusFilter && (
-            <Badge bg="primary" className="py-2 px-3">
-              <FaFilter className="me-1" /> Filtering: {statusFilter}
-            </Badge>
-          )}
+          <ButtonGroup size="sm" className="mb-3">
+            <Button
+              variant={dateFilter === 'today' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('today')}
+            >
+              Today's Orders
+            </Button>
+            <Button
+              variant={dateFilter === 'all' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('all')}
+            >
+              All Orders
+            </Button>
+            {/* Add more date range buttons later if needed */}
+          </ButtonGroup>
         </Col>
       </Row>
+      
+      <Row className="mb-4">
+        <Col md={6} lg={8}>
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            {allowedOrderStatuses.map(status => (
+              <Button
+                key={status}
+                size="sm"
+                variant={statusFilters.includes(status) ? 'primary' : 'outline-secondary'}
+                onClick={() => toggleStatusFilter(status)}
+                className="d-inline-flex align-items-center"
+              >
+                {status}
+                {statusFilters.includes(status) && <FaTimes className="ms-2" />}
+              </Button>
+            ))}
+            
+            {statusFilters.length > 0 && (
+              <Button 
+                variant="outline-danger" 
+                size="sm"
+                onClick={clearStatusFilters}
+                className="ms-2"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </Col>
+      </Row>
+      
+      {statusFilters.length > 0 && (
+        <div className="mb-3">
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <span className="text-muted me-2">Active filters:</span>
+            {statusFilters.map(status => (
+              <Badge 
+                key={status} 
+                bg={getStatusBadgeVariant(status)} 
+                className="py-2 px-3 d-flex align-items-center"
+              >
+                {status}
+                <Button 
+                  variant="link" 
+                  className="p-0 ms-2 text-white" 
+                  onClick={() => toggleStatusFilter(status)}
+                  aria-label={`Remove ${status} filter`}
+                >
+                  <FaTimes size={12} />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
       
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       
@@ -184,17 +268,17 @@ const OrderManagementPage = () => {
               <FaShoppingBag className="empty-state-icon" />
               <p className="empty-state-text">No Orders Found</p>
               <p className="mb-4 text-muted">
-                {statusFilter 
-                  ? `No orders match the "${statusFilter}" status filter.` 
+                {statusFilters.length > 0
+                  ? `No orders match the selected status filters.` 
                   : "You don't have any customer orders yet."}
               </p>
-              {statusFilter && (
+              {statusFilters.length > 0 && (
                 <Button 
                   variant="primary" 
-                  onClick={() => setStatusFilter('')}
+                  onClick={clearStatusFilters}
                   className="px-4 d-flex align-items-center gap-2 mx-auto"
                 >
-                  Clear Filter
+                  Clear Filters
                 </Button>
               )}
             </div>

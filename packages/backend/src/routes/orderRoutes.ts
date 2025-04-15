@@ -189,7 +189,8 @@ router.post('/', isUser, async (req: Request, res: Response) => {
     // Check for specific errors thrown from transaction
     if (error.message?.startsWith('Insufficient stock') || error.message?.startsWith('Product with ID')) {
        console.warn(`Order creation failed due to validation: ${error.message}`);
-       return res.status(400).json({ message: error.message }); // Return specific stock/product error
+       res.status(400).json({ message: error.message }); // Return specific stock/product error
+       return;
     }
     // Handle other errors (DB errors, etc.)
     console.error("Error creating order:", error);
@@ -338,7 +339,8 @@ router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response
 
     if (!order) {
       // Use 404 to indicate not found or not belonging to user
-      return res.status(404).json({ message: 'Order not found or does not belong to user.' });
+      res.status(404).json({ message: 'Order not found or does not belong to user.' });
+      return;
     }
     // Allow fetching number even if status moved past Pending Call,
     // but log if status is unexpected. Assignment should only happen once ideally.
@@ -361,7 +363,8 @@ router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response
     if (!availablePhone) {
       console.warn("No available phone numbers found for order ID:", orderIdInt);
       // Return 503 Service Unavailable
-      return res.status(503).json({ message: 'No verification phone lines are currently available. Please try again later.' });
+      res.status(503).json({ message: 'No verification phone lines are currently available. Please try again later.' });
+      return;
     }
 
     // 6. Mark the phone number as busy (Consider if this should only happen once)

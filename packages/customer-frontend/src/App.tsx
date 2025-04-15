@@ -13,23 +13,13 @@ import ResetPasswordPage from './pages/ResetPasswordPage'; // Import the new pag
 import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage'; // Import the new page
 import ProfilePage from './pages/ProfilePage'; // Import the profile page
 import WishlistPage from './pages/WishlistPage'; // Import the wishlist page
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import { WishlistProvider } from './context/WishlistContext'; // Import WishlistProvider
-import { Toaster } from 'react-hot-toast';
+import { useAuth } from './context/AuthContext';
 // Import other pages as needed
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <Toaster position="bottom-center" />
-            <AppRoutes />
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

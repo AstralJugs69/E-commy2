@@ -116,19 +116,55 @@ router.get('/stats', isAdmin, async (req: Request, res: Response) => {
 
 // GET /api/admin/orders - Fetch all orders for admin view (now with status filter)
 router.get('/orders', isAdmin, async (req: Request, res: Response) => {
-  // Get optional status query parameter
-  const statusFilter = req.query.status as string | undefined;
-  console.log(`GET /api/admin/orders route hit. Status filter: ${statusFilter}`);
+  // Parse status filter - can be a single string or an array of strings
+  const statusParam = req.query.status;
+  const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
+  
+  // Convert status parameter to array regardless of input type
+  let statusFilters: string[] = [];
+  
+  if (statusParam) {
+    if (Array.isArray(statusParam)) {
+      // If it's already an array (e.g., ?status=Verified&status=Processing)
+      statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
+    } else {
+      // If it's a single string (e.g., ?status=Verified)
+      const statusString = statusParam as string;
+      if (statusString.trim() !== '') {
+        statusFilters = [statusString.trim()];
+      }
+    }
+  }
+  
+  console.log(`GET /api/admin/orders route hit. Status filters: ${statusFilters.join(', ')}, DateFilter: ${dateFilter}`);
 
   try {
     // Build dynamic where clause
     const whereClause: Prisma.OrderWhereInput = {}; // Initialize empty where clause
 
-    if (statusFilter && statusFilter.trim() !== '') {
-        // Add status condition if filter is provided and not empty
-        whereClause.status = statusFilter.trim();
-        console.log(`Applying status filter: ${whereClause.status}`);
+    if (statusFilters.length > 0) {
+      // Add status condition if filters are provided
+      whereClause.status = {
+        in: statusFilters
+      };
+      console.log(`Applying status filters: ${statusFilters.join(', ')}`);
     }
+
+    // Add date filtering
+    if (dateFilter === 'today') {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+
+        whereClause.createdAt = {
+            gte: todayStart,
+            lte: todayEnd,
+        };
+        console.log(`Applying date filter: today (${todayStart.toISOString()} to ${todayEnd.toISOString()})`);
+    }
+    // Add 'all' case or specific date range handling later if needed
+    // Default behavior (if no dateFilter or dateFilter=='all') is no date filtering
 
     // Fetch orders from the database with relevant fields
     console.log('Fetching orders from database with where clause:', whereClause);
@@ -142,6 +178,8 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
         latitude: true,
         longitude: true,
         createdAt: true,
+        updatedAt: true,
+        userId: true,
         user: {
           select: {
             email: true
@@ -161,19 +199,25 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       }
     });
 
-    // Process orders to ensure consistent shippingDetails format
+    // Process orders to ensure consistent shippingDetails format and extract customer name
     const processedOrders = orders.map(order => {
       // Ensure shippingDetails exists and is properly formatted
       let formattedShippingDetails = order.shippingDetails;
+      let customerName = '(N/A)';
       
       // If shippingDetails is a string (JSON), parse it
       if (typeof order.shippingDetails === 'string') {
         try {
           formattedShippingDetails = JSON.parse(order.shippingDetails);
+          if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
+            customerName = (formattedShippingDetails as any).fullName || customerName;
+          }
         } catch (e) {
           console.warn(`Could not parse shippingDetails for order ${order.id}`);
           formattedShippingDetails = {};
         }
+      } else if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
+        customerName = (formattedShippingDetails as any).fullName || customerName;
       }
       
       // If shippingDetails doesn't exist or is null, provide an empty object
@@ -183,13 +227,14 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       
       return {
         ...order,
-        shippingDetails: formattedShippingDetails
+        shippingDetails: formattedShippingDetails,
+        customerName: customerName
       };
     });
 
     console.log(`Found ${orders.length} orders matching filter.`);
-    // Return the processed list as JSON
-    res.status(200).json(processedOrders);
+    // Return the processed list within an object with 'orders' property
+    res.status(200).json({ orders: processedOrders });
   } catch (error) {
     // Handle potential database errors
     console.error("Error fetching orders for admin:", error);
@@ -197,7 +242,63 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/orders/:orderId/status - Update an order's status
+// POST & PUT /api/admin/orders/:orderId/status - Update an order's status
+// Support both POST and PUT methods for backward compatibility
+router.put('/orders/:orderId/status', isAdmin, async (req: Request, res: Response) => {
+  // Define allowed statuses
+  const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
+  
+  // Define validation schema using Zod
+  const updateOrderStatusSchema = z.object({
+    status: z.string().refine(val => allowedOrderStatuses.includes(val), {
+      message: `Status must be one of: ${allowedOrderStatuses.join(', ')}`
+    })
+  });
+
+  // 1. Validate orderId param (convert to int, check NaN)
+  const orderIdInt = parseInt(req.params.orderId, 10);
+  if (isNaN(orderIdInt)) {
+    res.status(400).json({ message: 'Invalid order ID' });
+    return;
+  }
+
+  // 2. Validate request body using Zod schema
+  const validationResult = updateOrderStatusSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    res.status(400).json({ 
+      message: 'Validation failed', 
+      errors: validationResult.error.errors 
+    });
+    return;
+  }
+  
+  const { status: newStatus } = validationResult.data;
+
+  try {
+    // 3. Use Prisma `update` to change the status of the specified order
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderIdInt },
+      data: { status: newStatus },
+      select: { // Return updated order status and ID
+        id: true,
+        status: true
+      }
+    });
+    
+    // 4. Return 200 OK with updated status
+    res.status(200).json(updatedOrder);
+  } catch (error: any) {
+    // 5. Handle errors (Prisma P2025 for Not Found -> return 404, other errors -> 500)
+    if (error.code === 'P2025') {
+      res.status(404).json({ message: `Order with ID ${orderIdInt} not found` });
+      return;
+    }
+    console.error(`Error updating order ${orderIdInt} status:`, error);
+    res.status(500).json({ message: 'An error occurred while updating the order status' });
+  }
+});
+
+// Also keep the original POST endpoint for backward compatibility
 router.post('/orders/:orderId/status', isAdmin, async (req: Request, res: Response) => {
   // Define allowed statuses
   const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
@@ -248,7 +349,7 @@ router.post('/orders/:orderId/status', isAdmin, async (req: Request, res: Respon
       return;
     }
     console.error(`Error updating order ${orderIdInt} status:`, error);
-    res.status(500).json({ message: 'An internal server error occurred' });
+    res.status(500).json({ message: 'An error occurred while updating the order status' });
   }
 });
 
@@ -544,6 +645,48 @@ router.get('/users', isAdmin, async (req: Request, res: Response) => {
     // Handle potential database errors
     console.error("Error fetching users:", error);
     res.status(500).json({ message: 'An internal server error occurred' });
+  }
+});
+
+// GET /api/admin/users/:userId - Fetch user details with order history
+router.get('/users/:userId', isAdmin, async (req: Request, res: Response) => {
+  // Validate userId param (convert to int, check NaN)
+  const userIdInt = parseInt(req.params.userId, 10);
+  if (isNaN(userIdInt)) {
+    res.status(400).json({ message: 'Invalid user ID' });
+    return;
+  }
+
+  try {
+    // Fetch user details with their order history
+    const userDetails = await prisma.user.findUnique({
+      where: { id: userIdInt },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+        orders: { // Include related orders
+          select: {
+            id: true,
+            status: true,
+            totalAmount: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+        // Do NOT select passwordHash or reset tokens!
+      }
+    });
+
+    if (!userDetails) {
+      res.status(404).json({ message: `User with ID ${userIdInt} not found.` });
+      return;
+    }
+    
+    res.status(200).json(userDetails);
+  } catch (error) {
+    console.error(`Error fetching user ${userIdInt} details:`, error);
+    res.status(500).json({ message: 'An error occurred while fetching user details' });
   }
 });
 

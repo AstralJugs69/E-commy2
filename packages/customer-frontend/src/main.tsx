@@ -6,14 +6,17 @@ import App from './App.tsx'
 import './index.css' // Your custom CSS (optional overrides)
 import { AuthProvider } from './context/AuthContext'; // Import
 import { CartProvider } from './context/CartContext'; // Import
+import { WishlistProvider } from './context/WishlistContext'; // Import
 import { Toaster } from 'react-hot-toast';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider> {/* Wrap App */}
       <CartProvider> {/* Wrap App */}
-        <Toaster position="top-right" />
-        <App />
+        <WishlistProvider> {/* Wrap App */}
+          <Toaster position="bottom-center" />
+          <App />
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   </React.StrictMode>,

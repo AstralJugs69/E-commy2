@@ -9,18 +9,20 @@
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #14B8A6;
-  --primary-rgb: 20, 184, 166;
-  --primary-hover: #119A88; /* Slightly Darker Teal */
-  --primary-active: #0E8171; /* Even Darker Teal */
-  --primary-light: #73E5D7;
-  --primary-bg-subtle: #E6FAF8;
+  --primary: #39FF14; /* Neon Green */
+  --primary-rgb: 57, 255, 20;
+  --primary-hover: #32E012; /* Slightly Darker */
+  --primary-active: #2BC210; /* Even Darker */
+  --primary-light: #7CFF5E;
+  --primary-bg-subtle: #E9FFDF;
+  --primary-text-on: #000000; /* Black text for contrast on neon green */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #64748B; /* Neutral 500 */
-  --secondary-rgb: 100, 116, 139;
-  --secondary-hover: #475569; /* Neutral 600 */
-  --secondary-active: #334155; /* Neutral 700 */
+  --secondary-color: #343A40; /* Dark Gray */
+  --secondary-rgb: 52, 58, 64;
+  --secondary-hover: #23272B; /* Neutral 600 */
+  --secondary-active: #1D2124; /* Neutral 700 */
+  --secondary-text-on: #FFFFFF; /* White text on dark background */
   --light-bg: #F8FAFC; /* Neutral 50 */
   --subtle-border: #E2E8F0; /* Neutral 200 */
   --text-muted: #64748B; /* Neutral 500 */
@@ -60,6 +62,10 @@
   --info-active: #1D4ED8;
 
   /* Bootstrap Variables */
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: var(--primary-rgb);
+  --bs-secondary: var(--secondary-color);
+  --bs-secondary-rgb: var(--secondary-rgb);
   --bs-link-color-rgb: var(--primary-rgb);
   --bs-link-hover-color-rgb: var(--primary-rgb); /* Handled via filter below */
 
@@ -171,9 +177,10 @@ th {
   --bs-btn-active-border-color: var(--primary-active);
   --bs-btn-disabled-bg: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
-  --bs-btn-color: white;
-  --bs-btn-hover-color: white;
-  --bs-btn-active-color: white;
+  --bs-btn-color: var(--primary-text-on);
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-disabled-color: var(--primary-text-on);
 }
 
 .btn-secondary {
@@ -183,9 +190,10 @@ th {
   --bs-btn-hover-border-color: var(--secondary-hover);
   --bs-btn-active-bg: var(--secondary-active);
   --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-color: white;
-  --bs-btn-hover-color: white;
-  --bs-btn-active-color: white;
+  --bs-btn-color: var(--secondary-text-on);
+  --bs-btn-hover-color: var(--secondary-text-on);
+  --bs-btn-active-color: var(--secondary-text-on);
+  --bs-btn-disabled-color: var(--secondary-text-on);
 }
 
 .btn-outline-primary {
@@ -193,10 +201,10 @@ th {
   --bs-btn-border-color: var(--primary);
   --bs-btn-hover-bg: var(--primary);
   --bs-btn-hover-border-color: var(--primary);
-  --bs-btn-hover-color: white;
+  --bs-btn-hover-color: var(--primary-text-on);
   --bs-btn-active-bg: var(--primary-active);
   --bs-btn-active-border-color: var(--primary-active);
-  --bs-btn-active-color: white;
+  --bs-btn-active-color: var(--primary-text-on);
   --bs-btn-disabled-color: var(--primary);
   --bs-btn-disabled-border-color: var(--primary);
 }
@@ -206,10 +214,10 @@ th {
   --bs-btn-border-color: var(--secondary-color);
   --bs-btn-hover-bg: var(--secondary-color);
   --bs-btn-hover-border-color: var(--secondary-color);
-  --bs-btn-hover-color: white;
+  --bs-btn-hover-color: var(--secondary-text-on);
   --bs-btn-active-bg: var(--secondary-active);
   --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-active-color: white;
+  --bs-btn-active-color: var(--secondary-text-on);
   --bs-btn-disabled-color: var(--secondary-color);
   --bs-btn-disabled-border-color: var(--secondary-color);
 }
@@ -388,49 +396,59 @@ th {
 /* Backgrounds */
 .bg-primary {
   background-color: var(--primary) !important;
+  color: var(--primary-text-on) !important;
 }
 
 .bg-secondary {
-  background-color: var(--neutral-500) !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-on) !important;
 }
 
 .bg-success {
   background-color: var(--success) !important;
+  color: #fff !important;
 }
 
 .bg-danger {
   background-color: var(--danger) !important;
+  color: #fff !important;
 }
 
 .bg-warning {
   background-color: var(--warning) !important;
+  color: #212529 !important;
 }
 
 .bg-info {
   background-color: var(--info) !important;
+  color: #fff !important;
 }
 
 .bg-light {
-  background-color: var(--neutral-50) !important;
+  background-color: var(--neutral-100) !important;
 }
 
 .bg-dark {
   background-color: var(--neutral-900) !important;
+  color: #fff !important;
 }
 
 /* Badges */
 .badge {
   font-weight: var(--font-weight-medium);
+  border-radius: 0.25rem;
   padding: 0.35em 0.65em;
-  border-radius: 0.375rem;
+  font-size: 0.75em;
 }
 
 .badge.bg-primary {
   background-color: var(--primary) !important;
+  color: var(--primary-text-on) !important;
 }
 
 .badge.bg-secondary {
-  background-color: var(--neutral-500) !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-on) !important;
 }
 
 .badge.bg-success {
@@ -443,6 +461,7 @@ th {
 
 .badge.bg-warning {
   background-color: var(--warning) !important;
+  color: #212529;
 }
 
 .badge.bg-info {

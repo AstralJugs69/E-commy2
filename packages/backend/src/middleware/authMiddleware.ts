@@ -13,6 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only';
 interface UserPayload {
   userId: number;
   email: string;
+  name?: string;
   role?: string;
   exp?: number;
 }

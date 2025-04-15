@@ -16,6 +16,7 @@ interface Product {
   id: number;
   name: string;
   price: number;
+  costPrice?: number | null;
   description?: string;
   stock?: number;
   imageUrl?: string;
@@ -48,6 +49,7 @@ const ProductManagementPage: React.FC = () => {
   // Form state
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState('');
+  const [formCostPrice, setFormCostPrice] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStock, setFormStock] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('');
@@ -187,6 +189,7 @@ const ProductManagementPage: React.FC = () => {
     setEditingProduct(null);
     setFormName('');
     setFormPrice('');
+    setFormCostPrice('');
     setFormDescription('');
     setFormStock('');
     setFormImageUrl('');
@@ -201,6 +204,7 @@ const ProductManagementPage: React.FC = () => {
     setEditingProduct(product);
     setFormName(product.name);
     setFormPrice(product.price.toString());
+    setFormCostPrice(product.costPrice?.toString() || '');
     setFormDescription(product.description || '');
     setFormStock(product.stock?.toString() || '');
     setFormImageUrl(product.imageUrl || '');
@@ -236,6 +240,16 @@ const ProductManagementPage: React.FC = () => {
     if (isNaN(priceValue) || priceValue <= 0) {
       setModalError('Price must be a positive number.');
       return;
+    }
+
+    // Validate cost price if provided
+    let costValue = null;
+    if (formCostPrice) {
+      costValue = parseFloat(formCostPrice);
+      if (isNaN(costValue) || costValue < 0) {
+        setModalError('Cost Price must be a valid positive number or empty.');
+        return;
+      }
     }
 
     setIsModalLoading(true);
@@ -291,6 +305,7 @@ const ProductManagementPage: React.FC = () => {
     const productData = {
       name: formName.trim(),
       price: priceValue,
+      costPrice: costValue,
       description: formDescription.trim() || undefined,
       stock: formStock ? parseInt(formStock, 10) : undefined,
       imageUrl: formImageUrl.trim() || undefined,
@@ -494,6 +509,7 @@ const ProductManagementPage: React.FC = () => {
                     <th>Name</th>
                     <th>Category</th>
                     <th className="text-end">Price</th>
+                    <th className="text-end">Cost Price</th>
                     <th className="text-center">Stock</th>
                     <th style={{ width: '180px' }} className="text-end">Actions</th>
                   </tr>
@@ -527,6 +543,7 @@ const ProductManagementPage: React.FC = () => {
                         )}
                       </td>
                       <td className="text-end fw-medium">{formatCurrency(product.price)}</td>
+                      <td className="text-end">{product.costPrice != null ? formatCurrency(product.costPrice) : 'N/A'}</td>
                       <td className="text-center">
                         <Badge 
                           bg={product.stock === undefined || product.stock === null ? 'secondary' : 
@@ -609,6 +626,19 @@ const ProductManagementPage: React.FC = () => {
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
                   required
+                />
+              </InputGroup>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Cost Price (Optional)</Form.Label>
+              <InputGroup>
+                <InputGroup.Text>$</InputGroup.Text>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formCostPrice}
+                  onChange={(e) => setFormCostPrice(e.target.value)}
                 />
               </InputGroup>
             </Form.Group>
