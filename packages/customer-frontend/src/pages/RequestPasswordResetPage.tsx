@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:3001/api'; // Make sure this matches your backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'; // Make sure this matches your backend
 
 const RequestPasswordResetPage = () => {
   const [email, setEmail] = useState('');

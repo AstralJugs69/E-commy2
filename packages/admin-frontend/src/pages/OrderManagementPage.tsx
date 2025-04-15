@@ -29,7 +29,7 @@ interface AdminOrder {
   createdAt: string; // ISO 8601 date string
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Define allowed order statuses (must match backend)
 const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
@@ -221,13 +221,13 @@ const OrderManagementPage = () => {
               <Table hover responsive className="align-middle shadow-sm">
                 <thead>
                   <tr>
-                    <th width="80">ID</th>
+                    <th style={{ width: '80px' }}>ID</th>
                     <th>Customer</th>
                     <th>Items</th>
                     <th className="text-end">Total</th>
                     <th>Status</th>
                     <th>Date</th>
-                    <th width="180">Actions</th>
+                    <th style={{ width: '180px' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>

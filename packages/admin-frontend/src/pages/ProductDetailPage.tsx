@@ -17,7 +17,7 @@ interface Product {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

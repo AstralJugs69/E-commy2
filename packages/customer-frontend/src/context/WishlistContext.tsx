@@ -10,6 +10,9 @@ interface Product {
   price: number;
   imageUrl: string | null;
   stock: number;
+  description?: string | null;
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
 interface WishlistItem {
@@ -32,7 +35,7 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);

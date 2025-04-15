@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FaTrash, FaShoppingCart } from 'react-icons/fa';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const CartPage = () => {
   // Get all required functions from cart context in one place
@@ -30,9 +30,9 @@ const CartPage = () => {
           <FaShoppingCart className="empty-state-icon" />
           <p className="empty-state-text">Your cart is empty</p>
           <p className="mb-4 text-muted">Add products to your cart to get started with your shopping</p>
-          <Button variant="primary" as={Link} to="/" className="px-4">
+          <Link to="/" className="btn btn-primary px-4">
             Start Shopping
-          </Button>
+          </Link>
         </div>
       ) : (
         <>
@@ -190,7 +190,7 @@ const CartPage = () => {
               <h4 className="mb-3">Total: {formatCurrency(getCartTotal())}</h4>
               <div className="d-grid gap-2 d-sm-flex justify-content-sm-end">
                 <Button variant="outline-secondary" onClick={() => clearCart()}>Clear Cart</Button>
-                <Button variant="secondary" as={Link} to="/">Continue Shopping</Button>
+                <Link to="/" className="btn btn-secondary">Continue Shopping</Link>
                 <Button variant="success" onClick={handleCheckout}>Proceed to Checkout</Button>
               </div>
             </Card.Body>

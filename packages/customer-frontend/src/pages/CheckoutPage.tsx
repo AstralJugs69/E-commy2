@@ -361,4 +361,4 @@ const CheckoutPage: React.FC = () => {
   );
 };
 
-export default CheckoutPage; 
+export default CheckoutPage;

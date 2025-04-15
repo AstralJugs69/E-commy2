@@ -1,8 +1,9 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Card, Image, Row, Col, Toast, ToastContainer, Badge } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { BsImage, FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 
 interface Category {
@@ -24,7 +25,7 @@ interface Product {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -353,7 +354,7 @@ const ProductManagementPage: React.FC = () => {
     }
 
     if (adjustmentInt === 0) {
-        toast.info("No adjustment needed (value is 0).");
+        toast.success("No adjustment needed (value is 0).");
         setAdjustingProductId(null); // Close the input if adjustment is 0
         setAdjustmentValue('');
         return;
@@ -492,13 +493,13 @@ const ProductManagementPage: React.FC = () => {
               <Table hover responsive className="align-middle shadow-sm">
                 <thead>
                   <tr>
-                    <th width="60">ID</th>
-                    <th width="80">Image</th>
+                    <th style={{ width: '60px' }}>ID</th>
+                    <th style={{ width: '80px' }}>Image</th>
                     <th>Name</th>
                     <th>Category</th>
                     <th className="text-end">Price</th>
                     <th className="text-center">Stock</th>
-                    <th width="180" className="text-end">Actions</th>
+                    <th style={{ width: '180px' }} className="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

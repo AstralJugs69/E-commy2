@@ -12,7 +12,7 @@ interface UserOrder {
   createdAt: string; // ISO String
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Simple helper functions (can be moved to a utils file later)
 const formatDateTime = (isoString: string) => {
@@ -134,9 +134,9 @@ const OrderHistoryPage = () => {
               <FaList className="empty-state-icon" />
               <p className="empty-state-text">No Orders Yet</p>
               <p className="mb-4 text-muted">You haven't placed any orders yet. Start shopping to see your order history here.</p>
-              <Button as={Link} to="/" variant="primary" className="px-4">
+              <Link to="/" className="btn btn-primary px-4">
                 Start Shopping
-              </Button>
+              </Link>
             </div>
           ) : (
             <>

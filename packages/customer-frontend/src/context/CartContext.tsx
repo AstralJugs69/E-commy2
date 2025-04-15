@@ -20,6 +20,7 @@ interface CartContextType {
   cartItems: CartItem[];
   addToCart: (product: Product) => Promise<void>;
   addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
+  updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   clearCart: () => Promise<void>;
   getCartTotal: () => number;
@@ -30,7 +31,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -235,7 +236,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       // Update local state
-      setCartItems([]);
+    setCartItems([]);
       
       toast.success("Cart cleared successfully.");
     } catch (err) {
@@ -275,8 +276,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addToCart,
+      addToCart, 
       addOrUpdateItemQuantity,
+      updateCartItemQuantity: addOrUpdateItemQuantity,
       removeFromCart, 
       clearCart, 
       getCartTotal, 

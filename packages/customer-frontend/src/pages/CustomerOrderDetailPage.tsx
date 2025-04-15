@@ -32,7 +32,7 @@ interface CustomerOrder {
   // Other fields like userId, latitude, longitude might be present but not displayed
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Helper functions (consider moving to utils)
 const formatDateTime = (isoString: string) => {

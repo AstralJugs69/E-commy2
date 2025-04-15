@@ -12,7 +12,7 @@ interface ServiceZone {
   geoJsonPolygon: string; // The raw GeoJSON string
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Custom EditControl component to replace react-leaflet-draw
 interface EditControlProps {
@@ -31,7 +31,7 @@ interface EditControlProps {
   };
   edit?: {
     featureGroup?: L.FeatureGroup;
-    edit?: boolean | L.DrawOptions.EditHandlerOptions; 
+    edit?: boolean | any;
     remove?: boolean;
   };
 }
