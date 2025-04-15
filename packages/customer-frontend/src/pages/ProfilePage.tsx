@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';

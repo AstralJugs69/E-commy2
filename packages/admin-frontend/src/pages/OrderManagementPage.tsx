@@ -1,120 +1,299 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Table, Alert, Spinner, Badge } from 'react-bootstrap';
+import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+
+interface OrderItem {
+  id: number;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+interface ShippingDetails {
+  fullName: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+}
 
 interface AdminOrder {
   id: number;
-  customerName: string;
-  customerPhone: string;
   status: string;
-  locationCheckResult: string | null;
+  totalAmount: number;
+  shippingDetails: ShippingDetails;
+  items: OrderItem[];
   createdAt: string; // ISO 8601 date string
 }
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
+// Define allowed order statuses (must match backend)
+const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
+
 const OrderManagementPage = () => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<number[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      setError('Authentication required. Please log in again.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      const queryString = params.toString();
+      const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
+
+      console.log(`Fetching orders from ${apiUrl}`);
+      const response = await axios.get(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log('Received orders data:', response.data);
+      response.data.forEach((order: AdminOrder) => {
+        console.log(`Order ${order.id} shipping details:`, order.shippingDetails);
+      });
+      
+      setOrders(response.data);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        if (err.response.status === 401) {
+          setError('Your session has expired. Please log in again.');
+        } else {
+          setError(err.response.data.message || 'Failed to fetch orders.');
+        }
+        console.error('Error fetching orders:', err.response.data);
+      } else {
+        setError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem('admin_token');
-      if (!token) {
-        setError('Authentication required. Please log in again.');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await axios.get(`${API_BASE_URL}/admin/orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        setOrders(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          if (err.response.status === 401) {
-            setError('Your session has expired. Please log in again.');
-          } else {
-            setError(err.response.data.message || 'Failed to fetch orders.');
-          }
-          console.error('Error fetching orders:', err.response.data);
-        } else {
-          setError('Network error. Please check your connection.');
-          console.error('Network error:', err);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchOrders();
-  }, []);
+  }, [statusFilter]);
+
+  const handleStatusChange = async (orderId: number, newStatus: string) => {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      setError('Authentication required. Please log in again.');
+      return;
+    }
+
+    setUpdatingOrderIds(prev => [...prev, orderId]);
+    setError(null);
+
+    try {
+      console.log(`Attempting to update order ${orderId} status to ${newStatus}`);
+      console.log(`API URL: ${API_BASE_URL}/admin/orders/${orderId}/status`);
+      
+      await axios.post(
+        `${API_BASE_URL}/admin/orders/${orderId}/status`, 
+        { status: newStatus }, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      await fetchOrders();
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        if (err.response.status === 401) {
+          setError('Your session has expired. Please log in again.');
+        } else {
+          setError(err.response.data.message || `Failed to update order ${orderId} status.`);
+        }
+        console.error('Error updating order status:', err.response.data);
+      } else {
+        setError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setUpdatingOrderIds(prev => prev.filter(id => id !== orderId));
+    }
+  };
 
   const formatDateTime = (isoString: string): string => {
     return new Date(isoString).toLocaleString();
   };
 
+  const formatCurrency = (amount: number): string => {
+    return `€${amount.toFixed(2)}`;
+  };
+
+  const getStatusBadgeVariant = (status: string): string => {
+    switch (status?.toLowerCase()) {
+      case 'pending call': return 'warning';
+      case 'verified': return 'primary';
+      case 'processing': return 'info';
+      case 'shipped': return 'secondary';
+      case 'delivered': return 'success';
+      case 'cancelled': case 'failed verification': return 'danger';
+      default: return 'light';
+    }
+  };
+
   return (
-    <Container className="mt-3">
-      <h2>Order Management</h2>
+    <Container className="py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Order Management</h2>
+      </div>
       
-      {isLoading && (
-        <div className="text-center my-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
+      <Row className="mb-4 align-items-center">
+        <Col md={4} lg={3}>
+          <Form.Group controlId="statusFilter">
+            <Form.Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter orders by status"
+              className="shadow-sm border"
+            >
+              <option value="">All Statuses</option>
+              {allowedOrderStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col>
+          {statusFilter && (
+            <Badge bg="primary" className="py-2 px-3">
+              <FaFilter className="me-1" /> Filtering: {statusFilter}
+            </Badge>
+          )}
+        </Col>
+      </Row>
+      
+      {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+      
+      {isLoading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" className="mb-3" />
+          <p className="mt-2 text-muted">Loading orders...</p>
         </div>
-      )}
-      
-      {error && <Alert variant="danger">{error}</Alert>}
-      
-      {!isLoading && !error && (
-        <Table striped bordered hover responsive size="sm">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer Name</th>
-              <th>Phone</th>
-              <th>Status</th>
-              <th>Location Check</th>
-              <th>Date Placed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center">No orders found</td>
-              </tr>
-            ) : (
-              orders.map((order) => (
-                <tr key={order.id}>
-                  <td>{order.id}</td>
-                  <td>{order.customerName}</td>
-                  <td>{order.customerPhone}</td>
-                  <td>
-                    <Badge bg={
-                      order.status === 'Verified' ? 'success' :
-                      order.status === 'Pending Call' ? 'warning' :
-                      'secondary'
-                    }>
-                      {order.status}
-                    </Badge>
-                  </td>
-                  <td>{order.locationCheckResult || 'N/A'}</td>
-                  <td>{formatDateTime(order.createdAt)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+      ) : (
+        <>
+          {orders.length === 0 ? (
+            <div className="empty-state">
+              <FaShoppingBag className="empty-state-icon" />
+              <p className="empty-state-text">No Orders Found</p>
+              <p className="mb-4 text-muted">
+                {statusFilter 
+                  ? `No orders match the "${statusFilter}" status filter.` 
+                  : "You don't have any customer orders yet."}
+              </p>
+              {statusFilter && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setStatusFilter('')}
+                  className="px-4 d-flex align-items-center gap-2 mx-auto"
+                >
+                  Clear Filter
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <Table hover responsive className="align-middle shadow-sm">
+                <thead>
+                  <tr>
+                    <th width="80">ID</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th className="text-end">Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th width="180">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td>
+                        <Link to={`/admin/orders/${order.id}`} className="fw-bold text-decoration-none d-flex align-items-center">
+                          <FaInfoCircle className="text-primary me-1" /> {order.id}
+                        </Link>
+                      </td>
+                      <td>
+                        <div className="fw-medium">{order.shippingDetails?.fullName || '(No Name)'}</div>
+                        {order.shippingDetails?.phone && (
+                          <div className="text-muted small d-flex align-items-center">
+                            <FaPhone className="me-1" size={12} /> {order.shippingDetails.phone}
+                          </div>
+                        )}
+                        {order.shippingDetails?.address && (
+                          <div className="text-muted small d-flex align-items-center">
+                            <FaMapMarkerAlt className="me-1" size={12} /> 
+                            {`${order.shippingDetails.address}, ${order.shippingDetails.city || ''}`}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {order.items.map(item => (
+                          <div key={item.id} className="small">
+                            <span className="fw-medium">{item.quantity}x</span> {item.productName}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="text-end fw-medium">{formatCurrency(order.totalAmount)}</td>
+                      <td>
+                        <Badge bg={getStatusBadgeVariant(order.status)} className="px-2 py-1">
+                          {order.status}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div className="small d-flex align-items-center">
+                          <FaCalendarAlt className="me-1" size={12} /> 
+                          {formatDateTime(order.createdAt)}
+                        </div>
+                      </td>
+                      <td>
+                        <Form.Select
+                          size="sm"
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          disabled={updatingOrderIds.includes(order.id)}
+                          aria-label={`Change status for order ${order.id}`}
+                          className="shadow-sm border"
+                        >
+                          {allowedOrderStatuses.map(statusOption => (
+                            <option key={statusOption} value={statusOption}>
+                              {statusOption}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          )}
+        </>
       )}
     </Container>
   );

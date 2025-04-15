@@ -1,4 +1,777 @@
 /* 
  * Global custom styles for the Customer Storefront
- * All custom styles should be added here after Bootstrap imports
+ * Based on Bootstrap with custom overrides for consistency
  */
+
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Define Color Palette Variables */
+:root {
+  /* Primary Colors */
+  --primary: #14B8A6;
+  --primary-rgb: 20, 184, 166;
+  --primary-hover: #119A88; /* Slightly Darker Teal */
+  --primary-active: #0E8171; /* Even Darker Teal */
+  --primary-light: #73E5D7;
+  --primary-bg-subtle: #E6FAF8;
+  
+  /* Secondary/Accent Colors (Enhanced) */
+  --secondary-color: #64748B; /* Neutral 500 */
+  --secondary-rgb: 100, 116, 139;
+  --secondary-hover: #475569; /* Neutral 600 */
+  --secondary-active: #334155; /* Neutral 700 */
+  --light-bg: #F8FAFC; /* Neutral 50 */
+  --subtle-border: #E2E8F0; /* Neutral 200 */
+  --text-muted: #64748B; /* Neutral 500 */
+  --text-dark: #1E293B; /* Neutral 800 */
+  
+  /* Neutral Colors */
+  --neutral-50: #F8FAFC;
+  --neutral-100: #F1F5F9;
+  --neutral-200: #E2E8F0;
+  --neutral-300: #CBD5E1;
+  --neutral-400: #94A3B8;
+  --neutral-500: #64748B;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1E293B;
+  --neutral-900: #0F172A;
+  
+  /* Accent Color */
+  --accent: #8B5CF6;
+  --accent-rgb: 139, 92, 246;
+  --accent-dark: #7C3AED;
+  --accent-light: #A78BFA;
+  --accent-bg-subtle: #F3EEFF;
+  
+  /* Semantic Colors */
+  --success: #10B981;
+  --success-hover: #0EA06F;
+  --success-active: #0B8A5C;
+  --warning: #F59E0B;
+  --warning-hover: #D97706;
+  --warning-active: #B45309;
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-active: #B91C1C;
+  --info: #3B82F6;
+  --info-hover: #2563EB;
+  --info-active: #1D4ED8;
+
+  /* Bootstrap Variables */
+  --bs-link-color-rgb: var(--primary-rgb);
+  --bs-link-hover-color-rgb: var(--primary-rgb); /* Handled via filter below */
+
+  /* Font Settings */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Spacing */
+  --spacer-1: 0.25rem;
+  --spacer-2: 0.5rem;
+  --spacer-3: 1rem;
+  --spacer-4: 1.5rem;
+  --spacer-5: 3rem;
+  
+  /* Button Styles */
+  --button-border-radius: 0.375rem;
+  --button-padding-y: 0.5rem;
+  --button-padding-x: 1.25rem;
+  --button-font-weight: 500;
+  
+  /* Component Specific */
+  --card-border-radius: 0.5rem;
+  --card-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --input-border-radius: 0.375rem;
+}
+
+/* Global Base Styles */
+body {
+  font-family: var(--font-family-base);
+  background-color: var(--light-bg);
+  color: var(--neutral-800);
+  line-height: 1.6;
+}
+
+/* Typography Overrides */
+h1, h2, h3, h4, h5, h6, p, table, form, .card {
+  color: var(--neutral-900);
+  margin-bottom: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+/* Link Styles */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover {
+  filter: brightness(85%);
+  text-decoration: none;
+}
+
+/* Interactive Element Focus Styles */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.4);
+  border-radius: var(--input-border-radius);
+}
+
+/* Table Headers */
+th {
+  font-weight: 600;
+}
+
+/* ----- BOOTSTRAP COMPONENT OVERRIDES ----- */
+
+/* Buttons */
+.btn {
+  font-weight: var(--button-font-weight);
+  border-radius: var(--button-border-radius);
+  padding: var(--button-padding-y) var(--button-padding-x);
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.1s ease-in-out;
+  --bs-btn-focus-shadow-rgb: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:focus-visible {
+  border-radius: var(--button-border-radius);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary-hover);
+  --bs-btn-hover-border-color: var(--primary-hover);
+  --bs-btn-active-bg: var(--primary-active);
+  --bs-btn-active-border-color: var(--primary-active);
+  --bs-btn-disabled-bg: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
+}
+
+.btn-secondary {
+  --bs-btn-bg: var(--secondary-color);
+  --bs-btn-border-color: var(--secondary-color);
+  --bs-btn-hover-bg: var(--secondary-hover);
+  --bs-btn-hover-border-color: var(--secondary-hover);
+  --bs-btn-active-bg: var(--secondary-active);
+  --bs-btn-active-border-color: var(--secondary-active);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary);
+  --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-hover-color: white;
+  --bs-btn-active-bg: var(--primary-active);
+  --bs-btn-active-border-color: var(--primary-active);
+  --bs-btn-active-color: white;
+  --bs-btn-disabled-color: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--secondary-color);
+  --bs-btn-border-color: var(--secondary-color);
+  --bs-btn-hover-bg: var(--secondary-color);
+  --bs-btn-hover-border-color: var(--secondary-color);
+  --bs-btn-hover-color: white;
+  --bs-btn-active-bg: var(--secondary-active);
+  --bs-btn-active-border-color: var(--secondary-active);
+  --bs-btn-active-color: white;
+  --bs-btn-disabled-color: var(--secondary-color);
+  --bs-btn-disabled-border-color: var(--secondary-color);
+}
+
+.btn-success {
+  --bs-btn-bg: var(--success);
+  --bs-btn-border-color: var(--success);
+  --bs-btn-hover-bg: var(--success-hover);
+  --bs-btn-hover-border-color: var(--success-hover);
+  --bs-btn-active-bg: var(--success-active);
+  --bs-btn-active-border-color: var(--success-active);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--danger);
+  --bs-btn-border-color: var(--danger);
+  --bs-btn-hover-bg: var(--danger-hover);
+  --bs-btn-hover-border-color: var(--danger-hover);
+  --bs-btn-active-bg: var(--danger-active);
+  --bs-btn-active-border-color: var(--danger-active);
+  --bs-btn-color: white;
+  --bs-btn-hover-color: white;
+  --bs-btn-active-color: white;
+}
+
+.btn-warning {
+  --bs-btn-bg: var(--warning);
+  --bs-btn-border-color: var(--warning);
+  --bs-btn-hover-bg: var(--warning-hover);
+  --bs-btn-hover-border-color: var(--warning-hover);
+  --bs-btn-active-bg: var(--warning-active);
+  --bs-btn-active-border-color: var(--warning-active);
+}
+
+.btn-info {
+  --bs-btn-bg: var(--info);
+  --bs-btn-border-color: var(--info);
+  --bs-btn-hover-bg: var(--info-hover);
+  --bs-btn-hover-border-color: var(--info-hover);
+  --bs-btn-active-bg: var(--info-active);
+  --bs-btn-active-border-color: var(--info-active);
+}
+
+.btn-link {
+  color: var(--primary);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}
+
+/* Cards */
+.card {
+  border-radius: var(--card-border-radius);
+  border-color: var(--neutral-200);
+  box-shadow: var(--card-box-shadow);
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: var(--neutral-50);
+  border-bottom-color: var(--neutral-200);
+  padding: 1rem 1.25rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.card-footer {
+  background-color: var(--neutral-50);
+  border-top-color: var(--neutral-200);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Product Cards - Special styling for the store */
+.product-card {
+  height: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.product-img-container {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--neutral-50);
+}
+
+.product-img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.product-price {
+  font-weight: var(--font-weight-semibold);
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+/* Form Controls */
+.form-control, .form-select {
+  border-radius: var(--input-border-radius);
+  border-color: var(--neutral-300);
+  padding: 0.5rem 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--primary-rgb), 0.25);
+}
+
+.form-label {
+  font-weight: var(--font-weight-medium);
+  margin-bottom: 0.5rem;
+  color: var(--neutral-700);
+}
+
+.form-text {
+  color: var(--neutral-600);
+}
+
+/* Consistent form group spacing */
+.form-group, .mb-3 {
+  margin-bottom: 1.5rem;
+}
+
+/* Alerts */
+.alert {
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-width: 1px;
+  font-weight: 500;
+}
+
+.alert-primary {
+  background-color: var(--primary-bg-subtle);
+  border-color: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.alert-success {
+  --bs-alert-bg: #ECFDF5;
+  --bs-alert-border-color: #A7F3D0;
+  --bs-alert-color: #065F46;
+}
+
+.alert-warning {
+  --bs-alert-bg: #FFFBEB;
+  --bs-alert-border-color: #FCD34D;
+  --bs-alert-color: #92400E;
+}
+
+.alert-danger {
+  --bs-alert-bg: #FEF2F2;
+  --bs-alert-border-color: #FECACA;
+  --bs-alert-color: #991B1B;
+}
+
+/* Backgrounds */
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.bg-secondary {
+  background-color: var(--neutral-500) !important;
+}
+
+.bg-success {
+  background-color: var(--success) !important;
+}
+
+.bg-danger {
+  background-color: var(--danger) !important;
+}
+
+.bg-warning {
+  background-color: var(--warning) !important;
+}
+
+.bg-info {
+  background-color: var(--info) !important;
+}
+
+.bg-light {
+  background-color: var(--neutral-50) !important;
+}
+
+.bg-dark {
+  background-color: var(--neutral-900) !important;
+}
+
+/* Badges */
+.badge {
+  font-weight: var(--font-weight-medium);
+  padding: 0.35em 0.65em;
+  border-radius: 0.375rem;
+}
+
+.badge.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.badge.bg-secondary {
+  background-color: var(--neutral-500) !important;
+}
+
+.badge.bg-success {
+  background-color: var(--success) !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--danger) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--warning) !important;
+}
+
+.badge.bg-info {
+  background-color: var(--info) !important;
+}
+
+/* Tables */
+.table {
+  --bs-table-hover-bg: rgba(var(--primary-rgb), 0.05);
+}
+
+.table thead th {
+  background-color: var(--neutral-50);
+  color: var(--neutral-700);
+  font-weight: 600;
+  border-bottom-width: 1px;
+  padding: 0.75rem 1rem;
+}
+
+.table tfoot th, .table tfoot td {
+  background-color: var(--neutral-100);
+  font-weight: 600;
+}
+
+.tfoot-total {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+/* Navbars - Customer specific styling */
+.navbar {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.navbar-brand {
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+  font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+  font-weight: var(--font-weight-medium);
+  transition: color 0.2s ease;
+}
+
+/* Main Content Area */
+.main-content {
+  padding-top: 4rem; /* Make space for fixed navbar */
+}
+
+/* Footer */
+.footer {
+  background-color: var(--neutral-800);
+  color: white;
+  padding: 3rem 0;
+  margin-top: 3rem;
+}
+
+.footer a {
+  color: var(--neutral-300);
+}
+
+.footer a:hover {
+  color: white;
+}
+
+.footer-heading {
+  color: white;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 1.25rem;
+}
+
+/* Category items */
+.category-item {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  background-color: var(--neutral-50);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  border-radius: var(--card-border-radius);
+  padding: 0.75rem;
+}
+
+.category-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.category-item.border-primary {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.category-image {
+  max-height: 40px;
+    max-width: 100%;
+  object-fit: contain;
+}
+
+.category-name {
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-medium);
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+/* Star Rating Component */
+.star-rating {
+  color: var(--warning);
+}
+
+/* Custom responsive layout helpers */
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1.25rem;
+  }
+  
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  
+  .category-image {
+    max-height: 30px;
+  }
+  
+  .category-name {
+    font-size: 0.75rem;
+  }
+  
+  .category-item {
+    padding: 0.5rem;
+  }
+}
+
+/* Transitions & Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Banner and Hero Sections */
+.hero-banner {
+  background-color: var(--primary-bg-subtle);
+  padding: 3rem 0;
+  margin-bottom: 2rem;
+}
+
+.hero-title {
+  font-weight: var(--font-weight-bold);
+  margin-bottom: 1rem;
+}
+
+.hero-subtitle {
+  color: var(--neutral-600);
+  margin-bottom: 1.5rem;
+}
+
+/* Price formatting */
+.price {
+  color: var(--primary-dark);
+  font-weight: var(--font-weight-semibold);
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: var(--neutral-500);
+  margin-right: 0.5rem;
+}
+
+.discount-badge {
+  background-color: var(--danger);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+/* Transitions for Interactive Elements */
+.btn, .nav-link, .card, .category-item {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Empty State Styling */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--neutral-300);
+}
+
+.empty-state-text {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Horizontal scrolling categories for mobile */
+.category-scroll-container {
+  display: flex;
+  overflow-x: auto; /* Enable horizontal scroll */
+  white-space: nowrap; /* Prevent wrapping */
+  padding-bottom: 8px; /* Space for scrollbar */
+  -webkit-overflow-scrolling: touch; /* Smoother scroll on iOS */
+  scrollbar-width: none; /* Hide scrollbar standard */
+  margin-bottom: 1rem;
+}
+
+.category-scroll-container::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Webkit */
+}
+
+.category-item-wrapper {
+  display: inline-block; /* Align items horizontally */
+  margin-right: 8px; /* Space between items */
+  width: 80px; /* Fixed width for each category item */
+}
+
+.category-item-wrapper.active .category-item {
+  /* Style for selected category */
+  box-shadow: 0 0 0 2px var(--primary);
+  border-color: var(--primary) !important;
+}
+
+.category-item {
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-color: var(--neutral-200) !important;
+}
+
+/* Adjust existing category styles for mobile compatibility */
+@media (max-width: 768px) {
+  .category-image {
+    max-height: 35px;
+    object-fit: cover;
+  }
+  
+  .category-name {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Fix for dropdowns overflowing the screen on mobile */
+.dropdown-menu {
+  position: absolute;
+  max-width: 90vw;
+}
+
+/* Mobile sort dropdown specific styling */
+.mobile-sort-dropdown .dropdown-menu {
+  right: 0 !important;
+  left: auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  transform: none !important;
+  top: 100% !important;
+  position: absolute !important;
+  inset: auto 0 auto auto !important;
+}
+
+.mobile-sort-dropdown .form-select {
+  padding-right: 1.75rem !important;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 576px) {
+  .dropdown-menu {
+    width: 180px;
+    min-width: unset;
+  }
+  
+  .mobile-sort-dropdown select {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .mobile-sort-dropdown .form-select option {
+    white-space: normal;
+    font-size: 0.85rem;
+  }
+
+  /* Force dropdown to stay in viewport */
+  .mobile-sort-dropdown .dropdown-menu {
+    max-width: 160px !important;
+    margin-right: 0 !important;
+    right: 5px !important;
+  }
+}
+
+/* Mobile dropdown fixes */
+.mobile-sort-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.mobile-sort-dropdown .dropdown-toggle,
+.mobile-sort-dropdown .form-select {
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+@media (max-width: 576px) {
+  .mobile-sort-dropdown {
+    max-width: 160px;
+  }
+  
+  .mobile-sort-dropdown .form-select {
+    font-size: 0.85rem;
+    padding-right: 24px !important;
+    }
+}

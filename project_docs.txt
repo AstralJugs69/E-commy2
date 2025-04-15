@@ -2,100 +2,115 @@
 
 ## 1. Project Summary
 
-A mobile-first Progressive Web App (PWA) enabling online product discovery, cart management, and checkout. Uniquely integrates a mandatory customer-initiated phone call post-checkout for order verification. Verification is facilitated by admin-managed service area checks (using customer location captured via browser Geolocation API) and dynamic assignment of an available company phone number for the customer to call. Includes a separate Admin Panel for managing products, categories, orders, service zones (via map interface), and phone number availability.
+A mobile-first Progressive Web App (PWA - future goal) enabling online product discovery, cart management, and checkout. Uniquely integrates a mandatory customer-initiated phone call post-checkout for order verification. Verification is facilitated by admin-managed service area checks (using customer location captured via browser Geolocation API) and dynamic assignment of an available company phone number for the customer to call. Includes a separate Admin Panel (Desktop Web App) for managing products, categories (future), orders, service zones (via GeoJSON paste), and phone number availability.
 
 **Core Problem:** Provide a structured online sales channel for businesses requiring a human verification step (phone call) before fulfillment, while offering online browsing convenience. Addresses service area constraints and manages verification calls efficiently.
 
 ## 2. Goals
 
 *   **Business:** Increase order volume, improve order accuracy, enhance operational control (Admin Panel), manage service areas, build brand credibility.
-*   **Customer UX:** Intuitive mobile browsing/checkout, clear post-order call instructions, order history, accessibility, multi-language support.
-*   **Admin UX:** Efficient order/product/zone/phone management workflow, clear data visualization (including maps).
-*   **Technical:** Reliability (especially checkout/location/phone assignment), Security (HTTPS, auth, input validation), Performance (fast PWA/API), Maintainability (clean code, tests, docs), Scalability (ready for growth).
+*   **Customer UX (Mobile-First):** Intuitive mobile browsing/checkout, clear post-order call instructions, order history, accessibility.
+*   **Admin UX:** Efficient order/product/zone/phone management workflow, clear data visualization.
+*   **Technical:** Reliability (especially checkout/location/phone assignment), Security (HTTPS, auth, input validation), Performance (fast FE/API), Maintainability (clean code, docs), Scalability (ready for growth).
 
 ## 3. High-Level Architecture & Tech Stack
 
-*   **Architecture:** Monorepo (`pnpm` workspaces), Customer PWA <-> Backend API <-> DB, Admin Panel <-> Backend API <-> DB.
-*   **Monorepo:** `pnpm` workspaces.
-*   **Customer Frontend:** Vue.js 3 (Vite, TypeScript, PWA plugin).
-*   **Admin Frontend:** Vue.js 3 (Vite, TypeScript).
+*   **Architecture:** Monorepo (`npm` workspaces), Customer Frontend <-> Backend API <-> DB, Admin Panel <-> Backend API <-> DB.
+*   **Monorepo:** `npm` workspaces.
+*   **Customer Frontend:** React (Vite, TypeScript, Bootstrap + react-bootstrap) - **Mobile-First Design Priority**.
+*   **Admin Frontend:** React (Vite, TypeScript, Bootstrap + react-bootstrap).
 *   **Backend API:** Node.js (Express.js, TypeScript).
-*   **Database:** PostgreSQL (with PostGIS extension).
-*   **Styling:** Tailwind CSS (for both frontends).
-*   **Mapping (Admin):** Leaflet.js + OpenStreetMap.
+*   **Database:** PostgreSQL (local instance for development).
+*   **ORM:** Prisma.
+*   **Styling:** Bootstrap + `react-bootstrap` (supplemented by minimal custom CSS in `index.css` if needed).
 *   **API:** RESTful JSON API.
-*   **Authentication:** JWTs via HTTP-only cookies.
-*   **Geospatial:** PostGIS queries or Turf.js library in backend.
-*   **Process Management:** `pm2` (Node.js).
-*   **Containerization:** (Deferred - Using local PostgreSQL for initial development).
+*   **Authentication:** JWTs (via localStorage on frontend for MVP).
+*   **Geospatial:** Turf.js library in backend for point-in-polygon.
+*   **Validation:** Zod (backend).
+*   **API Client:** Axios (frontends).
+*   **Routing (FE):** `react-router-dom`.
 
 ## 4. Lean MVP Plan V1 (Prioritized)
 
 Focuses on the absolute core flow: Online Order -> Location Capture -> Backend Location Check -> Backend Phone Assignment -> Customer Sees Number -> Minimal Admin View/Control.
 
-**Priority 1: Core Backend & Minimal Data (Target: Sprint 1)**
-*   **Goal:** Establish essential API endpoints and database structure for the core flow.
-*   **Tasks:**
-    1.  **Project Setup:** Initialize Monorepo (`pnpm`, Git), Basic Backend API project (Node.js/Express/TS).
-    2.  **Database Setup (Minimal):** Local PostgreSQL instance. Simplest Schema (Users, Products(basic), Orders(basic), ServiceAreas(geojson text), PhoneNumbers(status)). Use ORM (Prisma/Sequelize).
-    3.  **Backend Auth API (Minimal):** `POST /api/auth/register`, `POST /api/auth/login` (JWT).
-    4.  **Backend Core Order/Phone API (Minimal):**
-        *   `POST /api/orders`: Receives user/order data + lat/lon. Saves order. **Performs location check** (Turf.js vs ServiceAreas). Saves result. Returns `orderId`.
-        *   `GET /api/orders/assign-number/{orderId}`: Finds first 'Available' phone number, returns `numberString`.
-    5.  **Backend Read APIs (Minimal - Admin/Customer):** `GET /api/products`, `GET /api/admin/orders`, `GET /api/admin/phonenumbers`, `POST /api/admin/phonenumbers/{id}/status`, `GET /api/admin/serviceareas`, `POST /api/admin/serviceareas`.
-*   **Testing:** Manually test APIs (Postman/Insomnia). Manually populate minimal DB data for testing.
+*   **Sprint 1: Core Backend & Minimal Data (COMPLETED)**
+    *   Setup Monorepo (`npm`), Backend API project (Node/Express/TS).
+    *   Setup Local PostgreSQL, Minimal Schema (Prisma: Users, Products(basic), Orders(basic), ServiceAreas(geojson text), PhoneNumbers(status)).
+    *   Implement Backend Auth API (`POST /api/auth/register`, `POST /api/auth/login` - JWT).
+    *   Implement Backend Core Order/Phone API:
+        *   `POST /api/orders` (Accepts data + lat/lon, performs location check via Turf.js, saves order/result, returns `orderId`).
+        *   `GET /api/orders/assign-number/:orderId` (Finds/returns available number string, marks number 'Busy').
+    *   Implement Backend Read/Write APIs (Admin): `GET /api/products`, `GET /api/admin/phonenumbers`, `POST /api/admin/phonenumbers/:id/status`, `GET /api/admin/serviceareas`, `POST /api/admin/serviceareas`, `GET /api/admin/orders`.
+    *   Implemented utility scripts (`seed-user`, `fix-service-areas`, `generate-token`). Fixed JWT secret consistency.
 
-**Priority 2: Minimal Admin Interface (Target: Sprint 2)**
-*   **Goal:** Allow admins to login, manage phone availability, see incoming orders, and add service zones (via GeoJSON text paste).
-*   **Tasks:**
-    1.  **Setup Admin Frontend:** Basic Vue3/Vite/TS/Tailwind.
-    2.  **Admin Login UI:** Calls backend login.
-    3.  **Admin Phone Management UI:** List numbers, show status, provide toggle button calling status update API.
-    4.  **Admin Order Viewing UI:** Simple table showing key order details (incl. location coords & check result). No map/editing.
-    5.  **Admin Service Zone Adding UI:** List existing zones (name). Form with Name input + TextArea for GeoJSON paste. Submit calls add zone API.
+*   **Sprint 2: Minimal Admin Interface (COMPLETED)**
+    *   Setup Admin Frontend project (React/Vite/TS/Bootstrap). Switched from `pnpm` to `npm`. Replaced initial Tailwind attempt with Bootstrap + `react-bootstrap`.
+    *   Implement Admin `LoginPage` component using `react-bootstrap`, handling API call, state, errors, token storage (localStorage).
+    *   Implement basic Routing (`react-router-dom`): Login page, protected routes wrapper (`ProtectedRoute`), shared layout (`AdminLayout` using `react-bootstrap` Navbar/Nav), placeholder pages (Dashboard, Phones, Orders, Zones). Logout functionality.
+    *   Implement `PhoneManagementPage`: Fetch list (`GET /api/admin/phonenumbers`), display in `react-bootstrap` Table, implement status toggle (`POST /api/admin/phonenumbers/:id/status`) with Buttons, handle loading/errors.
+    *   Implement `OrderManagementPage` (Read-Only): Fetch list (`GET /api/admin/orders`), display in `react-bootstrap` Table with relevant fields and status Badges, handle loading/errors.
+    *   Implement `ZoneManagementPage`: Fetch list (`GET /api/admin/serviceareas`), display in Table (previewing GeoJSON string); Implement 'Add Zone' form using `react-bootstrap` components (`Form`, `Card`, `Button`, `Alert`), handle input/submission (`POST /api/admin/serviceareas`), refresh list on success, handle loading/errors/validation.
 
-**Priority 3: Minimal Customer Frontend (Target: Sprint 3)**
-*   **Goal:** Allow customers to register/login, see products, add to basic client-side cart, checkout (triggering location capture & core flow), see success page with assigned number.
-*   **Tasks:**
-    1.  **Setup Customer Frontend:** Basic Vue3/Vite/TS/Tailwind (no PWA focus yet).
-    2.  **Customer Auth UI:** Register/Login forms calling backend.
-    3.  **Basic Product Display:** Fetch/display products (list/grid), "Add to Cart" button.
-    4.  **Simple Client-Side Cart:** Manage cart state locally. Display items/total.
-    5.  **Checkout Page (Single):** Name/Phone/Address(TextArea) inputs. Button triggers Geolocation `getCurrentPosition()`. On success, POSTs data to `/api/orders`. On API success, redirects to Success Page (`orderId`). Handle Geo/API errors.
-    6.  **Order Success Page:** Calls `/api/orders/assign-number/{orderId}`. Displays assigned phone number prominently (`tel:` link).
+*   **Sprint 3: Minimal Customer Frontend (IN PROGRESS)**
+    *   **Task 1:** Setup Customer Frontend project (React/Vite/TS/Bootstrap) - **(COMPLETED)**.
+    *   **Task 2:** Implement basic Routing (Home, basic Product List, Cart stub, Login/Register stubs, Order Success Page stub) - **(NEXT)**.
+    *   **Task 3:** Implement Customer Auth UI (Register/Login pages/components calling backend).
+    *   **Task 4:** Implement basic Product Display (fetch from `GET /api/products`, display in list/grid).
+    *   **Task 5:** Implement simple Client-Side Cart (add to cart button, basic cart state/display).
+    *   **Task 6:** Implement Checkout Page (single page): Inputs (Name, Phone, Address(TextArea)); Button triggers Geolocation `getCurrentPosition()`; On location success, POSTs data (auth token, details, lat, lon, cart items) to `/api/orders`; On API success, redirects to Success Page (`orderId`). Handle Geo/API errors.
+    *   **Task 7:** Implement Order Success Page: Calls `/api/orders/assign-number/:orderId`; Displays assigned phone number prominently (`tel:` link).
 
-**Deferred Features (Post-MVP):**
-PWA features, search/filter/sort, password reset, saved addresses, profiles, multi-language, admin dashboard, admin map UI, advanced phone logic, category management, product variants, image uploads, admin editing/deleting, detailed styling, tests, full Dockerization, etc.
+*   **Deferred Features (Post-MVP):**
+    PWA features, search/filter/sort (products/orders), password reset, saved addresses, user profiles, multi-language, admin dashboard widgets, admin map UI for zones, advanced phone assignment logic, category management, product variants/images, admin editing/deleting, detailed styling refinements, automated tests, deployment setup (Docker possibly revisited), order status updates beyond initial call, etc.
 
 ## 5. Current Progress
 
-*   **Current State:** Project Initiation & Planning Refinement.
-    - All Sprint 1 backend API endpoints implemented and tested (Auth, Products, Admin CRUD for Phones/Zones, Core Order processing w/ location check & number assignment).
-    - Implemented utility scripts (seed-user, fix-service-areas, generate-token) for testing/maintenance.
-    - Added enhancement: Assigned phone numbers are marked 'Busy'.
-*   **Current Focus:** Completed Sprint 1 (Core Backend). Preparing for Sprint 2 (Minimal Admin Interface).
-*   **Current Branch:** N/A (Will create `main` branch shortly).
+*   **Current State:** Sprint 3 (Minimal Customer Frontend) started.
+*   **Current Focus:** Setting up the basic Customer Frontend project structure and implementing initial routing.
+*   **Completed Sprints:** Sprint 1 (Core Backend), Sprint 2 (Minimal Admin Interface).
+*   **Current Branch:** `main` (Will use feature branches for significant UI work).
 
 ## 6. Chat Summary
 
-*   Session started: [Timestamp]
-*   Project Type: New Project.
-*   User provided detailed requirements for Hybrid E-commerce Platform.
-*   Architect proposed initial Architecture, Tech Stack, and Phased Plan.
-*   User requested simplification for MVP/Agile approach.
-*   Architect proposed a leaner, prioritized MVP plan (Backend -> Min Admin -> Min Customer).
-*   User agreed to the Lean MVP Plan V1.
-*   Architect instructed Coder to update `project_docs.txt` with the revised plan.
-*   Implemented POST /api/admin/phonenumbers/:id/status.
-*   Implemented GET /api/admin/serviceareas.
-*   Implemented POST /api/admin/serviceareas (with Zod validation).
-*   Implemented POST /api/orders (with Zod validation, isUser middleware, Turf.js location check). User added fixes/scripts for GeoJSON issues & testing.
-*   Implemented GET /api/orders/assign-number/:orderId (with isUser middleware, order/status check, marks number 'Busy').
-*   Sprint 1 (Core Backend) Completed.
+*   Project initiated; detailed requirements provided.
+*   Initial plan proposed (Vue, Node, etc.).
+*   Lean MVP plan adopted, prioritizing core backend flow.
+*   **Sprint 1 Completed:** Backend API implemented (Auth, Admin CRUD for Phones/Zones, Public Products, Core Order flow w/ location check & number assignment). Addressed JWT secret issues. Tested via Postman.
+*   **Sprint 2 Started:** Admin Frontend setup initiated (Vue attempt). Encountered tooling issues.
+*   **Frontend Restart:** Decided to restart Admin Frontend using React + Vite + TS + Bootstrap. Removed old Vue attempt.
+*   **Admin Frontend Rebuild:** Successfully scaffolded React project, integrated Bootstrap + `react-bootstrap`.
+*   Implemented Admin Login page & functionality.
+*   Implemented full Admin routing structure (`react-router-dom`), protected routes, shared layout. Resolved initial `react-router-bootstrap` conflict using `Link as={...}` pattern. Styled layout with `react-bootstrap`.
+*   Implemented functional Admin Phone Management page (fetch, display, toggle status).
+*   Implemented functional Admin Order Management page (read-only fetch, display).
+*   Implemented functional Admin Zone Management page (fetch, display, add new zone form).
+*   **Sprint 2 Completed.**
+*   **Sprint 3 Started:** Initial Customer Frontend project scaffolded (React + Vite + TS + Bootstrap). Mobile-first priority noted.
 
 ## 7. Dev Notes / Lessons Learned
 
-*   L17: Switched from Dockerized PostgreSQL to local PostgreSQL instance due to initial setup issues. Adjusted `DATABASE_URL` in `.env` accordingly. Updated `dev` script in `packages/backend/package.json` to remove single quotes for Windows PowerShell compatibility (`nodemon --watch src/**/*.ts --exec ts-node src/index.ts`). Initial migration successful.
-*   L18: GeoJSON Handling - Parsing GeoJSON strings from DB requires robust error handling (try-catch). Invalid GeoJSON data can break location checks; utility scripts (e.g., fix-service-areas.js) can help maintain data integrity.
-*   L19: Testing Auth Endpoints - Utility scripts (e.g., generate-token.js, seed-user.js) are valuable for simplifying the testing of JWT-protected endpoints, especially during backend-only development.
-*   L20: State Management (Backend) - Critical operations like assigning a phone number should update the resource's state (e.g., PhoneNumber status to 'Busy') to prevent race conditions or duplicate assignments. 
+*   L1: UI Layout Brittleness (Mitigation: Simple initial UI, Component Libraries, Responsive utilities)
+*   L2: Implicit Context & State (Mitigation: Clear state mgmt, API calls, Prop drilling awareness)
+*   L3: Visual Feedback Loop is Critical (Mitigation: User validation + testing)
+*   L4: Async & UI Responsiveness (Mitigation: Loading states, disable buttons during calls)
+*   L5: Abstract vs. Concrete Styling (Mitigation: Component libraries like react-bootstrap)
+*   L6: Component Boundaries (Mitigation: Encapsulation, Clear props)
+*   L7: MVP Philosophy: Implement backend first / foundations first. Iterate.
+*   L8: Manual Command Reliability: User must carefully execute manual commands (Git, npm, tests) and report results accurately.
+*   L9: Build System Issues: Config errors (vite.config, tsconfig, postcss.config) require careful setup. Manual test (`npm run build`) is key.
+*   L10: (Removed - Tool specific)
+*   L11: Explicit Instructions: Prompts must clearly specify file paths and desired logic/structure.
+*   L12: (Removed - Tool specific)
+*   L13: CSS Specificity & Transforms: Less relevant now using Bootstrap, but complex CSS can break layout.
+*   L14: Coder Proactivity vs. Scope: Coder might make unrequested changes; user validation crucial.
+*   L15: Handling Existing Projects: Requires analysis, documentation, goal setting before workflow.
+*   L16: Code Removal Caution: Verify code is dead before removing; check shared utilities.
+*   L17: Switched from Dockerized PostgreSQL to local instance due to setup issues. Adjusted `.env`. Fixed `dev` script for Windows PowerShell.
+*   L18: GeoJSON Handling - Parsing requires robust error handling. Invalid data breaks checks; utility scripts can help.
+*   L19: Testing Auth Endpoints - Utility scripts (`generate-token`, `seed-user`) valuable for backend-only dev. Postman/Insomnia essential.
+*   L20: State Management (Backend) - Critical ops (assigning phone) should update resource state ('Busy') to prevent race conditions.
+*   L21: Customer Frontend - Prioritize mobile-first design principles (layout, navigation, touch targets). Use responsive utilities/components.
+*   L22: JWT Secret Management: Ensure JWT secret is consistent across generation (login) and verification (middleware). Use `.env` file reliably.
+*   L23: Frontend Tooling Conflicts: Frameworks (React/Vue), bundlers (Vite), CSS tools (Tailwind/PostCSS/Bootstrap) can have configuration conflicts. Switching tools (e.g., Tailwind -> Bootstrap) can resolve persistent issues. Check compatibility and follow official integration guides.
+*   L24: Routing Integration: Component library wrappers (e.g., `react-router-bootstrap`) might have issues; standard router components (`Link`) with props (`as={...}`) can be a workaround. 

@@ -17,38 +17,116 @@ async function seedTestOrders() {
       console.log('Test user not found. Please run seed-user.js first.');
       return;
     }
+
+    // Create some test products if they don't exist
+    const testProducts = [
+      {
+        name: 'Test Product 1',
+        price: 19.99,
+        description: 'A test product for seeding orders',
+        stock: 100
+      },
+      {
+        name: 'Test Product 2',
+        price: 29.99,
+        description: 'Another test product',
+        stock: 50
+      }
+    ];
+
+    // Create or find the products
+    const products = [];
+    for (const productData of testProducts) {
+      const existingProduct = await prisma.product.findFirst({
+        where: { name: productData.name }
+      });
+
+      if (existingProduct) {
+        products.push(existingProduct);
+      } else {
+        const newProduct = await prisma.product.create({
+          data: productData
+        });
+        products.push(newProduct);
+      }
+    }
     
     // Sample order data
     const orderData = [
       {
         userId: user.id,
-        customerName: 'John Doe',
-        customerPhone: '+123456789',
-        addressText: '123 Main St, Anytown, USA',
+        status: 'PENDING',
+        totalAmount: 59.97,
         latitude: 40.7128,
         longitude: -74.0060,
-        status: 'Pending Call',
-        locationCheckResult: 'Inside Zone Main'
+        shippingDetails: {
+          fullName: 'John Doe',
+          address: '123 Main St',
+          city: 'Anytown',
+          zipCode: '12345',
+          country: 'USA',
+          phone: '+123456789'
+        },
+        items: [
+          {
+            productId: products[0].id,
+            productName: products[0].name,
+            quantity: 2,
+            price: products[0].price
+          },
+          {
+            productId: products[1].id,
+            productName: products[1].name,
+            quantity: 1,
+            price: products[1].price
+          }
+        ]
       },
       {
         userId: user.id,
-        customerName: 'Jane Smith',
-        customerPhone: '+987654321',
-        addressText: '456 Oak Ave, Somewhere, USA',
+        status: 'PROCESSING',
+        totalAmount: 29.99,
         latitude: 34.0522,
         longitude: -118.2437,
-        status: 'Verified',
-        locationCheckResult: 'Inside Zone West'
+        shippingDetails: {
+          fullName: 'Jane Smith',
+          address: '456 Oak Ave',
+          city: 'Somewhere',
+          zipCode: '67890',
+          country: 'USA',
+          phone: '+987654321'
+        },
+        items: [
+          {
+            productId: products[1].id,
+            productName: products[1].name,
+            quantity: 1,
+            price: products[1].price
+          }
+        ]
       },
       {
         userId: user.id,
-        customerName: 'Bob Johnson',
-        customerPhone: '+1122334455',
-        addressText: '789 Pine St, Nowhere, USA',
+        status: 'SHIPPED',
+        totalAmount: 19.99,
         latitude: 41.8781,
         longitude: -87.6298,
-        status: 'Processing',
-        locationCheckResult: 'Inside Zone North'
+        shippingDetails: {
+          fullName: 'Bob Johnson',
+          address: '789 Pine St',
+          city: 'Nowhere',
+          zipCode: '54321',
+          country: 'USA',
+          phone: '+1122334455'
+        },
+        items: [
+          {
+            productId: products[0].id,
+            productName: products[0].name,
+            quantity: 1,
+            price: products[0].price
+          }
+        ]
       }
     ];
     
@@ -57,19 +135,29 @@ async function seedTestOrders() {
       where: { userId: user.id }
     });
     
-    // Insert sample orders
-    const orders = await Promise.all(
-      orderData.map(order => 
-        prisma.order.create({
-          data: order
-        })
-      )
-    );
-    
-    console.log(`Created ${orders.length} test orders`);
-    orders.forEach((order, index) => {
-      console.log(`Order ${index + 1} ID: ${order.id} - Status: ${order.status}`);
-    });
+    // Insert sample orders with order items
+    for (const orderDataItem of orderData) {
+      const { items, ...orderDetails } = orderDataItem;
+      
+      const order = await prisma.order.create({
+        data: orderDetails
+      });
+      
+      // Create order items for each order
+      for (const item of items) {
+        await prisma.orderItem.create({
+          data: {
+            orderId: order.id,
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price
+          }
+        });
+      }
+      
+      console.log(`Created order ${order.id} with ${items.length} items`);
+    }
     
   } catch (error) {
     console.error('Error creating test orders:', error);

@@ -45,18 +45,21 @@ router.post('/register', (async (req: Request, res: Response) => {
     
     // Basic validation
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      res.status(400).json({ message: 'Email and password are required' });
+      return;
     }
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+      res.status(400).json({ message: 'Invalid email format' });
+      return;
     }
     
     // Validate password length
     if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      return;
     }
     
     // Check if user already exists
@@ -65,7 +68,8 @@ router.post('/register', (async (req: Request, res: Response) => {
     });
     
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already registered' });
+      res.status(409).json({ message: 'Email already registered' });
+      return;
     }
     
     // Hash the password
@@ -97,7 +101,8 @@ router.post('/login', (async (req: Request, res: Response) => {
     
     // Basic validation
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      res.status(400).json({ message: 'Email and password are required' });
+      return;
     }
     
     // Find user by email
@@ -106,7 +111,8 @@ router.post('/login', (async (req: Request, res: Response) => {
     });
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
     
     // Compare provided password with the stored hash
@@ -114,7 +120,8 @@ router.post('/login', (async (req: Request, res: Response) => {
 
     if (!isPasswordValid) {
       // Passwords don't match
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
     
     // Generate JWT token
@@ -163,16 +170,17 @@ router.post('/request-password-reset', (async (req: Request, res: Response) => {
 
     // Generate a secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    // TODO: Hash the token before storing for enhanced security
+    // Hash the token before storing
+    const hashedToken = await bcrypt.hash(resetToken, SALT_ROUNDS);
 
     // Calculate expiry time (1 hour from now)
     const expires = new Date(Date.now() + 3600000);
 
-    // Update user record with token and expiry
+    // Update user record with HASHED token and expiry
     await prisma.user.update({
       where: { email },
       data: {
-        passwordResetToken: resetToken, 
+        passwordResetToken: hashedToken, // Store the HASH
         passwordResetExpires: expires,
       },
     });
@@ -180,8 +188,12 @@ router.post('/request-password-reset', (async (req: Request, res: Response) => {
     // Simulate email sending by logging the link
     // Use environment variable for frontend URL, default to Vite default port
     const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const resetUrl = `${frontendBaseUrl}/reset-password/${resetToken}`;
-    console.log(`Password Reset Requested for ${email}. Token: ${resetToken}. Link: ${resetUrl}`);
+    const customerResetUrl = `http://localhost:3000/reset-password/${resetToken}`; // Customer FE Port - use PLAIN token in link
+    const adminResetUrl = `http://localhost:5173/reset-password/${resetToken}`; // Admin FE Port - use PLAIN token in link
+    
+    console.log(`Password Reset Requested for ${email}. Token: ${resetToken}.`); // Log PLAIN token
+    console.log(`   => Customer Link: ${customerResetUrl}`);
+    console.log(`   => Admin Link: ${adminResetUrl}`);
 
     // Send generic success message
     res.status(200).json({ message: genericSuccessMessage });
@@ -207,49 +219,55 @@ router.post('/reset-password', (async (req: Request, res: Response) => {
       return; // Exit function
     }
 
-    const { token, password } = validationResult.data;
+    const { token: plainTokenFromRequest, password } = validationResult.data;
 
-    // TODO: If hashing tokens, find user by hashedToken instead
-    const user = await prisma.user.findUnique({
-      where: { passwordResetToken: token },
+    // Find potential users with active reset tokens
+    const potentialUsers = await prisma.user.findMany({
+      where: {
+        passwordResetToken: { not: null },
+        passwordResetExpires: { not: null, gt: new Date() } // Check expiry
+      },
+      select: { id: true, passwordResetToken: true, passwordResetExpires: true } // Select needed fields
     });
 
-    // Check if token is valid and not expired
-    const isTokenInvalid = !user || !user.passwordResetExpires || user.passwordResetExpires < new Date();
+    let user: { id: number; passwordResetToken: string | null; passwordResetExpires: Date | null; } | null = null;
 
-    if (isTokenInvalid) {
-      // Clear the invalid/expired token fields if user exists
-      if (user) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { passwordResetToken: null, passwordResetExpires: null },
-        }).catch(err => console.error("Error clearing expired token:", err)); 
+    // Compare the provided token hash with stored hashes
+    for (const potentialUser of potentialUsers) {
+      if (potentialUser.passwordResetToken) {
+        // Compare the PLAIN token from request with the STORED HASH
+        const isTokenMatch = await bcrypt.compare(plainTokenFromRequest, potentialUser.passwordResetToken);
+        if (isTokenMatch) {
+          user = potentialUser; // Found the matching user
+          break;
+        }
       }
+    }
+
+    // If user is not found or tokens don't match
+    if (!user) {
       res.status(400).json({ message: "Password reset token is invalid or has expired." });
-      return; // Exit function
+      return;
     }
 
     // Hash the new password
-    const newPasswordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Update password and clear reset token fields
+    // Update user with new password and clear reset fields
     await prisma.user.update({
-      where: { id: user.id }, 
+      where: { id: user.id },
       data: {
-        passwordHash: newPasswordHash,
-        passwordResetToken: null, 
-        passwordResetExpires: null, 
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
       },
     });
 
-    // Send success message
+    // Return success
     res.status(200).json({ message: "Password has been reset successfully." });
-    // No return needed here
-
   } catch (error) {
     console.error('Password reset error:', error);
     res.status(500).json({ message: 'An internal server error occurred' });
-    // No return needed here
   }
 }) as RequestHandler);
 
@@ -324,6 +342,40 @@ router.get('/me', isUser, (async (req: Request, res: Response) => {
   };
 
   res.status(200).json(userInfo);
+}) as RequestHandler);
+
+// GET /api/auth/validate-token - Validate token and get user info
+router.get('/validate-token', isUser, (async (req: Request, res: Response) => {
+  try {
+    // Use user info from middleware
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      res.status(400).json({ message: 'User ID not found in token' });
+      return;
+    }
+    
+    // Fetch user details
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true
+      }
+    });
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    // Return user info
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Token validation error:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
 }) as RequestHandler);
 
 export default router; 

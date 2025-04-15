@@ -17,6 +17,9 @@ model User {
   passwordResetExpires DateTime?
   passwordResetToken   String?   @unique
   orders               Order[]
+  reviews              Review[]
+  cartItems            CartItem[]
+  wishlistItems        WishlistItem[]
 }
 
 model Category {
@@ -25,21 +28,27 @@ model Category {
   description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  imageUrl    String?
   products    Product[]
 }
 
 model Product {
-  id          Int         @id @default(autoincrement())
-  name        String
-  price       Float
-  description String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  imageUrl    String?
-  stock       Int         @default(0)
-  categoryId  Int?
-  orderItems  OrderItem[]
-  category    Category?   @relation(fields: [categoryId], references: [id])
+  id            Int         @id @default(autoincrement())
+  name          String
+  price         Float
+  description   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  imageUrl      String?
+  stock         Int         @default(0)
+  categoryId    Int?
+  averageRating Float?
+  reviewCount   Int         @default(0)
+  orderItems    OrderItem[]
+  category      Category?   @relation(fields: [categoryId], references: [id])
+  reviews       Review[]
+  cartItems     CartItem[]
+  wishlistedBy  WishlistItem[]
 }
 
 model Order {
@@ -84,4 +93,42 @@ model PhoneNumber {
   status       String   @default("Offline")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  productId Int
+  userId    Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, productId]) // Ensure uniqueness of product per user
+}
+
+model WishlistItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId]) // User can only wishlist a product once
 }

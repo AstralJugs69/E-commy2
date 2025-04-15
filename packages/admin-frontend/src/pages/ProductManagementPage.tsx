@@ -1,8 +1,9 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Card } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Card, Image, Row, Col, Toast, ToastContainer, Badge } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { BsImage } from 'react-icons/bs';
+import { BsImage, FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 interface Category {
   id: number;
@@ -23,7 +24,7 @@ interface Product {
   };
 }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -59,6 +60,15 @@ const ProductManagementPage: React.FC = () => {
   const [adjustingProductId, setAdjustingProductId] = useState<number | null>(null);
   const [adjustmentValue, setAdjustmentValue] = useState<string>('');
 
+  // Add state for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Add state for stock adjustment modal
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockProduct, setStockProduct] = useState<Product | null>(null);
+  const [stockAdjustment, setStockAdjustment] = useState('');
+
   // Fetch products and categories on component mount
   useEffect(() => {
     fetchProducts();
@@ -77,7 +87,7 @@ const ProductManagementPage: React.FC = () => {
     }
     
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/categories`, {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/categories`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -110,7 +120,7 @@ const ProductManagementPage: React.FC = () => {
 
     try {
       // Use admin endpoint to get products with category information
-      const response = await axios.get(`${API_BASE_URL}/admin/products`, {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/products`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -134,8 +144,8 @@ const ProductManagementPage: React.FC = () => {
   };
 
   const handleDelete = async (productId: number) => {
-    if (!window.confirm(`Are you sure you want to delete product #${productId}?`)) {
-      return;
+    if (!window.confirm(`Are you sure you want to delete product #${productId}? This action cannot be undone.`)) {
+      return; // Stop execution if user cancels
     }
 
     const token = localStorage.getItem('admin_token');
@@ -145,7 +155,7 @@ const ProductManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/admin/products/${productId}`, {
+      await axios.delete(`${API_BASE_URL}/api/admin/products/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -241,7 +251,7 @@ const ProductManagementPage: React.FC = () => {
         
         // Upload the image
         const uploadResponse = await axios.post(
-          `${API_BASE_URL}/admin/upload`,
+          `${API_BASE_URL}/api/admin/upload`,
           formData,
           {
             headers: {
@@ -405,12 +415,49 @@ const ProductManagementPage: React.FC = () => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
+  const handleShowDeleteModal = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (productToDelete) {
+      await handleDelete(productToDelete.id);
+      handleCloseDeleteModal();
+    }
+  };
+  
+  const handleShowStockModal = (product: Product) => {
+    setStockProduct(product);
+    setStockAdjustment('');
+    setShowStockModal(true);
+  };
+  
+  const handleCloseStockModal = () => {
+    setShowStockModal(false);
+    setStockProduct(null);
+    setStockAdjustment('');
+  };
+  
+  const handleStockAdjustmentSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (stockProduct && stockAdjustment) {
+      await handleAdjustStock(stockProduct.id, stockAdjustment);
+      handleCloseStockModal();
+    }
+  };
+
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Product Management</h2>
-        <Button variant="primary" onClick={handleShowAddModal}>
-          Add New Product
+        <Button variant="primary" onClick={handleShowAddModal} className="d-flex align-items-center gap-2">
+          <FaPlus size={14} /> Add New Product
         </Button>
       </div>
 
@@ -422,111 +469,109 @@ const ProductManagementPage: React.FC = () => {
 
       {isLoading ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-2">Loading products...</p>
+          <Spinner animation="border" variant="primary" className="mb-3" />
+          <p className="mt-2 text-muted">Loading products...</p>
         </div>
       ) : (
-        <div className="table-responsive">
+        <>
           {products.length === 0 ? (
-            <Alert variant="info">No products found. Add your first product!</Alert>
+            <div className="empty-state">
+              <FaBox className="empty-state-icon" />
+              <p className="empty-state-text">No Products Found</p>
+              <p className="mb-4 text-muted">You haven't added any products yet.</p>
+              <Button 
+                variant="primary" 
+                onClick={handleShowAddModal} 
+                className="px-4 d-flex align-items-center gap-2 mx-auto"
+              >
+                <FaPlus size={14} /> Add Your First Product
+              </Button>
+            </div>
           ) : (
-            <Table striped bordered hover>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Price</th>
-                  <th>Category</th>
-                  <th>Stock</th>
-                  <th>Image</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td>{product.id}</td>
-                    <td>{product.name}</td>
-                    <td>{formatCurrency(product.price)}</td>
-                    <td>{product.category?.name || 'N/A'}</td>
-                    <td>
-                      {adjustingProductId === product.id ? (
-                        <InputGroup size="sm">
-                          <Form.Control 
-                            type="number" 
-                            value={adjustmentValue} 
-                            onChange={(e) => setAdjustmentValue(e.target.value)}
-                            placeholder="Change by..." 
-                            aria-label="Stock adjustment" 
-                          />
-                          <Button 
-                            variant="outline-success" 
-                            onClick={() => handleAdjustStock(product.id, adjustmentValue)}
-                          >
-                            Save
-                          </Button>
-                          <Button 
-                            variant="outline-secondary" 
-                            onClick={() => { setAdjustingProductId(null); setAdjustmentValue(''); }}
-                          >
-                            Cancel
-                          </Button>
-                        </InputGroup>
-                      ) : (
-                        <div className="d-flex align-items-center">
-                          <span className="me-2">{product.stock !== undefined ? product.stock : 'N/A'}</span>
-                          <Button 
-                            variant="outline-secondary" 
-                            size="sm"
-                            onClick={() => { setAdjustingProductId(product.id); setAdjustmentValue(''); }}
-                          >
-                            Adjust
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ width: '80px', height: '60px' }}>
+            <div className="table-responsive">
+              <Table hover responsive className="align-middle shadow-sm">
+                <thead>
+                  <tr>
+                    <th width="60">ID</th>
+                    <th width="80">Image</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th className="text-end">Price</th>
+                    <th className="text-center">Stock</th>
+                    <th width="180" className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id}>
+                      <td>{product.id}</td>
+                      <td className="text-center">
                         {product.imageUrl ? (
-                          <Card.Img 
-                            src={product.imageUrl.startsWith('http') 
-                              ? product.imageUrl 
-                              : `${API_BASE_URL}${product.imageUrl}`}
-                            alt={product.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            className="border rounded"
+                          <img 
+                            src={product.imageUrl.startsWith('/') 
+                              ? `${API_BASE_URL}${product.imageUrl}` 
+                              : product.imageUrl} 
+                            alt={product.name} 
+                            className="product-thumbnail rounded shadow-sm" 
+                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                           />
                         ) : (
-                          <div className="d-flex align-items-center justify-content-center bg-light border rounded" style={{ width: '100%', height: '100%' }}>
-                            <BsImage size={24} className="text-secondary" />
+                          <div className="product-thumbnail d-flex align-items-center justify-content-center bg-light rounded shadow-sm" style={{ width: '50px', height: '50px' }}>
+                            <FaImage className="text-secondary" />
                           </div>
                         )}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex gap-2">
-                        <Button 
-                          variant="outline-primary" 
-                          size="sm" 
-                          onClick={() => handleShowEditModal(product)}
+                      </td>
+                      <td>{truncateText(product.name, 30)}</td>
+                      <td>
+                        {product.category?.name ? (
+                          <Badge bg="info" className="fw-normal px-2 py-1">{product.category.name}</Badge>
+                        ) : (
+                          <span className="text-muted small">Uncategorized</span>
+                        )}
+                      </td>
+                      <td className="text-end fw-medium">{formatCurrency(product.price)}</td>
+                      <td className="text-center">
+                        <Badge 
+                          bg={product.stock === undefined || product.stock === null ? 'secondary' : 
+                              product.stock <= 0 ? 'danger' : 
+                              product.stock < 10 ? 'warning' : 'success'}
+                          className="px-2 py-1"
                         >
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm" 
-                          onClick={() => handleDelete(product.id)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+                          {product.stock === undefined || product.stock === null ? 'N/A' : product.stock}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1 justify-content-end">
+                          <Button 
+                            variant="outline-secondary" 
+                            size="sm" 
+                            onClick={() => handleShowStockModal(product)}
+                          >
+                            Stock
+                          </Button>
+                          <Button 
+                            variant="outline-primary" 
+                            size="sm" 
+                            onClick={() => handleShowEditModal(product)}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm"
+                            onClick={() => handleShowDeleteModal(product)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Product Add/Edit Modal */}
@@ -605,25 +650,34 @@ const ProductManagementPage: React.FC = () => {
             {formImageUrl && (
               <div className="mb-3">
                 <p className="mb-1">Current Image:</p>
-                <img 
-                  src={formImageUrl.startsWith('http') ? formImageUrl : `${API_BASE_URL}${formImageUrl}`} 
+                <Image 
+                  src={formImageUrl.startsWith('/') ? `${API_BASE_URL}${formImageUrl}` : formImageUrl} 
                   alt="Product" 
                   style={{ maxHeight: '100px', maxWidth: '100%' }}
-                  className="border rounded" 
                 />
               </div>
             )}
-            <Form.Group className="mb-3">
-              <Form.Label>Image URL (Optional)</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="https://example.com/image.jpg"
-                value={formImageUrl}
-                onChange={(e) => setFormImageUrl(e.target.value)}
-              />
-              <Form.Text className="text-muted">
-                You can either upload an image or provide a URL.
-              </Form.Text>
+            <Form.Group controlId="formImageUrl" className="mb-3">
+              <Form.Label>Image URL</Form.Label>
+              <div className="d-flex align-items-center">
+                <Form.Control
+                  type="text"
+                  value={formImageUrl || ''}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  placeholder="Image URL (optional)"
+                  disabled={isUploading}
+                />
+                {formImageUrl && (
+                  <div className="ms-2">
+                    <Image 
+                      src={formImageUrl.startsWith('/') ? `${API_BASE_URL}${formImageUrl}` : formImageUrl} 
+                      alt="Preview" 
+                      thumbnail 
+                      style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
+              </div>
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Category (Optional)</Form.Label>
@@ -657,6 +711,72 @@ const ProductManagementPage: React.FC = () => {
               ) : (
                 'Save Product'
               )}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {productToDelete && (
+            <p>Are you sure you want to delete <strong>{productToDelete.name}</strong>?</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseDeleteModal}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Stock Adjustment Modal */}
+      <Modal show={showStockModal} onHide={handleCloseStockModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>Adjust Stock</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleStockAdjustmentSubmit}>
+          <Modal.Body>
+            {stockProduct && (
+              <>
+                <p>
+                  Adjust stock for <strong>{stockProduct.name}</strong>
+                  <br />
+                  <span className="text-muted">Current stock: {stockProduct.stock || 0}</span>
+                </p>
+                <Form.Group className="mb-3">
+                  <Form.Label>Stock adjustment (+ to add, - to remove)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    value={stockAdjustment}
+                    onChange={(e) => setStockAdjustment(e.target.value)}
+                    placeholder="Enter adjustment value"
+                    required
+                  />
+                  <Form.Text className="text-muted">
+                    Example: Enter "5" to add 5 units or "-3" to remove 3 units
+                  </Form.Text>
+                </Form.Group>
+                {stockAdjustment && !isNaN(Number(stockAdjustment)) && (
+                  <Alert variant="info">
+                    New stock will be: {(stockProduct.stock || 0) + Number(stockAdjustment)}
+                  </Alert>
+                )}
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseStockModal}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              Save Changes
             </Button>
           </Modal.Footer>
         </Form>

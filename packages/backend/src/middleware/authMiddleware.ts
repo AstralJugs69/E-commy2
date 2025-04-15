@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+// Use require instead of import for jwt to avoid transpilation issues
+const jwt = require('jsonwebtoken');
+import dotenv from 'dotenv';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only'; // Use environment variable or default for development
+// Load environment variables first
+dotenv.config();
+
+// Get JWT secret with a fallback for development
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_for_dev_only';
 
 // Interface for the JWT payload
 interface UserPayload {
@@ -29,12 +35,15 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1]; // Extract token
     console.log('Token found, verifying...');
+    console.log('JWT_SECRET exists:', !!JWT_SECRET); // Debug
+    
     try {
       // Verify the token
-      const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+      const decoded = jwt.verify(token, JWT_SECRET);
       console.log('Token verified successfully:', decoded);
+      
       // Attach decoded payload to request object
-      req.user = decoded;
+      req.user = decoded as UserPayload;
       
       // TODO (Future): Check if the decoded payload corresponds to an admin user in the DB.
       // For MVP V1, just verifying the token is enough to proceed.
@@ -59,12 +68,13 @@ export const isUser = (req: Request, res: Response, next: NextFunction) => {
   // Check if Authorization header exists and starts with 'Bearer '
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1]; // Extract token
+    
     try {
       // Verify the token
-      const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+      const decoded = jwt.verify(token, JWT_SECRET);
       
       // Attach decoded payload to request object
-      req.user = decoded;
+      req.user = decoded as UserPayload;
       
       next(); // Token is valid, proceed to the route handler
     } catch (error) {

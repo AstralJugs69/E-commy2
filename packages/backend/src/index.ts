@@ -10,6 +10,10 @@ import authRoutes from './routes/authRoutes';
 import categoryAdminRoutes from './routes/categoryAdminRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import uploadRoutes from './routes/uploadRoutes';
+import reviewRoutes from './routes/reviewRoutes';
+import reportsAdminRoutes from './routes/reportsAdminRoutes';
+import cartRoutes from './routes/cartRoutes';
+import wishlistRoutes from './routes/wishlistRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -37,7 +41,11 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin/products', productAdminRoutes);
 app.use('/api/admin/categories', categoryAdminRoutes);
 app.use('/api/admin/upload', uploadRoutes);
+app.use('/api/admin/reports', reportsAdminRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // Start Server
 app.listen(port, () => {
