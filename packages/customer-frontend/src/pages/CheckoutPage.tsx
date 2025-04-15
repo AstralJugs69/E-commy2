@@ -18,6 +18,18 @@ interface ShippingInfo {
   phone: string;
 }
 
+interface Address {
+  id: number;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  country: string;
+  isDefault: boolean;
+  userId: number;
+}
+
 const CheckoutPage: React.FC = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
   const { token } = useAuth();
@@ -31,6 +43,12 @@ const CheckoutPage: React.FC = () => {
     country: '',
     phone: '',
   });
+
+  // Address selection state
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [selectedAddressOption, setSelectedAddressOption] = useState('new');
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -83,12 +101,58 @@ const CheckoutPage: React.FC = () => {
     }
   }, [cartItems, navigate]);
 
+  // Fetch saved addresses
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchAddresses = async () => {
+      setIsLoadingAddresses(true);
+      setAddressError(null);
+
+      try {
+        const response = await axios.get(`${API_URL}/api/addresses`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        const addresses = response.data;
+        setSavedAddresses(addresses);
+        
+        // If there's a default address, select it automatically
+        const defaultAddress = addresses.find((addr: Address) => addr.isDefault);
+        if (defaultAddress) {
+          setSelectedAddressOption(defaultAddress.id.toString());
+        } else if (addresses.length > 0) {
+          // If no default but addresses exist, select the first one
+          setSelectedAddressOption(addresses[0].id.toString());
+        } else {
+          // If no addresses, select 'new'
+          setSelectedAddressOption('new');
+        }
+      } catch (err) {
+        console.error('Error fetching addresses:', err);
+        setAddressError('Failed to load your saved addresses.');
+        // Fall back to manual entry
+        setSelectedAddressOption('new');
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [token]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
     });
+  };
+
+  const handleAddressOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedAddressOption(e.target.value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,13 +164,39 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // Validate only required fields
+    // Validate based on selected option
     setValidationError(null); // Clear previous validation errors
     setError(null); // Clear previous errors
     
-    if (!formData.fullName.trim() || !formData.phone.trim()) {
-      setValidationError('Please fill in all required fields: Name and Phone.');
-      return; // Stop submission
+    // Get shipping details based on the selected option
+    let shippingDetails: ShippingInfo;
+    
+    if (selectedAddressOption === 'new') {
+      // Using manually entered address
+      if (!formData.fullName.trim() || !formData.phone.trim()) {
+        setValidationError('Please fill in all required fields: Name and Phone.');
+        return; // Stop submission
+      }
+      shippingDetails = { ...formData };
+    } else {
+      // Using a saved address
+      const selectedAddress = savedAddresses.find(
+        addr => addr.id.toString() === selectedAddressOption
+      );
+      
+      if (!selectedAddress) {
+        setValidationError('Selected address not found. Please choose another address or enter manually.');
+        return; // Stop submission
+      }
+      
+      shippingDetails = {
+        fullName: selectedAddress.fullName,
+        phone: selectedAddress.phone,
+        address: selectedAddress.address,
+        city: selectedAddress.city,
+        zipCode: selectedAddress.zipCode,
+        country: selectedAddress.country
+      };
     }
 
     try {
@@ -118,9 +208,7 @@ const CheckoutPage: React.FC = () => {
           quantity: item.quantity,
           price: item.price
         })),
-        shippingDetails: {
-          ...formData
-        },
+        shippingDetails,
         location: location || undefined,
         totalAmount: totalPrice
       };
@@ -210,81 +298,150 @@ const CheckoutPage: React.FC = () => {
                   </Alert>
                 )}
                 
-                <Row>
-                  <Col xs={12} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Full Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="fullName"
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        required
+                {addressError && (
+                  <Alert variant="warning" className="mb-3">
+                    {addressError}
+                  </Alert>
+                )}
+                
+                {/* Saved Addresses Selection */}
+                {isLoadingAddresses ? (
+                  <div className="text-center mb-3">
+                    <Spinner animation="border" size="sm" />
+                    <span className="ms-2">Loading saved addresses...</span>
+                  </div>
+                ) : savedAddresses.length > 0 && (
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-bold">Choose a Delivery Address</Form.Label>
+                    
+                    {savedAddresses.map(address => (
+                      <Form.Check 
+                        key={address.id}
+                        type="radio"
+                        id={`address-${address.id}`}
+                        name="addressOption"
+                        className="mb-2 border-bottom pb-2"
+                        value={address.id.toString()}
+                        checked={selectedAddressOption === address.id.toString()}
+                        onChange={handleAddressOptionChange}
+                        label={
+                          <div>
+                            <div className="fw-bold">{address.fullName}</div>
+                            <div>{address.phone}</div>
+                            <div className="text-muted small">
+                              {address.address}, {address.city}, {address.zipCode}, {address.country}
+                              {address.isDefault && <span className="ms-2 text-success">(Default)</span>}
+                            </div>
+                          </div>
+                        }
                       />
-                    </Form.Group>
-                  </Col>
+                    ))}
+                    
+                    <Form.Check 
+                      type="radio"
+                      id="address-new"
+                      name="addressOption"
+                      className="mt-3"
+                      value="new"
+                      checked={selectedAddressOption === 'new'}
+                      onChange={handleAddressOptionChange}
+                      label={<span className="fw-bold">Enter a new address</span>}
+                    />
+                  </Form.Group>
+                )}
+                
+                {/* Manual address form - conditionally disabled */}
+                <Form.Group className="mb-3">
+                  {(savedAddresses.length > 0) && selectedAddressOption !== 'new' && (
+                    <div className="mb-3 pb-3 border-bottom">
+                      <Alert variant="info" className="py-2">
+                        Using selected address for delivery.
+                      </Alert>
+                    </div>
+                  )}
+                  
+                  <Row>
+                    <Col xs={12} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>Full Name</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleChange}
+                          required
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
 
-                  <Col xs={12} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Address</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                      />
-                    </Form.Group>
-                  </Col>
+                    <Col xs={12} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>Address</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleChange}
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
 
-                  <Col xs={12} sm={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>City</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                      />
-                    </Form.Group>
-                  </Col>
+                    <Col xs={12} sm={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>City</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
 
-                  <Col xs={12} sm={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>ZIP Code</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleChange}
-                      />
-                    </Form.Group>
-                  </Col>
+                    <Col xs={12} sm={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>ZIP Code</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="zipCode"
+                          value={formData.zipCode}
+                          onChange={handleChange}
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
 
-                  <Col xs={12} sm={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Country</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="country"
-                        value={formData.country}
-                        onChange={handleChange}
-                      />
-                    </Form.Group>
-                  </Col>
+                    <Col xs={12} sm={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>Country</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="country"
+                          value={formData.country}
+                          onChange={handleChange}
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
 
-                  <Col xs={12} sm={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Phone Number</Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
+                    <Col xs={12} sm={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label>Phone Number</Form.Label>
+                        <Form.Control
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          required
+                          disabled={selectedAddressOption !== 'new'}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </Form.Group>
 
                 {locationError && (
                   <Alert variant="warning" className="mb-3">
