@@ -306,6 +306,9 @@ th {
 .product-card {
   height: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--neutral-200);
 }
 
 .product-card:hover {
@@ -330,8 +333,29 @@ th {
 
 .product-price {
   font-weight: var(--font-weight-semibold);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--primary);
+  margin-bottom: 0.75rem;
+}
+
+.product-title {
+  font-weight: var(--font-weight-medium);
+  font-size: 0.95rem;
+  min-height: 2.5rem; /* Ensure consistent height for titles */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-card .card-body {
+  padding: 1rem;
+}
+
+.product-card .card-footer {
+  border-top: none;
+  background-color: transparent;
+  padding-top: 0;
 }
 
 /* Form Controls */
@@ -809,4 +833,24 @@ th {
     font-size: 0.85rem;
     padding-right: 24px !important;
     }
+}
+
+@media (max-width: 576px) {
+  .product-card .card-body {
+    padding: 0.75rem;
+  }
+  
+  .product-card .card-footer {
+    padding: 0.75rem;
+  }
+  
+  .product-title {
+    font-size: 0.85rem;
+    min-height: 2.2rem;
+  }
+  
+  .product-price {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
 }

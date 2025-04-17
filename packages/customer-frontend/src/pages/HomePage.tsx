@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination, InputGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
@@ -290,42 +290,42 @@ const HomePage = () => {
       </div>
       
       {/* Combined Search and Sort */}
-      <Row className="mb-3 g-2 align-items-center">
-        <Col xs={7} sm={8} md={6} lg={4}>
-          <Form.Group controlId="productSearch">
-            <Form.Label visuallyHidden>Search Products</Form.Label>
-            <Form.Control
-              type="search"
-              placeholder="Search products by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Form.Group>
-        </Col>
-        <Col xs={5} sm={4} md={3} lg={3} className="position-relative">
-          <Form.Group controlId="productSort" className="mobile-sort-dropdown">
-            <Form.Label visuallyHidden>Sort By</Form.Label>
-            <Form.Select
-              size="sm"
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [field, order] = e.target.value.split('-');
-                setSortBy(field);
-                setSortOrder(order);
-              }}
-              aria-label="Sort products by"
-              className="pe-5 w-100"
-              style={{ maxWidth: '100%' }}
-            >
-              <option value="createdAt-desc">Newest</option>
-              <option value="price-asc">Price: Low-High</option>
-              <option value="price-desc">Price: High-Low</option>
-              <option value="name-asc">Name: A-Z</option>
-              <option value="name-desc">Name: Z-A</option>
-            </Form.Select>
-          </Form.Group>
-        </Col>
-      </Row>
+      <div className="mb-4">
+        <Row className="justify-content-center">
+          <Col xs={12} md={8} lg={7}>
+            <InputGroup className="shadow-sm rounded overflow-hidden">
+              <Form.Control
+                id="productSearch"
+                type="search"
+                placeholder="Search products by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search Products"
+                className="border-end-0"
+              />
+              <Form.Select
+                id="productSort"
+                size="sm"
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-');
+                  setSortBy(field);
+                  setSortOrder(order);
+                }}
+                aria-label="Sort products by"
+                className="flex-grow-0 border-start-0"
+                style={{ minWidth: '130px', maxWidth: '180px' }}
+              >
+                <option value="createdAt-desc">Newest</option>
+                <option value="price-asc">Price: Low-High</option>
+                <option value="price-desc">Price: High-Low</option>
+                <option value="name-asc">Name: A-Z</option>
+                <option value="name-desc">Name: Z-A</option>
+              </Form.Select>
+            </InputGroup>
+          </Col>
+        </Row>
+      </div>
       
       {/* Product Listing */}
       {isLoading && (
@@ -353,7 +353,7 @@ const HomePage = () => {
             </p>
           )}
           
-          <Row className="g-2 my-3">
+          <Row className="g-3 my-3">
             {products.length === 0 ? (
               <Col>
                 <p>No products available at the moment.</p>
@@ -361,7 +361,7 @@ const HomePage = () => {
             ) : (
               products.map((product) => (
                 <Col key={product.id} xs={6} md={4} lg={3} className="d-flex">
-                  <Card className="w-100 shadow-sm">
+                  <Card className="w-100 shadow-sm product-card">
                     <Link to={`/product/${product.id}`} className="text-decoration-none text-reset">
                       <div className="position-relative">
                         {product.imageUrl ? (
@@ -369,7 +369,7 @@ const HomePage = () => {
                             variant="top" 
                             src={`${API_BASE_URL}${product.imageUrl}`} 
                             alt={product.name}
-                            style={{ height: '130px', objectFit: 'cover' }}
+                            style={{ height: '160px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                               // Prevent infinite loop if placeholder itself fails
                               if (e.currentTarget.src !== '/placeholder-image.svg') {
@@ -383,7 +383,7 @@ const HomePage = () => {
                             variant="top" 
                             src="/placeholder-image.svg"
                             alt={product.name}
-                            style={{ height: '130px', objectFit: 'cover' }}
+                            style={{ height: '160px', objectFit: 'cover' }}
                           />
                         )}
                         
@@ -403,13 +403,13 @@ const HomePage = () => {
                           )}
                         </Button>
                       </div>
-                      <Card.Body className="p-2 p-md-3">
-                        <Card.Title className="h6 text-dark mb-1 text-truncate">{product.name}</Card.Title>
-                        <Card.Subtitle className="mb-1 text-muted small">€{product.price.toFixed(2)}</Card.Subtitle>
+                      <Card.Body className="p-2 p-md-3 text-center">
+                        <Card.Title className="h6 text-dark mb-2 text-truncate">{product.name}</Card.Title>
+                        <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
                         
                         {/* Display Rating */}
                         {product.averageRating !== undefined && product.averageRating !== null && (
-                          <div className="d-flex align-items-center mb-1">
+                          <div className="d-flex align-items-center justify-content-center mb-1">
                             <StarRating rating={product.averageRating} />
                             <small className="ms-1 text-muted">
                               ({product.reviewCount ?? 0})
