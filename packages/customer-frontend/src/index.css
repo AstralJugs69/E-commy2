@@ -698,9 +698,20 @@ th {
 }
 
 .empty-state-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 3.5rem;
   color: var(--neutral-300);
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.empty-state-icon svg {
+  filter: opacity(0.6);
+  transition: transform 0.2s ease;
+}
+
+.empty-state-icon:hover svg {
+  transform: scale(1.1);
 }
 
 .empty-state-text {

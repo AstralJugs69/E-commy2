@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
+import EmptyState from '../components/EmptyState';
 
 interface UserOrder {
   id: number; 
@@ -96,14 +97,12 @@ const OrderHistoryPage = () => {
       {!error && (
         <>
           {orders.length === 0 ? (
-            <div className="empty-state">
-              <FaList className="empty-state-icon" />
-              <p className="empty-state-text">No Orders Yet</p>
-              <p className="mb-4 text-muted">You haven't placed any orders yet. Start shopping to see your order history here.</p>
-              <Link to="/" className="btn btn-primary px-4">
-                Start Shopping
-              </Link>
-            </div>
+            <EmptyState
+              icon={<FaList />}
+              title="No Orders Yet"
+              message="You haven't placed any orders yet. Start shopping to see your order history here."
+              actionButton={<Link to="/" className="btn btn-primary px-4">Start Shopping</Link>}
+            />
           ) : (
             <>
               {orders.map((order) => (

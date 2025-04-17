@@ -5,6 +5,7 @@ import { FaHeart, FaTrash, FaChevronLeft, FaRegHeart, FaStar, FaStarHalfAlt, FaR
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
+import EmptyState from '../components/EmptyState';
 
 // Define Product interface if not imported
 interface Product {
@@ -80,14 +81,12 @@ const WishlistPage: React.FC = () => {
       ) : error ? (
         <Alert variant="danger">{error}</Alert>
       ) : wishlistItems.length === 0 ? (
-        <div className="text-center my-5">
-          <Alert variant="info">
-            Your wishlist is empty. Browse our products and add items to your wishlist!
-          </Alert>
-          <Link to="/">
-            <Button variant="primary" className="mt-3">Browse Products</Button>
-          </Link>
-        </div>
+        <EmptyState
+          icon={<FaRegHeart />}
+          title="Your Wishlist is Empty"
+          message="Browse our products and add items you love to your wishlist!"
+          actionButton={<Link to="/" className="btn btn-primary px-4">Browse Products</Link>}
+        />
       ) : (
         <>
           <p className="text-muted mb-4">{wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} in your wishlist</p>

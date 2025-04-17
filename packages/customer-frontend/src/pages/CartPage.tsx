@@ -2,6 +2,7 @@ import { Container, Row, Col, Table, Button, Alert, Card, Form, Image } from 're
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FaTrash, FaShoppingCart } from 'react-icons/fa';
+import EmptyState from '../components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -26,14 +27,12 @@ const CartPage = () => {
       <h2 className="mb-4">Your Shopping Cart</h2>
       
       {cartIsEmpty ? (
-        <div className="empty-state">
-          <FaShoppingCart className="empty-state-icon" />
-          <p className="empty-state-text">Your cart is empty</p>
-          <p className="mb-4 text-muted">Add products to your cart to get started with your shopping</p>
-          <Link to="/" className="btn btn-primary px-4">
-            Start Shopping
-          </Link>
-        </div>
+        <EmptyState
+          icon={<FaShoppingCart />}
+          title="Your cart is empty"
+          message="Looks like you haven't added anything yet. Start exploring now!"
+          actionButton={<Link to="/" className="btn btn-primary px-4">Start Shopping</Link>}
+        />
       ) : (
         <>
           {/* Desktop/Tablet Cart Table - Hidden on small screens */}
