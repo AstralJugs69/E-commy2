@@ -1,6 +1,11 @@
 /* 
  * Global custom styles for the Customer Storefront
  * Based on Bootstrap with custom overrides for consistency
+ * 
+ * Color Theme: Natural & Earthy Theme
+ * - Primary: Sage Green (#9DB17C)
+ * - Background: Cream/Linen (#FAF0E6)
+ * - Text: Dark Brown (#5D4037)
  */
 
 /* Import Inter font from Google Fonts */
@@ -9,36 +14,36 @@
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #39FF14; /* Neon Green */
-  --primary-rgb: 57, 255, 20;
-  --primary-hover: #32E012; /* Slightly Darker */
-  --primary-active: #2BC210; /* Even Darker */
-  --primary-light: #7CFF5E;
-  --primary-bg-subtle: #E9FFDF;
-  --primary-text-on: #000000; /* Black text for contrast on neon green */
+  --primary: #9DB17C; /* Sage Green */
+  --primary-rgb: 157, 177, 124;
+  --primary-hover: #8AA06B; /* Slightly Darker Sage */
+  --primary-active: #7C905B; /* Even Darker Sage */
+  --primary-light: #B8C8A2; /* Lighter Sage */
+  --primary-bg-subtle: #F0F3EC; /* Very light green/cream */
+  --primary-text-on: #FFFFFF; /* White text for buttons */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #343A40; /* Dark Gray */
+  --secondary-color: #343A40; /* Dark Gray - keeping as per instructions */
   --secondary-rgb: 52, 58, 64;
   --secondary-hover: #23272B; /* Neutral 600 */
   --secondary-active: #1D2124; /* Neutral 700 */
   --secondary-text-on: #FFFFFF; /* White text on dark background */
-  --light-bg: #F8FAFC; /* Neutral 50 */
+  --light-bg: #FAF0E6; /* Cream/Linen background */
   --subtle-border: #E2E8F0; /* Neutral 200 */
-  --text-muted: #64748B; /* Neutral 500 */
-  --text-dark: #1E293B; /* Neutral 800 */
+  --text-muted: #A1887F; /* A muted brown/gray */
+  --text-dark: #5D4037; /* Dark Brown for primary text */
   
   /* Neutral Colors */
-  --neutral-50: #F8FAFC;
-  --neutral-100: #F1F5F9;
-  --neutral-200: #E2E8F0;
-  --neutral-300: #CBD5E1;
-  --neutral-400: #94A3B8;
-  --neutral-500: #64748B;
-  --neutral-600: #475569;
-  --neutral-700: #334155;
-  --neutral-800: #1E293B;
-  --neutral-900: #0F172A;
+  --neutral-50: #FAF0E6; /* Aligned with light-bg */
+  --neutral-100: #F5E9DF; /* Slightly darker cream */
+  --neutral-200: #E6D7C3; /* Even darker cream for borders */
+  --neutral-300: #D4BEA6; /* Light brown */
+  --neutral-400: #BEA48E; /* Medium brown */
+  --neutral-500: #A1887F; /* Same as text-muted */
+  --neutral-600: #8D6E63; /* Medium-dark brown */
+  --neutral-700: #795548; /* Dark brown */
+  --neutral-800: #6D4C41; /* Slightly lighter brown for consistency */
+  --neutral-900: #5D4037; /* Dark Brown - matches text-dark */
   
   /* Accent Color */
   --accent: #8B5CF6;
@@ -100,7 +105,7 @@
 body {
   font-family: var(--font-family-base);
   background-color: var(--light-bg);
-  color: var(--neutral-800);
+  color: var(--text-dark);
   line-height: 1.6;
 }
 
@@ -133,7 +138,7 @@ a {
   transition: color 0.2s ease;
 }
 a:hover {
-  filter: brightness(85%);
+  color: var(--primary-hover);
   text-decoration: none;
 }
 
@@ -305,10 +310,10 @@ th {
 /* Product Cards - Special styling for the store */
 .product-card {
   height: 100%;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease-in-out;
+  border-color: var(--neutral-200);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--neutral-200);
 }
 
 .product-card:hover {
@@ -332,10 +337,10 @@ th {
 }
 
 .product-price {
-  font-weight: var(--font-weight-semibold);
-  font-size: 1.1rem;
+  font-weight: var(--font-weight-bold);
+  font-size: 1.25rem;
   color: var(--primary);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .product-title {
@@ -396,7 +401,7 @@ th {
 .alert-primary {
   background-color: var(--primary-bg-subtle);
   border-color: var(--primary-light);
-  color: var(--primary-dark);
+  color: var(--primary-active);
 }
 
 .alert-success {
@@ -430,22 +435,22 @@ th {
 
 .bg-success {
   background-color: var(--success) !important;
-  color: #fff !important;
+  color: var(--primary-text-on) !important;
 }
 
 .bg-danger {
   background-color: var(--danger) !important;
-  color: #fff !important;
+  color: var(--primary-text-on) !important;
 }
 
 .bg-warning {
   background-color: var(--warning) !important;
-  color: #212529 !important;
+  color: var(--text-dark) !important;
 }
 
 .bg-info {
   background-color: var(--info) !important;
-  color: #fff !important;
+  color: var(--primary-text-on) !important;
 }
 
 .bg-light {
@@ -454,7 +459,7 @@ th {
 
 .bg-dark {
   background-color: var(--neutral-900) !important;
-  color: #fff !important;
+  color: var(--primary-text-on) !important;
 }
 
 /* Badges */
@@ -541,17 +546,17 @@ th {
 /* Footer */
 .footer {
   background-color: var(--neutral-800);
-  color: white;
+  color: var(--neutral-100);
   padding: 3rem 0;
   margin-top: 3rem;
 }
 
 .footer a {
-  color: var(--neutral-300);
+  color: var(--primary-light);
 }
 
 .footer a:hover {
-  color: white;
+  color: var(--primary);
 }
 
 .footer-heading {
@@ -580,7 +585,7 @@ th {
 }
 
 .category-item.border-primary {
-    box-shadow: 0 0 0 2px var(--primary);
+    border-color: var(--primary) !important;
 }
 
 .category-image {

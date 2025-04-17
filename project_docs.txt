@@ -215,6 +215,7 @@ Completed:
 - Profile Page address list refinement - Changed from Cards to ListGroup with improved styling (2023-05-06)
 - Created reusable EmptyState component and applied it to Cart, Order History, and Wishlist pages for consistent UI (2023-05-07)
 - Fixed recommended product cards on Product Detail page to be clickable links without nested anchor tags (2023-05-10)
+- Refactored Profile page into a tabbed Settings page (/settings) with 'Account', 'Shipping', and 'Preferences' tabs for better organization. Functionality for editing profile, managing addresses, changing password (trigger pending), viewing orders/wishlist, and accessing the About page are integrated into these tabs. (2023-05-12)
 
 Areas identified for refinement:
 - Product Details Page layout
