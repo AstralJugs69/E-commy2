@@ -1,6 +1,10 @@
 # Project Documentation: Hybrid E-commerce Platform (Comprehensive)
 *(Generated: 2025-04-15)*
 
+## 1. Current Progress
+
+Work has commenced on the `feature/customer-ui-refinement` branch with the goal of Customer Frontend UI/UX improvements. This phase focuses on enhancing the user interface and experience of the customer-facing application.
+
 ## 1. Project Summary & Vision
 
 ### 1.1. Core Concept
@@ -195,6 +199,29 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
         *   Comprehensive Test Coverage (Unit, Integration, E2E)
         *   CI/CD Pipeline Setup
         *   Move Image Storage to Cloud (S3, Cloudinary, etc.) + Image Optimization
+
+### Current Focus: Customer Frontend UI Refinement
+
+Goals:
+- Improve UI/UX for key customer-facing pages
+- Ensure consistent styling throughout the application
+- Optimize for mobile-first experience
+- Add subtle animations/transitions for a more polished feel
+
+Completed:
+- Bottom navigation bar implementation for mobile
+- Home page layout refinement (2023-05-04)
+- Search/sort layout refinement (2023-05-05)
+- Profile Page address list refinement - Changed from Cards to ListGroup with improved styling (2023-05-06)
+- Created reusable EmptyState component and applied it to Cart, Order History, and Wishlist pages for consistent UI (2023-05-07)
+- Fixed recommended product cards on Product Detail page to be clickable links without nested anchor tags (2023-05-10)
+
+Areas identified for refinement:
+- Product Details Page layout
+- Cart and Checkout flow
+- Order History Page layout
+
+Work is being done on the `feature/customer-ui-refinement` branch.
 
 ## 7. Known Issues / Areas for Improvement
 

@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-b
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { FaStore } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -77,15 +78,25 @@ const LoginPage = () => {
   };
 
   return (
-    <Container fluid className="py-3">
+    <Container fluid className="py-5">
+      {/* Logo Section */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} className="text-center">
+          <div className="store-logo-container">
+            <FaStore size={50} className="text-primary mb-2" />
+            <h1 className="h3 text-primary">HybridStore</h1>
+          </div>
+        </Col>
+      </Row>
+      
       <Row className="justify-content-center">
-        <Col xs={12} sm={10} md={8} lg={6} xl={4}>
-          <Card className="shadow">
+        <Col xs={12} sm={10} md={8} lg={5} xl={4}>
+          <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h3 className="text-center mb-4">Customer Login</h3>
+              <h2 className="text-center mb-4">Sign In</h2>
               
               {validationError && (
-                <Alert variant="danger" className="mb-3">
+                <Alert variant="danger" className="mb-4">
                   {validationError}
                 </Alert>
               )}
@@ -100,7 +111,7 @@ const LoginPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    size="lg"
+                    className="auth-input"
                   />
                 </Form.Group>
                 
@@ -113,13 +124,13 @@ const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    size="lg"
+                    className="auth-input"
                   />
                 </Form.Group>
                 
                 {/* Forgot Password Link */}
-                <div className="text-end mb-3">
-                  <Link to="/request-password-reset">Forgot Password?</Link>
+                <div className="text-end mb-4">
+                  <Link to="/request-password-reset" className="text-decoration-none">Forgot Password?</Link>
                 </div>
                 
                 {/* Submit button */}
@@ -127,22 +138,22 @@ const LoginPage = () => {
                   variant="primary"
                   type="submit"
                   disabled={isLoading}
-                  className="w-100 py-2"
+                  className="w-100 py-2 rounded-pill"
                   size="lg"
                 >
                   {isLoading ? (
                     <>
                       <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Logging in...
+                      Signing in...
                     </>
                   ) : (
-                    'Login'
+                    'Sign In'
                   )}
                 </Button>
               </Form>
               
               <p className="mt-4 text-center">
-                Don't have an account? <Link to="/register">Register here</Link>
+                Don't have an account? <Link to="/register" className="text-decoration-none">Create account</Link>
               </p>
             </Card.Body>
           </Card>
