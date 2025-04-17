@@ -1,6 +1,10 @@
 # Project Documentation: Hybrid E-commerce Platform (Comprehensive)
 *(Generated: 2025-04-15)*
 
+## 1. Current Progress
+
+Work has commenced on the `feature/customer-ui-refinement` branch with the goal of Customer Frontend UI/UX improvements. This phase focuses on enhancing the user interface and experience of the customer-facing application.
+
 ## 1. Project Summary & Vision
 
 ### 1.1. Core Concept
@@ -195,6 +199,20 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
         *   Comprehensive Test Coverage (Unit, Integration, E2E)
         *   CI/CD Pipeline Setup
         *   Move Image Storage to Cloud (S3, Cloudinary, etc.) + Image Optimization
+
+### Current Focus: Customer Frontend UI Refinement
+
+We are starting a UI/UX refinement phase for the Customer Frontend (`packages/customer-frontend`). The goal is to improve the user interface and experience by taking inspiration from provided reference screenshots (ANANAS app), focusing on layout, component structure, and flow improvements while maintaining the existing Neon Green/Dark Gray theme.
+
+Key areas identified for initial refinement include:
+1.  Implementing a bottom navigation bar.
+2.  Refactoring the Home Page layout (search, categories, product grids).
+3.  Refactoring the Profile Page layout and functionality.
+4.  Creating a dedicated Account sub-page.
+5.  Improving empty state components.
+6.  Reviewing Login/Signup page layouts.
+
+Work is being done on the `feature/customer-ui-refinement` branch.
 
 ## 7. Known Issues / Areas for Improvement
 

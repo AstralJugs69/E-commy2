@@ -20,11 +20,12 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart } = useCart();
+  const { addOrUpdateItemQuantity } = useCart();
 
   const handleAddToCart = (product: Product) => {
-    addToCart(product);
-    toast.success(`${product.name} added to cart!`);
+    addOrUpdateItemQuantity(product.id, 1).catch(error => {
+      console.error('Error adding to cart:', error);
+    });
   };
 
   return (

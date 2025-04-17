@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -15,6 +15,7 @@ const Layout = () => {
   const wishlistCount = wishlistItems.length;
   const [showOffcanvas, setShowOffcanvas] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   
   const handleCloseOffcanvas = () => setShowOffcanvas(false);
   const handleShowOffcanvas = () => setShowOffcanvas(true);
@@ -76,10 +77,10 @@ const Layout = () => {
             </Offcanvas.Header>
             <Offcanvas.Body>
               <Nav className="justify-content-end flex-grow-1">
-                <Nav.Link as={Link} to="/" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
+                <Nav.Link as={Link} to="/" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
                   <FaHome className="me-2 text-secondary" /> Home
                 </Nav.Link>
-                <Nav.Link as={Link} to="/cart" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative">
+                <Nav.Link as={Link} to="/cart" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative d-none d-lg-flex">
                   <FaShoppingCart className="me-2 text-secondary" /> Cart 
                   {itemCount > 0 && <Badge pill bg="danger" className="ms-2">{itemCount}</Badge>}
                 </Nav.Link>
@@ -90,10 +91,10 @@ const Layout = () => {
                       <FaHeart className="me-2 text-secondary" /> My Wishlist
                       {wishlistCount > 0 && <Badge pill bg="primary" className="ms-2">{wishlistCount}</Badge>}
                     </Nav.Link>
-                    <Nav.Link as={Link} to="/profile" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
+                    <Nav.Link as={Link} to="/profile" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
                       <FaUser className="me-2 text-secondary" /> My Profile
                     </Nav.Link>
-                    <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
+                    <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
                       <FaList className="me-2 text-secondary" /> My Orders
                     </Nav.Link>
                     <Button variant="link" onClick={handleLogout} className="py-3 border-bottom d-flex align-items-center w-100 text-danger text-decoration-none">
@@ -113,7 +114,7 @@ const Layout = () => {
         </Container>
       </Navbar>
       
-      <main className="flex-grow-1 pt-5 mt-3">
+      <main className="flex-grow-1 pt-5 mt-3 pb-5 pb-lg-0">
         <Outlet />
       </main>
       
@@ -160,6 +161,72 @@ const Layout = () => {
           </div>
         </Container>
       </footer>
+      
+      {/* Bottom Navigation Bar - Mobile Only */}
+      <div className="d-lg-none">
+        <Navbar fixed="bottom" bg="light" className="shadow-sm border-top">
+          <Container>
+            <Nav className="w-100 justify-content-around">
+              <Nav.Link 
+                as={Link} 
+                to="/" 
+                className="d-flex flex-column align-items-center text-center text-secondary py-1"
+                style={{ color: location.pathname === '/' ? 'var(--primary)' : undefined }}
+              >
+                <FaHome 
+                  size={18} 
+                  style={{ color: location.pathname === '/' ? 'var(--primary)' : undefined }} 
+                />
+                <small style={{ color: location.pathname === '/' ? 'var(--primary)' : undefined }}>Home</small>
+              </Nav.Link>
+              
+              <Nav.Link 
+                as={Link} 
+                to="/cart" 
+                className="d-flex flex-column align-items-center text-center text-secondary py-1 position-relative"
+                style={{ color: location.pathname === '/cart' ? 'var(--primary)' : undefined }}
+              >
+                <FaShoppingCart 
+                  size={18} 
+                  style={{ color: location.pathname === '/cart' ? 'var(--primary)' : undefined }} 
+                />
+                {itemCount > 0 && (
+                  <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle badge-sm">
+                    {itemCount}
+                  </Badge>
+                )}
+                <small style={{ color: location.pathname === '/cart' ? 'var(--primary)' : undefined }}>Cart</small>
+              </Nav.Link>
+              
+              <Nav.Link 
+                as={Link} 
+                to="/orders" 
+                className="d-flex flex-column align-items-center text-center text-secondary py-1"
+                style={{ color: location.pathname === '/orders' ? 'var(--primary)' : undefined }}
+              >
+                <FaList 
+                  size={18} 
+                  style={{ color: location.pathname === '/orders' ? 'var(--primary)' : undefined }} 
+                />
+                <small style={{ color: location.pathname === '/orders' ? 'var(--primary)' : undefined }}>Orders</small>
+              </Nav.Link>
+              
+              <Nav.Link 
+                as={Link} 
+                to="/profile" 
+                className="d-flex flex-column align-items-center text-center text-secondary py-1"
+                style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }}
+              >
+                <FaUser 
+                  size={18} 
+                  style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }} 
+                />
+                <small style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }}>Profile</small>
+              </Nav.Link>
+            </Nav>
+          </Container>
+        </Navbar>
+      </div>
     </div>
   );
 };

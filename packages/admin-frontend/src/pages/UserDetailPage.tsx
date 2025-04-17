@@ -90,9 +90,11 @@ const UserDetailPage: React.FC = () => {
           {error}
         </Alert>
         <div className="text-center">
-          <Button as={Link} to="/admin/users" variant="secondary">
-            Back to User List
-          </Button>
+          <Link to="/admin/users">
+            <Button variant="secondary">
+              Back to User List
+            </Button>
+          </Link>
         </div>
       </Container>
     );
@@ -105,9 +107,11 @@ const UserDetailPage: React.FC = () => {
           No user data available.
         </Alert>
         <div className="text-center">
-          <Button as={Link} to="/admin/users" variant="secondary">
-            Back to User List
-          </Button>
+          <Link to="/admin/users">
+            <Button variant="secondary">
+              Back to User List
+            </Button>
+          </Link>
         </div>
       </Container>
     );
@@ -117,9 +121,11 @@ const UserDetailPage: React.FC = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>User Details</h2>
-        <Button as={Link} to="/admin/users" variant="outline-secondary">
-          Back to User List
-        </Button>
+        <Link to="/admin/users">
+          <Button variant="outline-secondary">
+            Back to User List
+          </Button>
+        </Link>
       </div>
 
       <Row className="mb-4">
