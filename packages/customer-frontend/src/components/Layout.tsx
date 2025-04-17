@@ -108,6 +108,9 @@ const Layout = () => {
                     </Nav.Link>
                   </>
                 )}
+                <Nav.Link as={Link} to="/about" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center">
+                  <FaStore className="me-2 text-secondary" /> About Us
+                </Nav.Link>
               </Nav>
             </Offcanvas.Body>
           </Navbar.Offcanvas>
@@ -117,50 +120,6 @@ const Layout = () => {
       <main className="flex-grow-1 pt-5 mt-3 pb-5 pb-lg-0">
         <Outlet />
       </main>
-      
-      <footer className="footer bg-dark text-white py-3 mt-4">
-        <Container>
-          <Row className="gy-3">
-            <Col md={4} className="mb-3 mb-md-0">
-              <div className="d-flex align-items-center mb-2">
-                <FaStore className="me-2 text-primary" size={22} />
-                <h5 className="fw-bold mb-0">
-                  <span style={{ color: 'var(--primary)' }}>Hybrid</span>Store
-                </h5>
-              </div>
-              <p className="text-light small">Your one-stop destination for quality products with convenient pickup and delivery options.</p>
-            </Col>
-            <Col md={2} className="mb-3 mb-md-0 d-none d-md-block">
-              <h6 className="fw-semibold mb-2">Shop</h6>
-              <ul className="list-unstyled">
-                <li className="mb-1"><Link to="/" className="text-decoration-none text-light small">Products</Link></li>
-                <li className="mb-1"><Link to="/cart" className="text-decoration-none text-light small">Cart</Link></li>
-              </ul>
-            </Col>
-            <Col md={2} className="mb-3 mb-md-0 d-none d-md-block">
-              <h6 className="fw-semibold mb-2">Account</h6>
-              <ul className="list-unstyled">
-                <li className="mb-1"><Link to="/profile" className="text-decoration-none text-light small">My Profile</Link></li>
-                <li className="mb-1"><Link to="/orders" className="text-decoration-none text-light small">Orders</Link></li>
-              </ul>
-            </Col>
-            <Col md={4} className="d-none d-md-block">
-              <h6 className="fw-semibold mb-2">Contact</h6>
-              <p className="mb-1 text-light small">Email: support@hybridstore.com</p>
-              <p className="mb-1 text-light small">Phone: (123) 456-7890</p>
-              <p className="mb-1 text-light small">Address: 123 Commerce St, Business City</p>
-            </Col>
-          </Row>
-          <hr className="my-3 border-light" />
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <p className="mb-0 text-light small text-center text-md-start">© {new Date().getFullYear()} Hybrid Store. All rights reserved.</p>
-            <div className="d-none d-md-flex gap-2">
-              <Button variant="outline-light" size="sm">Terms of Service</Button>
-              <Button variant="outline-light" size="sm">Privacy Policy</Button>
-            </div>
-          </div>
-        </Container>
-      </footer>
       
       {/* Bottom Navigation Bar - Mobile Only */}
       <div className="d-lg-none">
