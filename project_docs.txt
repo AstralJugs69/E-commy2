@@ -221,6 +221,7 @@ Update:
 - ~~Refined the product grid layout and card styling.~~ **COMPLETED [2025-05-06]:** Improved product card appearance with centered text, refined spacing, consistent height elements, and better mobile responsiveness. Updated image container proportions and added rounded corners for a more modern look.
 - ~~Refactored the Profile Page layout.~~ **COMPLETED [2025-05-06]:** Reorganized the profile page with a clear header section, implemented an intuitive action/navigation list with icons, and improved the organization of address management and password change sections.
 - ~~Enhanced Profile Page action list styling.~~ **COMPLETED [2025-05-07]:** Refined the Account Management section with proper chevron icons, consistent spacing, and improved border styling for a cleaner, more modern appearance.
+- ~~Refined Login/Register page layouts.~~ **COMPLETED [2025-05-07]:** Added store logo display, improved form styling with custom inputs, rounded buttons, and consistent spacing. Enhanced overall visual appearance for better user experience.
 
 ## 7. Known Issues / Areas for Improvement
 

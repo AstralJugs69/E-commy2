@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-b
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { FaStore } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -97,12 +98,28 @@ const RegisterPage = () => {
   };
 
   return (
-    <Container fluid className="py-3">
+    <Container fluid className="py-5">
+      {/* Logo Section */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} className="text-center">
+          <div className="store-logo-container">
+            <FaStore size={50} className="text-primary mb-2" />
+            <h1 className="h3 text-primary">HybridStore</h1>
+          </div>
+        </Col>
+      </Row>
+      
       <Row className="justify-content-center">
-        <Col xs={12} sm={10} md={8} lg={6} xl={4}>
-          <Card className="shadow">
+        <Col xs={12} sm={10} md={8} lg={5} xl={4}>
+          <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h3 className="text-center mb-4">Create an Account</h3>
+              <h2 className="text-center mb-4">Create Account</h2>
+              
+              {validationError && (
+                <Alert variant="danger" className="mb-4">
+                  {validationError}
+                </Alert>
+              )}
               
               <Form onSubmit={handleRegister}>
                 {/* Email input */}
@@ -114,7 +131,7 @@ const RegisterPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    size="lg"
+                    className="auth-input"
                   />
                 </Form.Group>
                 
@@ -127,7 +144,7 @@ const RegisterPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    size="lg"
+                    className="auth-input"
                   />
                   <Form.Text className="text-muted">
                     Must be at least 6 characters long
@@ -143,23 +160,16 @@ const RegisterPage = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    size="lg"
+                    className="auth-input"
                   />
                 </Form.Group>
-                
-                {/* Error message */}
-                {validationError && (
-                  <Alert variant="danger" className="mb-3">
-                    {validationError}
-                  </Alert>
-                )}
                 
                 {/* Submit button */}
                 <Button
                   variant="primary"
                   type="submit"
                   disabled={isLoading}
-                  className="w-100 py-2"
+                  className="w-100 py-2 rounded-pill"
                   size="lg"
                 >
                   {isLoading ? (
@@ -168,13 +178,13 @@ const RegisterPage = () => {
                       Creating Account...
                     </>
                   ) : (
-                    'Register'
+                    'Create Account'
                   )}
                 </Button>
               </Form>
               
               <p className="mt-4 text-center">
-                Already have an account? <Link to="/login">Login here</Link>
+                Already have an account? <Link to="/login" className="text-decoration-none">Sign in</Link>
               </p>
             </Card.Body>
           </Card>
