@@ -422,8 +422,8 @@ const ProfilePage = () => {
     }
     
     try {
-      await axios.put(
-        `${API_BASE_URL}/addresses/${addressId}/default`,
+      await axios.post(
+        `${API_BASE_URL}/addresses/${addressId}/set-default`,
         {},
         {
           headers: {
@@ -606,31 +606,30 @@ const ProfilePage = () => {
                   You don't have any saved addresses yet. Click "Shipping Addresses" above to add one and make checkout faster.
                 </Alert>
               ) : (
-                <div className="address-list">
+                <ListGroup variant="flush" className="address-list">
                   {addresses.map(address => (
-                    <Card key={address.id} className="mb-3 address-card">
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start mb-2">
-                          <div>
-                            <h6 className="mb-0">{address.fullName}</h6>
-                            <p className="text-muted mb-0">{address.phone}</p>
+                    <ListGroup.Item key={address.id} className="py-3">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div className="address-info">
+                          <div className="d-flex align-items-center mb-1">
+                            <h6 className="mb-0 me-2">{address.fullName}</h6>
+                            {address.isDefault && (
+                              <Badge bg="success" className="default-badge">Default</Badge>
+                            )}
                           </div>
-                          {address.isDefault && (
-                            <Badge bg="success">Default</Badge>
-                          )}
+                          <p className="text-muted small mb-1">{address.phone}</p>
+                          <p className="mb-0">
+                            {address.address}<br />
+                            {address.city}, {address.zipCode}<br />
+                            {address.country}
+                          </p>
                         </div>
-                        
-                        <p className="mb-1">
-                          {address.address}<br />
-                          {address.city}, {address.zipCode}<br />
-                          {address.country}
-                        </p>
-                        
-                        <div className="mt-3 d-flex gap-2">
+                        <div className="address-actions d-flex flex-column flex-sm-row align-items-sm-center gap-2">
                           <Button 
                             variant="outline-secondary" 
                             size="sm"
                             onClick={() => handleShowAddressModal(address)}
+                            className="address-action-btn"
                           >
                             <FaEdit className="me-1" /> Edit
                           </Button>
@@ -638,6 +637,7 @@ const ProfilePage = () => {
                             variant="outline-danger" 
                             size="sm"
                             onClick={() => handleDeleteAddress(address.id)}
+                            className="address-action-btn"
                           >
                             <FaTrash className="me-1" /> Delete
                           </Button>
@@ -646,15 +646,16 @@ const ProfilePage = () => {
                               variant="outline-success" 
                               size="sm"
                               onClick={() => handleSetDefaultAddress(address.id)}
+                              className="address-action-btn"
                             >
-                              Set as Default
+                              Set Default
                             </Button>
                           )}
                         </div>
-                      </Card.Body>
-                    </Card>
+                      </div>
+                    </ListGroup.Item>
                   ))}
-                </div>
+                </ListGroup>
               )}
             </Card.Body>
           </Card>
@@ -729,7 +730,7 @@ const ProfilePage = () => {
           </Card>
 
           {/* Address Modal */}
-          <Modal show={showAddressModal} onHide={handleCloseAddressModal}>
+          <Modal show={showAddressModal} onHide={handleCloseAddressModal} className="address-modal">
             <Modal.Header closeButton>
               <Modal.Title>{editingAddress ? 'Edit Address' : 'Add New Address'}</Modal.Title>
             </Modal.Header>
@@ -745,6 +746,7 @@ const ProfilePage = () => {
                         value={addressForm.fullName}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -758,6 +760,7 @@ const ProfilePage = () => {
                         value={addressForm.phone}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -771,6 +774,7 @@ const ProfilePage = () => {
                         value={addressForm.address}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -784,6 +788,7 @@ const ProfilePage = () => {
                         value={addressForm.city}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -797,6 +802,7 @@ const ProfilePage = () => {
                         value={addressForm.zipCode}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -810,6 +816,7 @@ const ProfilePage = () => {
                         value={addressForm.country}
                         onChange={handleAddressFormChange}
                         required
+                        className="address-input"
                       />
                     </Form.Group>
                   </Col>
@@ -817,7 +824,7 @@ const ProfilePage = () => {
               </Form>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={handleCloseAddressModal}>
+              <Button variant="outline-secondary" onClick={handleCloseAddressModal}>
                 Cancel
               </Button>
               <Button 

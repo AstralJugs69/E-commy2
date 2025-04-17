@@ -202,26 +202,24 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
 
 ### Current Focus: Customer Frontend UI Refinement
 
-We are starting a UI/UX refinement phase for the Customer Frontend (`packages/customer-frontend`). The goal is to improve the user interface and experience by taking inspiration from provided reference screenshots (ANANAS app), focusing on layout, component structure, and flow improvements while maintaining the existing Neon Green/Dark Gray theme.
+Goals:
+- Improve UI/UX for key customer-facing pages
+- Ensure consistent styling throughout the application
+- Optimize for mobile-first experience
+- Add subtle animations/transitions for a more polished feel
 
-Key areas identified for initial refinement include:
-1.  ~~Implementing a bottom navigation bar.~~ **COMPLETED [2025-05-04]:** Implemented a functional, mobile-only bottom navigation bar (Home, Cart, Orders, Profile) visible below the 'lg' breakpoint. Corresponding Offcanvas links are now hidden on mobile.
-2.  Refactoring the Home Page layout (search, categories, product grids).
-3.  Refactoring the Profile Page layout and functionality.
-4.  Creating a dedicated Account sub-page.
-5.  Improving empty state components.
-6.  Reviewing Login/Signup page layouts.
+Completed:
+- Bottom navigation bar implementation for mobile
+- Home page layout refinement (2023-05-04)
+- Search/sort layout refinement (2023-05-05)
+- Profile Page address list refinement - Changed from Cards to ListGroup with improved styling (2023-05-06)
+
+Areas identified for refinement:
+- Product Details Page layout
+- Cart and Checkout flow
+- Order History Page layout
 
 Work is being done on the `feature/customer-ui-refinement` branch.
-
-Update:
-- ~~Implemented a mobile-only bottom navigation bar (Home, Cart, Orders, Profile).~~ **COMPLETED [2025-05-04]:** Implemented with appropriate styling and active state indicators.
-- ~~Refined the category filter UI with circular images and centered text labels.~~ **COMPLETED [2025-05-05]:** Implemented circular image styling, improved active state, and optimized mobile appearance.
-- ~~Refined the homepage search bar and sort dropdown layout.~~ **COMPLETED [2025-05-05]:** Integrated search and sort controls using InputGroup for better visual integration and responsiveness, improving the user experience especially on mobile devices.
-- ~~Refined the product grid layout and card styling.~~ **COMPLETED [2025-05-06]:** Improved product card appearance with centered text, refined spacing, consistent height elements, and better mobile responsiveness. Updated image container proportions and added rounded corners for a more modern look.
-- ~~Refactored the Profile Page layout.~~ **COMPLETED [2025-05-06]:** Reorganized the profile page with a clear header section, implemented an intuitive action/navigation list with icons, and improved the organization of address management and password change sections.
-- ~~Enhanced Profile Page action list styling.~~ **COMPLETED [2025-05-07]:** Refined the Account Management section with proper chevron icons, consistent spacing, and improved border styling for a cleaner, more modern appearance.
-- ~~Refined Login/Register page layouts.~~ **COMPLETED [2025-05-07]:** Added store logo display, improved form styling with custom inputs, rounded buttons, and consistent spacing. Enhanced overall visual appearance for better user experience.
 
 ## 7. Known Issues / Areas for Improvement
 
