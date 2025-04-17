@@ -219,6 +219,7 @@ Update:
 - ~~Refined the category filter UI with circular images and centered text labels.~~ **COMPLETED [2025-05-05]:** Implemented circular image styling, improved active state, and optimized mobile appearance.
 - ~~Refined the homepage search bar and sort dropdown layout.~~ **COMPLETED [2025-05-05]:** Integrated search and sort controls using InputGroup for better visual integration and responsiveness, improving the user experience especially on mobile devices.
 - ~~Refined the product grid layout and card styling.~~ **COMPLETED [2025-05-06]:** Improved product card appearance with centered text, refined spacing, consistent height elements, and better mobile responsiveness. Updated image container proportions and added rounded corners for a more modern look.
+- ~~Refactored the Profile Page layout.~~ **COMPLETED [2025-05-06]:** Reorganized the profile page with a clear header section, implemented an intuitive action/navigation list with icons, and improved the organization of address management and password change sections.
 
 ## 7. Known Issues / Areas for Improvement
 

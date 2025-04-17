@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUserEdit, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -452,8 +452,6 @@ const ProfilePage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-4">My Profile</h2>
-      
       {isLoading && (
         <div className="text-center my-5">
           <Spinner animation="border" role="status">
@@ -476,10 +474,15 @@ const ProfilePage = () => {
       
       {profile && (
         <>
+          {/* Profile Header Section */}
           <Card className="mb-4">
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <Card.Title>Account Information</Card.Title>
+              <div className="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h2 className="mb-1">{profile.name || 'Your Profile'}</h2>
+                  <p className="text-muted mb-0">{profile.email}</p>
+                  <small className="text-muted d-block mt-1">Member since: {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}</small>
+                </div>
                 {!isEditing && (
                   <Button 
                     variant="outline-secondary" 
@@ -491,24 +494,7 @@ const ProfilePage = () => {
                 )}
               </div>
               
-              {!isEditing ? (
-                <>
-                  <Card.Text>
-                    <strong>Name:</strong> {profile.name || '(Not Set)'}
-                  </Card.Text>
-                  <Card.Text>
-                    <strong>Email:</strong> {profile.email}
-                  </Card.Text>
-                  <Card.Text>
-                    <strong>User ID:</strong> {profile.id}
-                  </Card.Text>
-                  {profile.createdAt && (
-                    <Card.Text>
-                      <strong>Member Since:</strong> {new Date(profile.createdAt).toLocaleDateString()}
-                    </Card.Text>
-                  )}
-                </>
-              ) : (
+              {isEditing && (
                 <Form onSubmit={handleProfileUpdate}>
                   {editError && (
                     <Alert variant="danger" className="mb-3">
@@ -561,17 +547,44 @@ const ProfilePage = () => {
             </Card.Body>
           </Card>
           
+          {/* Action/Navigation List */}
+          <Card className="mb-4">
+            <Card.Body>
+              <Card.Title className="mb-3">Account Management</Card.Title>
+              <ListGroup variant="flush" className="profile-action-list">
+                <ListGroup.Item action as={Link} to="/orders" className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <FaList className="me-2 text-muted" /> My Orders
+                  </div>
+                  <span className="text-muted">→</span>
+                </ListGroup.Item>
+                <ListGroup.Item action as={Link} to="/wishlist" className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <FaHeart className="me-2 text-muted" /> My Wishlist
+                  </div>
+                  <span className="text-muted">→</span>
+                </ListGroup.Item>
+                <ListGroup.Item action onClick={() => handleShowAddressModal()} className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <FaMapMarkerAlt className="me-2 text-muted" /> Shipping Addresses
+                  </div>
+                  <span className="text-muted">→</span>
+                </ListGroup.Item>
+                <ListGroup.Item action href="#password-section" className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <FaLock className="me-2 text-muted" /> Change Password
+                  </div>
+                  <span className="text-muted">→</span>
+                </ListGroup.Item>
+              </ListGroup>
+            </Card.Body>
+          </Card>
+          
+          {/* Address Management Section */}
           <Card className="mb-4">
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <Card.Title>Manage Addresses</Card.Title>
-                <Button 
-                  variant="outline-primary" 
-                  size="sm"
-                  onClick={() => handleShowAddressModal()}
-                >
-                  <FaPlus className="me-1" /> Add New Address
-                </Button>
+                <Card.Title id="addresses-section">My Shipping Addresses</Card.Title>
               </div>
               
               {addressError && (
@@ -588,7 +601,7 @@ const ProfilePage = () => {
                 </div>
               ) : addresses.length === 0 ? (
                 <Alert variant="info">
-                  You don't have any saved addresses yet. Add an address to make checkout faster.
+                  You don't have any saved addresses yet. Click "Shipping Addresses" above to add one and make checkout faster.
                 </Alert>
               ) : (
                 <div className="address-list">
@@ -644,7 +657,8 @@ const ProfilePage = () => {
             </Card.Body>
           </Card>
           
-          <Card className="mb-4">
+          {/* Change Password Section */}
+          <Card className="mb-4" id="password-section">
             <Card.Body>
               <Card.Title>Change Password</Card.Title>
               
@@ -709,17 +723,6 @@ const ProfilePage = () => {
                   ) : 'Update Password'}
                 </Button>
               </Form>
-            </Card.Body>
-          </Card>
-          
-          <Card className="mb-4">
-            <Card.Body>
-              <Card.Title>My Account</Card.Title>
-              <ListGroup variant="flush">
-                <ListGroup.Item action as={Link} to="/orders">My Orders</ListGroup.Item>
-                <ListGroup.Item action as={Link} to="/wishlist">My Wishlist</ListGroup.Item>
-                {/* Add more account management links later */}
-              </ListGroup>
             </Card.Body>
           </Card>
 

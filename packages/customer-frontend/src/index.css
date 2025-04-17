@@ -854,3 +854,40 @@ th {
     margin-bottom: 0.5rem;
   }
 }
+
+/* Profile page styling */
+.profile-action-list .list-group-item {
+  padding: 0.75rem 1rem;
+  border-left: none;
+  border-right: none;
+}
+
+.profile-action-list .list-group-item:first-child {
+  border-top: none;
+}
+
+.profile-action-list .list-group-item:hover {
+  background-color: var(--neutral-50);
+}
+
+.profile-action-list .list-group-item.active {
+  background-color: var(--primary-bg-subtle);
+  color: var(--primary-dark);
+  border-color: var(--neutral-200);
+}
+
+.profile-action-list .list-group-item svg {
+  color: var(--primary);
+}
+
+.address-card {
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--card-border-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.address-card:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
