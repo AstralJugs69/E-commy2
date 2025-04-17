@@ -45,14 +45,14 @@ router.post('/', async (req: Request, res: Response) => {
 
     try {
         let newAddress;
-        // Map Zod validated data to the specific field names mentioned in the TS error
+        // Map field names correctly to match the Prisma schema
         const createData = {
             userId: userId,
             fullName: addressData.fullName,
-            phoneNumber: addressData.phone,   // Use phoneNumber
-            streetAddress: addressData.address, // Use streetAddress
+            phone: addressData.phone,       // Correct field name
+            address: addressData.address,   // Correct field name
             city: addressData.city,
-            postalCode: addressData.zipCode,    // Use postalCode
+            zipCode: addressData.zipCode,   // Correct field name
             country: addressData.country,
             isDefault: isDefault ?? false
         };
@@ -61,7 +61,7 @@ router.post('/', async (req: Request, res: Response) => {
             // If setting as default, use a transaction to unset other defaults
             [newAddress] = await prisma.$transaction([
                 prisma.address.create({
-                    data: { ...createData, isDefault: true }, // Use data with potentially expected names
+                    data: createData, // Now using correct field names
                 }),
                 prisma.address.updateMany({
                     where: { userId, NOT: { id: undefined } }, // This will be replaced by the new ID
@@ -77,7 +77,7 @@ router.post('/', async (req: Request, res: Response) => {
         } else {
             // Otherwise, just create the address
             newAddress = await prisma.address.create({
-                data: createData, // Use data with potentially expected names
+                data: createData, // Now using correct field names
             });
         }
 

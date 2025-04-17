@@ -1,208 +1,199 @@
 import os
-import datetime
-import fnmatch # For pattern matching ignored files/dirs
+import argparse
 
 # --- Configuration ---
-OUTPUT_FILENAME = "code_context.md"
-PROJECT_ROOT = os.getcwd() # Assumes script is run from project root
 
-# Directories to explicitly scan for source code
-# Add more if needed (e.g., 'packages/shared-utils/src')
-DIRECTORIES_TO_SCAN = [
-    os.path.join('packages', 'backend', 'src'),
-    os.path.join('packages', 'customer-frontend', 'src'),
-    os.path.join('packages', 'admin-frontend', 'src'), # Will be skipped if it doesn't exist
-]
-
-# Specific important files to include (relative to project root)
-IMPORTANT_FILES = [
-    'project_docs.txt',
-    'package.json', # Root package.json
-    os.path.join('packages', 'backend', 'package.json'),
-    os.path.join('packages', 'customer-frontend', 'package.json'),
-    os.path.join('packages', 'admin-frontend', 'package.json'), # Will be skipped if not found
-    os.path.join('packages', 'backend', 'prisma', 'schema.prisma'),
-    os.path.join('packages', 'backend', 'tsconfig.json'), # Backend tsconfig
-    os.path.join('packages', 'customer-frontend', 'tsconfig.json'), # Customer FE tsconfig
-    os.path.join('packages', 'admin-frontend', 'tsconfig.json'), # Admin FE tsconfig
-    os.path.join('packages', 'customer-frontend', 'postcss.config.js'), # Example specific config
-    os.path.join('packages', 'admin-frontend', 'postcss.config.js'), # Example specific config
-]
-
-# File extensions to include when scanning directories
-# Add other extensions if needed (e.g., '.py', '.java', '.html')
-RELEVANT_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.css', '.json', '.prisma', '.md', '.txt']
-
-# --- Ignored items ---
-# Directories to completely ignore (basename matching)
-IGNORED_DIRS_BASE = [
+# Directories to completely ignore
+IGNORE_DIRS = {
     'node_modules',
     '.git',
-    'dist',
-    'build',
     '.vscode',
     '.idea',
     '__pycache__',
-    '.next', # Example for Next.js if used later
-    '.cache',
+    'build',
+    'dist',
+    'target',
+    'vendor',
+    '.next',
+    'out',
+    '.svelte-kit',
+    'env', 'venv', '.env', '.venv', # Virtual environments
+    'logs',
     'coverage',
-]
+    # Add project-specific build/asset dirs if needed
+    'assets', 'images', 'img', 'static', 'public' # Common asset folders
+}
 
-# Specific files to ignore by name (basename matching)
-IGNORED_FILES_BASE = [
+# Specific files or patterns to ignore by name
+IGNORE_FILES = {
     'package-lock.json',
+    'yarn.lock',
     'pnpm-lock.yaml',
-    '.env', # IMPORTANT: Ignore environment files
+    '.env',
     '.DS_Store',
-    OUTPUT_FILENAME, # Don't include the output file itself
-]
-# Add wildcard patterns if needed
-IGNORED_FILE_PATTERNS = [
+    # Add specific large data/binary files if known
     '*.log',
-    '*.svg', # Usually not useful for code context
-    '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', # Images
-    '*.ico',
-    '*.lock', # Generic lock files
-]
-# --- End Configuration ---
+    '*.lock', # General lock files (adjust if needed, e.g. keep Gemfile.lock)
+    # Add common binary file extensions you absolutely want to skip by name
+     '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.ico', '*.pdf', '*.zip', '*.gz', '*.tar',
+     '*.exe', '*.dll', '*.so', '*.dylib', '*.jar', '*.class',
+     '*.mp3', '*.wav', '*.mp4', '*.mov',
+     '*.ttf', '*.otf', '*.woff', '*.woff2',
+     '*.db', '*.sqlite', '*.sqlite3',
+}
+
+# File extensions to attempt to include (focus on common text/code)
+# Files NOT matching these extensions (or specific filenames below) will be skipped BEFORE attempting to read.
+INCLUDE_EXTENSIONS = {
+    # Web Frontend
+    '.html', '.htm', '.css', '.scss', '.sass', '.less',
+    '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte',
+    # Backend
+    '.py', '.java', '.rb', '.php', '.cs', '.go', '.rs', '.swift',
+    # Scripts & Config
+    '.sh', '.bash', '.ps1',
+    '.json', '.yaml', '.yml', '.toml', '.xml',
+    '.md', '.txt', '.rst',
+    # SQL
+    '.sql',
+    # Docker/Git/Common Config (add specific filenames if extensionless)
+    'Dockerfile', '.dockerignore', '.gitignore', '.gitattributes',
+    'requirements.txt', 'Pipfile', 'pyproject.toml', # Python
+    'pom.xml', 'build.gradle', # Java
+    '.csproj', '.sln', # C#
+    'Gemfile', 'Gemfile.lock', # Ruby (Keep Gemfile.lock despite *.lock pattern)
+    'composer.json', 'composer.lock', # PHP
+    # Add other TEXT file extensions relevant to your project
+}
+
+# --- Script Logic ---
+
+def should_ignore(path, root_dir):
+    """Checks if a file or directory should be ignored based on rules."""
+    relative_path = os.path.relpath(path, root_dir)
+    parts = relative_path.split(os.sep)
+
+    # Check ignored directories
+    for part in parts:
+        if part in IGNORE_DIRS:
+            return True, f"In ignored directory '{part}'"
+
+    filename = parts[-1]
+
+    # Check ignored file names/patterns
+    import fnmatch
+    for pattern in IGNORE_FILES:
+        # Special case: Ensure Gemfile.lock/composer.lock etc are NOT ignored by '*.lock'
+        is_specific_lock = pattern == '*.lock' and filename in ('Gemfile.lock', 'Pipfile.lock', 'composer.lock', 'poetry.lock') # Add others if needed
+        if not is_specific_lock and fnmatch.fnmatch(filename, pattern):
+             return True, f"Matches ignored pattern '{pattern}'"
+
+    # Ignore hidden files/directories unless explicitly included
+    if filename.startswith('.') and filename not in INCLUDE_EXTENSIONS and os.path.splitext(filename)[1] not in INCLUDE_EXTENSIONS:
+         if os.path.isfile(path):
+             return True, "Is hidden file not in INCLUDE_EXTENSIONS"
+         elif os.path.isdir(path) and filename not in IGNORE_DIRS:
+              return True, "Is hidden directory not in IGNORE_DIRS"
+
+    return False, ""
 
 
-def get_markdown_language_hint(extension):
-    """Maps file extension to Markdown language hint."""
-    mapping = {
-        '.ts': 'typescript',
-        '.tsx': 'tsx',
-        '.js': 'javascript',
-        '.jsx': 'jsx',
-        '.json': 'json',
-        '.css': 'css',
-        '.html': 'html',
-        '.py': 'python',
-        '.prisma': 'prisma', # Or potentially 'sql' depending on highlighting needs
-        '.md': 'markdown',
-        '.txt': 'text',
-        '.sh': 'bash',
-        '.yaml': 'yaml',
-        '.yml': 'yaml',
-        '.xml': 'xml',
-    }
-    return mapping.get(extension.lower(), '') # Return empty string if no hint found
+def process_project(root_dir, output_file):
+    """Walks directory, appends text file contents to the output markdown file."""
+    count = 0
+    ignored_count = 0
+    binary_skipped_count = 0
+    error_count = 0
 
+    output_abs_path = os.path.abspath(output_file)
 
-def should_ignore(path, is_dir):
-    """Checks if a given path should be ignored based on config."""
-    basename = os.path.basename(path)
+    with open(output_file, 'w', encoding='utf-8') as outfile:
+        outfile.write(f"# Project Codebase Summary: {os.path.basename(root_dir)}\n\n")
+        outfile.write("Generated by `create_code_summary_simple.py`.\n")
+        outfile.write("This file concatenates suspected text/code files. Files ignored by rules or detected as binary are skipped.\n\n")
 
-    if is_dir:
-        return basename in IGNORED_DIRS_BASE
+        for dirpath, dirnames, filenames in os.walk(root_dir, topdown=True):
+            # Filter ignored directories
+            dirs_to_remove = set()
+            for d in dirnames:
+                dir_full_path = os.path.join(dirpath, d)
+                ignore_dir, reason_dir = should_ignore(dir_full_path, root_dir)
+                if ignore_dir:
+                    dirs_to_remove.add(d)
+            dirnames[:] = [d for d in dirnames if d not in dirs_to_remove]
+            ignored_count += len(dirs_to_remove)
 
-    # Check specific filenames first
-    if basename in IGNORED_FILES_BASE:
-        return True
+            # Process files
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                relative_path = os.path.relpath(file_path, root_dir)
 
-    # Check wildcard patterns
-    for pattern in IGNORED_FILE_PATTERNS:
-        if fnmatch.fnmatch(basename, pattern):
-            return True
-
-    # Check if it's in a relevant directory scan and has a relevant extension
-    # This check is mainly done during the os.walk part, not needed here usually.
-    # _, extension = os.path.splitext(basename)
-    # if extension.lower() not in RELEVANT_EXTENSIONS:
-    #    return True # Ignore if scanning and extension is not relevant
-
-    return False
-
-
-def append_file_content(filepath, output_file):
-    """Appends formatted file content to the output markdown file."""
-    relative_path = os.path.relpath(filepath, PROJECT_ROOT).replace("\\", "/") # Use forward slashes
-
-    if not os.path.exists(filepath):
-        print(f"Warning: File not found, skipping: {relative_path}")
-        return False
-
-    if should_ignore(filepath, is_dir=False):
-        print(f"Info: Ignoring file explicitly: {relative_path}")
-        return False
-
-    print(f"Appending: {relative_path}")
-    _, extension = os.path.splitext(filepath)
-    lang_hint = get_markdown_language_hint(extension)
-
-    try:
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as infile:
-            content = infile.read()
-
-        output_file.write("---\n")
-        output_file.write(f"### File: `{relative_path}`\n\n")
-        output_file.write(f"```{lang_hint}\n")
-        output_file.write(content.strip()) # Strip leading/trailing whitespace from content
-        output_file.write("\n```\n\n")
-        return True
-    except Exception as e:
-        print(f"Error reading file {relative_path}: {e}")
-        return False
-
-
-def main():
-    """Main function to generate the context file."""
-    start_time = datetime.datetime.now()
-    print("Starting code context generation...")
-    print(f"Output file: {OUTPUT_FILENAME}")
-
-    processed_files = set() # Keep track of files already added
-
-    try:
-        with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as outfile:
-            outfile.write(f"# Project Code Context ({start_time.strftime('%Y-%m-%d %H:%M:%S')})\n\n")
-
-            # 1. Add important specific files first
-            outfile.write("## Key Configuration Files\n\n")
-            for rel_path in IMPORTANT_FILES:
-                full_path = os.path.join(PROJECT_ROOT, rel_path)
-                if append_file_content(full_path, outfile):
-                    processed_files.add(os.path.normpath(full_path))
-
-            # 2. Scan specified directories
-            outfile.write("## Source Code Files\n\n")
-            for rel_dir in DIRECTORIES_TO_SCAN:
-                scan_dir = os.path.join(PROJECT_ROOT, rel_dir)
-                if not os.path.isdir(scan_dir):
-                    print(f"Info: Scan directory not found, skipping: {rel_dir}")
+                # Skip the output file itself
+                if os.path.abspath(file_path) == output_abs_path:
                     continue
 
-                print(f"Scanning directory: {rel_dir}")
-                for root, dirs, files in os.walk(scan_dir, topdown=True):
-                    # Prune ignored directories
-                    dirs[:] = [d for d in dirs if not should_ignore(os.path.join(root, d), is_dir=True)]
+                # Check ignore rules
+                ignore_file, reason_file = should_ignore(file_path, root_dir)
+                if ignore_file:
+                    # print(f"Ignoring file: {relative_path} ({reason_file})") # Optional: uncomment for more detail
+                    ignored_count += 1
+                    continue
 
-                    for filename in files:
-                        _, extension = os.path.splitext(filename)
-                        if extension.lower() in RELEVANT_EXTENSIONS:
-                            full_path = os.path.join(root, filename)
-                            norm_path = os.path.normpath(full_path)
-                            # Check if already processed (e.g., if it was in IMPORTANT_FILES)
-                            if norm_path not in processed_files:
-                                if append_file_content(full_path, outfile):
-                                    processed_files.add(norm_path)
-                        # else: # Optionally print skipped files
-                        #     print(f"Skipping (extension): {os.path.join(root, filename)}")
+                # Check if extension or filename is in our include list
+                _, ext = os.path.splitext(filename)
+                basename = os.path.basename(filename)
+                if ext.lower() not in INCLUDE_EXTENSIONS and basename not in INCLUDE_EXTENSIONS:
+                    # print(f"Skipping (extension not included): {relative_path}") # Optional: uncomment for more detail
+                    ignored_count += 1
+                    continue
 
+                # Try reading the file as text
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as infile:
+                        content = infile.read()
 
-            outfile.write("---\n")
-            outfile.write("--- End of Context ---\n")
+                    # Append to output file
+                    outfile.write(f"## File: `{relative_path}`\n\n")
+                    outfile.write("```\n") # Generic code block
+                    # Ensure content ends with a newline before the closing fence
+                    if content and not content.endswith('\n'):
+                         content += '\n'
+                    outfile.write(content)
+                    outfile.write("```\n\n")
+                    count += 1
 
-        end_time = datetime.datetime.now()
-        duration = end_time - start_time
-        print("\nCode context generation complete!")
-        print(f"Processed {len(processed_files)} files.")
-        print(f"Output written to: {OUTPUT_FILENAME}")
-        print(f"Duration: {duration}")
-        print("\nIMPORTANT: Please review the generated file for any sensitive data before sharing.")
+                except UnicodeDecodeError:
+                    # print(f"Skipping (binary detected): {relative_path}") # Optional: uncomment for more detail
+                    binary_skipped_count += 1
+                    continue # Skip this file
+                except FileNotFoundError:
+                     print(f"Error: File not found (possible symlink issue?): {relative_path}")
+                     error_count += 1
+                except Exception as e:
+                    print(f"Error reading file {relative_path}: {e}")
+                    error_count += 1
 
-    except Exception as e:
-        print(f"\nAn error occurred during script execution: {e}")
+    print("-" * 50)
+    print(f"Processing Complete.")
+    print(f"Output file: {output_file}")
+    print(f"Text files processed: {count}")
+    print(f"Files/Dirs ignored by rules/extension: {ignored_count}")
+    print(f"Files skipped (detected as binary): {binary_skipped_count}")
+    print(f"File read errors: {error_count}")
+    print("-" * 50)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Generate a simple Markdown summary of a project's text codebase.")
+    parser.add_argument("root_dir", nargs='?', default='.', help="The root directory of the project (default: current directory).")
+    parser.add_argument("-o", "--output", default="project_codebase_simple.md", help="The name of the output Markdown file (default: project_codebase_simple.md).")
+    args = parser.parse_args()
+
+    root_directory = os.path.abspath(args.root_dir)
+    output_filename = os.path.join(root_directory, args.output) # Place output in root dir by default
+
+    if not os.path.isdir(root_directory):
+        print(f"Error: Root directory '{root_directory}' not found or is not a directory.")
+    else:
+        print(f"Starting codebase scan in: {root_directory}")
+        print(f"Output will be saved to: {output_filename}")
+        process_project(root_directory, output_filename)
