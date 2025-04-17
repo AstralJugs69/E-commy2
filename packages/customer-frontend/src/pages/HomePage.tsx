@@ -253,16 +253,16 @@ const HomePage = () => {
             {/* All Categories Option */}
             <div className={`category-item-wrapper ${selectedCategoryId === '' ? 'active' : ''}`}>
               <div 
-                className="category-item p-1 rounded border"
+                className="category-item"
                 onClick={() => setSelectedCategoryId('')}
               >
                 <img 
                   src="/placeholder-image.svg" 
                   alt="All Categories" 
-                  className="category-image img-fluid rounded mb-1" 
+                  className="category-image" 
                   onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
                 />
-                <p className="text-center category-name text-truncate w-100">All Categories</p>
+                <p className="category-name text-truncate w-100">All Categories</p>
               </div>
             </div>
             
@@ -270,7 +270,7 @@ const HomePage = () => {
             {categories.map((category) => (
               <div key={category.id} className={`category-item-wrapper ${selectedCategoryId === category.id.toString() ? 'active' : ''}`}>
                 <div 
-                  className="category-item p-1 rounded border"
+                  className="category-item"
                   onClick={() => setSelectedCategoryId(category.id.toString())}
                 >
                   <img 
@@ -278,10 +278,10 @@ const HomePage = () => {
                       ? `${API_BASE_URL}${category.imageUrl}` 
                       : '/placeholder-image.svg'}
                     alt={category.name} 
-                    className="category-image img-fluid rounded mb-1"
+                    className="category-image"
                     onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
                   />
-                  <p className="text-center category-name text-truncate w-100">{category.name}</p>
+                  <p className="category-name text-truncate w-100">{category.name}</p>
                 </div>
               </div>
             ))}

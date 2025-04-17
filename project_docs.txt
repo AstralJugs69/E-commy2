@@ -205,7 +205,7 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
 We are starting a UI/UX refinement phase for the Customer Frontend (`packages/customer-frontend`). The goal is to improve the user interface and experience by taking inspiration from provided reference screenshots (ANANAS app), focusing on layout, component structure, and flow improvements while maintaining the existing Neon Green/Dark Gray theme.
 
 Key areas identified for initial refinement include:
-1.  Implementing a bottom navigation bar.
+1.  ~~Implementing a bottom navigation bar.~~ **COMPLETED [2025-05-04]:** Implemented a functional, mobile-only bottom navigation bar (Home, Cart, Orders, Profile) visible below the 'lg' breakpoint. Corresponding Offcanvas links are now hidden on mobile.
 2.  Refactoring the Home Page layout (search, categories, product grids).
 3.  Refactoring the Profile Page layout and functionality.
 4.  Creating a dedicated Account sub-page.

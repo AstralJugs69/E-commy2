@@ -540,36 +540,40 @@ th {
 .category-item {
     cursor: pointer;
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  background-color: var(--neutral-50);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  border-radius: var(--card-border-radius);
-  padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    border: none;
+    background-color: transparent;
 }
 
 .category-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .category-item.border-primary {
-  box-shadow: 0 0 0 2px var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
 }
 
 .category-image {
-  max-height: 40px;
-    max-width: 100%;
-  object-fit: contain;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--neutral-200);
+    background-color: var(--neutral-100);
 }
 
 .category-name {
-  font-size: 0.85rem;
-  font-weight: var(--font-weight-medium);
-  margin-top: 0.5rem;
-  margin-bottom: 0;
-  text-align: center;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    text-align: center;
 }
 
 /* Star Rating Component */
@@ -588,11 +592,20 @@ th {
   h3 { font-size: 1.25rem; }
   
   .category-image {
-    max-height: 30px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
   }
   
   .category-name {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    margin-top: 0.35rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
   }
   
   .category-item {
@@ -673,52 +686,55 @@ th {
 
 /* Horizontal scrolling categories for mobile */
 .category-scroll-container {
-  display: flex;
-  overflow-x: auto; /* Enable horizontal scroll */
-  white-space: nowrap; /* Prevent wrapping */
-  padding-bottom: 8px; /* Space for scrollbar */
-  -webkit-overflow-scrolling: touch; /* Smoother scroll on iOS */
-  scrollbar-width: none; /* Hide scrollbar standard */
-  margin-bottom: 1rem;
+    display: flex;
+    overflow-x: auto; /* Enable horizontal scroll */
+    white-space: nowrap; /* Prevent wrapping */
+    padding-bottom: 10px; /* Space for scrollbar */
+    -webkit-overflow-scrolling: touch; /* Smoother scroll on iOS */
+    scrollbar-width: none; /* Hide scrollbar standard */
+    margin-bottom: 1rem;
 }
 
 .category-scroll-container::-webkit-scrollbar {
-  display: none; /* Hide scrollbar Webkit */
+    display: none; /* Hide scrollbar Webkit */
 }
 
 .category-item-wrapper {
-  display: inline-block; /* Align items horizontally */
-  margin-right: 8px; /* Space between items */
-  width: 80px; /* Fixed width for each category item */
+    display: inline-block; /* Align items horizontally */
+    margin-right: 12px; /* Space between items */
+    width: 70px; /* Fixed width for each category item */
 }
 
 .category-item-wrapper.active .category-item {
-  /* Style for selected category */
-  box-shadow: 0 0 0 2px var(--primary);
-  border-color: var(--primary) !important;
-}
-
-.category-item {
-  width: 100%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-color: var(--neutral-200) !important;
+    /* Style for selected category */
+    border: 2px solid var(--primary);
+    border-radius: 1rem;
+    background-color: var(--neutral-50);
+    overflow: hidden;
 }
 
 /* Adjust existing category styles for mobile compatibility */
 @media (max-width: 768px) {
-  .category-image {
-    max-height: 35px;
-    object-fit: cover;
-  }
-  
-  .category-name {
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+    .category-image {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .category-name {
+        font-size: 0.7rem;
+        margin-top: 0.35rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .category-item {
+        padding: 0.5rem;
+    }
 }
 
 /* Fix for dropdowns overflowing the screen on mobile */
