@@ -38,7 +38,7 @@ const Layout = () => {
           
           <div className="d-flex align-items-center">
             {isAuthenticated && (
-              <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none">
+              <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none d-none d-lg-flex">
                 <FaHeart size={20} className="text-secondary" />
                 {wishlistCount > 0 && (
                   <Badge pill bg="primary" className="position-absolute top-0 start-100 translate-middle badge-sm">
@@ -47,7 +47,7 @@ const Layout = () => {
                 )}
               </Link>
             )}
-            <Link to="/cart" className="position-relative me-3 d-flex align-items-center text-decoration-none">
+            <Link to="/cart" className="position-relative me-3 d-flex align-items-center text-decoration-none d-none d-lg-flex">
               <FaShoppingCart size={20} className="text-secondary" />
               {itemCount > 0 && (
                 <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle badge-sm">
