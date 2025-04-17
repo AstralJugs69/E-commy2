@@ -6,12 +6,13 @@ import { isUser } from '../middleware/authMiddleware';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Zod schema for creating an address (all fields required except isDefault)
+// Zod schema for creating an address (all fields required except isDefault and state)
 const addressSchema = z.object({
     fullName: z.string().min(1, { message: "Full name is required" }),
     phone: z.string().min(1, { message: "Phone number is required" }),
     address: z.string().min(1, { message: "Address line is required" }),
     city: z.string().min(1, { message: "City is required" }),
+    state: z.string().optional(),
     zipCode: z.string().min(1, { message: "Zip code is required" }),
     country: z.string().min(1, { message: "Country is required" }),
     isDefault: z.boolean().optional().default(false),
@@ -45,14 +46,15 @@ router.post('/', async (req: Request, res: Response) => {
 
     try {
         let newAddress;
-        // Map field names correctly to match the Prisma schema
+        // Create data matching the Prisma schema
         const createData = {
             userId: userId,
             fullName: addressData.fullName,
-            phone: addressData.phone,       // Correct field name
-            address: addressData.address,   // Correct field name
+            phone: addressData.phone,
+            address: addressData.address,
             city: addressData.city,
-            zipCode: addressData.zipCode,   // Correct field name
+            state: addressData.state,
+            zipCode: addressData.zipCode,
             country: addressData.country,
             isDefault: isDefault ?? false
         };
@@ -61,7 +63,7 @@ router.post('/', async (req: Request, res: Response) => {
             // If setting as default, use a transaction to unset other defaults
             [newAddress] = await prisma.$transaction([
                 prisma.address.create({
-                    data: createData, // Now using correct field names
+                    data: createData,
                 }),
                 prisma.address.updateMany({
                     where: { userId, NOT: { id: undefined } }, // This will be replaced by the new ID
@@ -77,19 +79,14 @@ router.post('/', async (req: Request, res: Response) => {
         } else {
             // Otherwise, just create the address
             newAddress = await prisma.address.create({
-                data: createData, // Now using correct field names
+                data: createData,
             });
         }
 
         res.status(201).json(newAddress);
     } catch (error) {
         console.error('Error creating address:', error);
-        // Check if it's the TS error we were seeing before
-        if (error instanceof TypeError && error.message.includes('AddressUncheckedCreateInput')) {
-             res.status(500).json({ message: 'Internal server error: Address creation type mismatch.' });
-        } else {
-             res.status(500).json({ message: 'Failed to create address' });
-        }
+        res.status(500).json({ message: 'Failed to create address' });
     }
 });
 
@@ -106,6 +103,7 @@ router.get('/', async (req: Request, res: Response) => {
             where: { userId },
             orderBy: { isDefault: 'desc' }, // Show default first
         });
+        
         res.status(200).json(addresses);
     } catch (error) {
         console.error('Error fetching addresses:', error);
@@ -160,6 +158,7 @@ router.put('/:addressId', validateAddressId, async (req: Request, res: Response)
         if (addressData.phone !== undefined) updatePayload.phone = addressData.phone;
         if (addressData.address !== undefined) updatePayload.address = addressData.address;
         if (addressData.city !== undefined) updatePayload.city = addressData.city;
+        if (addressData.state !== undefined) updatePayload.state = addressData.state;
         if (addressData.zipCode !== undefined) updatePayload.zipCode = addressData.zipCode;
         if (addressData.country !== undefined) updatePayload.country = addressData.country;
 
@@ -257,17 +256,14 @@ router.post('/:addressId/set-default', validateAddressId, async (req: Request, r
             }),
         ]);
 
-        // If the update threw P2025, the transaction would fail.
-        // If it succeeded, we know the record existed and was updated.
         res.status(200).json(updatedAddress);
-
     } catch (error: any) {
-         if (error.code === 'P2025') { // Handle record not found specifically
-             res.status(404).json({ message: `Address with ID ${addressIdInt} not found or does not belong to user.` });
-         } else {
-             console.error(`Error setting default address ${addressIdInt}:`, error);
-             res.status(500).json({ message: 'Failed to set default address' });
-         }
+        if (error.code === 'P2025') { // Prisma error code for record not found
+            res.status(404).json({ message: `Address with ID ${addressIdInt} not found or does not belong to user.` });
+        } else {
+            console.error(`Error setting default address ${addressIdInt}:`, error);
+            res.status(500).json({ message: 'Failed to set default address' });
+        }
     }
 });
 

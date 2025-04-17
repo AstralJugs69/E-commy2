@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup } from 'react-bootstrap';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -677,7 +677,9 @@ const ProductDetailPage = () => {
             <Row xs={2} md={4} className="g-3">
               {otherProducts.map(p => (
                 <Col key={p.id}>
-                  <ProductCard product={p} />
+                  <Link to={`/product/${p.id}`} className="text-decoration-none text-reset d-block h-100">
+                    <ProductCard product={p} hideAddToCart={true} disableInternalLink={true} />
+                  </Link>
                 </Col>
               ))}
             </Row>

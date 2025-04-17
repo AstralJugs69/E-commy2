@@ -144,6 +144,7 @@ model Address {
   phone       String
   address     String
   city        String
+  state       String?
   zipCode     String
   country     String
   isDefault   Boolean  @default(false)
