@@ -11,7 +11,7 @@ import OrderHistoryPage from './pages/OrderHistoryPage'; // Import the new page
 import RequestPasswordResetPage from './pages/RequestPasswordResetPage'; // Import the new page
 import ResetPasswordPage from './pages/ResetPasswordPage'; // Import the new page
 import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage'; // Import the new page
-import ProfilePage from './pages/ProfilePage'; // Import the profile page
+import SettingsPage from './pages/SettingsPage'; // Import the settings page
 import WishlistPage from './pages/WishlistPage'; // Import the wishlist page
 import AboutPage from './pages/AboutPage'; // Import the about page
 import { useAuth } from './context/AuthContext';
@@ -53,8 +53,8 @@ function AppRoutes() {
         <Route path="orders" element={isAuthenticated ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
         {/* Add the new route for order detail */}
         <Route path="order/:orderId" element={isAuthenticated ? <CustomerOrderDetailPage /> : <Navigate to="/login" replace />} />
-        {/* Add the profile page route */}
-        <Route path="profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" replace />} />
+        {/* Add the settings page route */}
+        <Route path="settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" replace />} />
         {/* Add the about page route */}
         <Route path="about" element={<AboutPage />} />
         {/* Add other routes like product detail later */}

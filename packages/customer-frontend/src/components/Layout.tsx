@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
-import { FaShoppingCart, FaUser, FaList, FaSignOutAlt, FaHome, FaRegHeart, FaStore, FaHeart } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaList, FaSignOutAlt, FaHome, FaRegHeart, FaStore, FaHeart, FaCog } from 'react-icons/fa';
 
 const Layout = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -91,8 +91,8 @@ const Layout = () => {
                       <FaHeart className="me-2 text-secondary" /> My Wishlist
                       {wishlistCount > 0 && <Badge pill bg="primary" className="ms-2">{wishlistCount}</Badge>}
                     </Nav.Link>
-                    <Nav.Link as={Link} to="/profile" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
-                      <FaUser className="me-2 text-secondary" /> My Profile
+                    <Nav.Link as={Link} to="/settings" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
+                      <FaCog className="me-2 text-secondary" /> Settings
                     </Nav.Link>
                     <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center d-none d-lg-flex">
                       <FaList className="me-2 text-secondary" /> My Orders
@@ -172,15 +172,15 @@ const Layout = () => {
               
               <Nav.Link 
                 as={Link} 
-                to="/profile" 
+                to="/settings" 
                 className="d-flex flex-column align-items-center text-center text-secondary py-1"
-                style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }}
+                style={{ color: location.pathname === '/settings' ? 'var(--primary)' : undefined }}
               >
-                <FaUser 
+                <FaCog 
                   size={18} 
-                  style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }} 
+                  style={{ color: location.pathname === '/settings' ? 'var(--primary)' : undefined }} 
                 />
-                <small style={{ color: location.pathname === '/profile' ? 'var(--primary)' : undefined }}>Profile</small>
+                <small style={{ color: location.pathname === '/settings' ? 'var(--primary)' : undefined }}>Settings</small>
               </Nav.Link>
             </Nav>
           </Container>

@@ -214,6 +214,7 @@ Completed:
 - Search/sort layout refinement (2023-05-05)
 - Profile Page address list refinement - Changed from Cards to ListGroup with improved styling (2023-05-06)
 - Created reusable EmptyState component and applied it to Cart, Order History, and Wishlist pages for consistent UI (2023-05-07)
+- Fixed recommended product cards on Product Detail page to be clickable links without nested anchor tags (2023-05-10)
 
 Areas identified for refinement:
 - Product Details Page layout
