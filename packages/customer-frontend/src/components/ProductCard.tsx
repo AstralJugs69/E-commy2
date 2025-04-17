@@ -17,9 +17,15 @@ interface Product {
 
 interface ProductCardProps {
   product: Product;
+  hideAddToCart?: boolean;
+  disableInternalLink?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  hideAddToCart = false,
+  disableInternalLink = false 
+}) => {
   const { addOrUpdateItemQuantity } = useCart();
 
   const handleAddToCart = (product: Product) => {
@@ -68,23 +74,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Badge>
         )}
       </div>
-      <Link to={`/product/${product.id}`} className="text-decoration-none">
+      {disableInternalLink ? (
         <Card.Body className="d-flex flex-column p-3 text-center">
           <Card.Title className="text-dark mb-2 product-title">{product.name}</Card.Title>
           <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
           <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block">{product.description || ''}</Card.Text>
         </Card.Body>
-      </Link>
-      <Card.Footer className="bg-white border-0 pt-0 p-3 text-center">
-        <Button 
-          variant="primary" 
-          className="w-100 rounded-pill"
-          onClick={() => handleAddToCart(product)}
-          disabled={product.stock <= 0}
-        >
-          {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-        </Button>
-      </Card.Footer>
+      ) : (
+        <Link to={`/product/${product.id}`} className="text-decoration-none">
+          <Card.Body className="d-flex flex-column p-3 text-center">
+            <Card.Title className="text-dark mb-2 product-title">{product.name}</Card.Title>
+            <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
+            <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block">{product.description || ''}</Card.Text>
+          </Card.Body>
+        </Link>
+      )}
+      {!hideAddToCart && (
+        <Card.Footer className="bg-white border-0 pt-0 p-3 text-center">
+          <Button 
+            variant="primary" 
+            className="w-100 rounded-pill"
+            onClick={() => handleAddToCart(product)}
+            disabled={product.stock <= 0}
+          >
+            {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+          </Button>
+        </Card.Footer>
+      )}
     </Card>
   );
 };
