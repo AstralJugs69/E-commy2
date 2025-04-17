@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser } from 'react-icons/fa';
+import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser, FaChevronRight } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -548,33 +548,35 @@ const ProfilePage = () => {
           </Card>
           
           {/* Action/Navigation List */}
-          <Card className="mb-4">
-            <Card.Body>
-              <Card.Title className="mb-3">Account Management</Card.Title>
+          <Card className="mb-4 profile-action-card">
+            <Card.Body className="p-0">
+              <div className="px-3 pt-3">
+                <Card.Title className="mb-3">Account Management</Card.Title>
+              </div>
               <ListGroup variant="flush" className="profile-action-list">
                 <ListGroup.Item action as={Link} to="/orders" className="d-flex justify-content-between align-items-center">
                   <div>
-                    <FaList className="me-2 text-muted" /> My Orders
+                    <FaList className="me-3 action-icon" /> My Orders
                   </div>
-                  <span className="text-muted">→</span>
+                  <FaChevronRight size={14} className="text-muted" />
                 </ListGroup.Item>
                 <ListGroup.Item action as={Link} to="/wishlist" className="d-flex justify-content-between align-items-center">
                   <div>
-                    <FaHeart className="me-2 text-muted" /> My Wishlist
+                    <FaHeart className="me-3 action-icon" /> My Wishlist
                   </div>
-                  <span className="text-muted">→</span>
+                  <FaChevronRight size={14} className="text-muted" />
                 </ListGroup.Item>
                 <ListGroup.Item action onClick={() => handleShowAddressModal()} className="d-flex justify-content-between align-items-center">
                   <div>
-                    <FaMapMarkerAlt className="me-2 text-muted" /> Shipping Addresses
+                    <FaMapMarkerAlt className="me-3 action-icon" /> Shipping Addresses
                   </div>
-                  <span className="text-muted">→</span>
+                  <FaChevronRight size={14} className="text-muted" />
                 </ListGroup.Item>
                 <ListGroup.Item action href="#password-section" className="d-flex justify-content-between align-items-center">
                   <div>
-                    <FaLock className="me-2 text-muted" /> Change Password
+                    <FaLock className="me-3 action-icon" /> Change Password
                   </div>
-                  <span className="text-muted">→</span>
+                  <FaChevronRight size={14} className="text-muted" />
                 </ListGroup.Item>
               </ListGroup>
             </Card.Body>

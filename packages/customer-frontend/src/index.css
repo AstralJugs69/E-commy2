@@ -856,14 +856,19 @@ th {
 }
 
 /* Profile page styling */
-.profile-action-list .list-group-item {
-  padding: 0.75rem 1rem;
-  border-left: none;
-  border-right: none;
+.profile-action-card {
+  overflow: hidden;
 }
 
-.profile-action-list .list-group-item:first-child {
-  border-top: none;
+.profile-action-list .list-group-item {
+  padding: 1rem 1.25rem;
+  border: none;
+  border-bottom: 1px solid var(--neutral-200);
+  transition: background-color 0.2s ease;
+}
+
+.profile-action-list .list-group-item:last-child {
+  border-bottom: none;
 }
 
 .profile-action-list .list-group-item:hover {
@@ -876,8 +881,12 @@ th {
   border-color: var(--neutral-200);
 }
 
-.profile-action-list .list-group-item svg {
+.profile-action-list .action-icon {
   color: var(--primary);
+  font-size: 1rem;
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
 }
 
 .address-card {
