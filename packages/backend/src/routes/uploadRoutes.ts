@@ -48,12 +48,12 @@ const upload = multer({
 
 /**
  * @route POST /api/admin/upload
- * @description Upload a file (admin only)
+ * @description Upload multiple product images (admin only, up to 5 files)
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
-    // Handle file upload with manually typed callback
-    upload.single('productImage')(req as any, res as any, (err: any) => {
+    // Handle multiple file uploads with manually typed callback
+    upload.array('productImages', 5)(req as any, res as any, (err: any) => {
         if (err) {
             let errorMessage = 'File upload failed.';
             
@@ -61,6 +61,8 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
                 // A Multer error occurred when uploading
                 if (err.code === 'LIMIT_FILE_SIZE') {
                     errorMessage = 'File too large. Maximum file size is 5MB.';
+                } else if (err.code === 'LIMIT_FILE_COUNT') {
+                    errorMessage = 'Too many files. Maximum is 5 files.';
                 }
             } else {
                 // A different error occurred
@@ -71,17 +73,19 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
             return;
         }
         
-        // No file was uploaded
-        if (!req.file) {
-            res.status(400).json({ message: 'No file uploaded. Please select a file.' });
+        // No files were uploaded
+        if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+            res.status(400).json({ message: 'No files uploaded. Please select at least one file.' });
             return;
         }
         
-        // File upload successful
-        const relativeUrl = `/uploads/${req.file.filename}`; // Path relative to the 'public' dir
+        // Files upload successful
+        const files = req.files as Express.Multer.File[];
+        const imageUrls = files.map(file => `/uploads/${file.filename}`); // Paths relative to the 'public' dir
+        
         res.status(201).json({ 
-            message: 'File uploaded successfully',
-            imageUrl: relativeUrl
+            message: 'Files uploaded successfully',
+            imageUrls: imageUrls
         });
     });
 });

@@ -308,7 +308,11 @@ const ProductManagementPage: React.FC = () => {
       costPrice: costValue,
       description: formDescription.trim() || undefined,
       stock: formStock ? parseInt(formStock, 10) : undefined,
-      imageUrl: formImageUrl.trim() || undefined,
+      imageUrl: formImageUrl.trim() 
+        ? (formImageUrl.trim().startsWith('/') 
+          ? `${API_BASE_URL}${formImageUrl.trim()}` 
+          : formImageUrl.trim())
+        : undefined,
       categoryId: formCategoryId ? parseInt(formCategoryId, 10) : null
     };
 
@@ -316,7 +320,7 @@ const ProductManagementPage: React.FC = () => {
       if (editingProduct) {
         // Update existing product
         await axios.put(
-          `${API_BASE_URL}/admin/products/${editingProduct.id}`,
+          `${API_BASE_URL}/api/admin/products/${editingProduct.id}`,
           productData,
           {
             headers: {
@@ -328,7 +332,7 @@ const ProductManagementPage: React.FC = () => {
       } else {
         // Create new product
         await axios.post(
-          `${API_BASE_URL}/admin/products`,
+          `${API_BASE_URL}/api/admin/products`,
           productData,
           {
             headers: {
@@ -386,7 +390,7 @@ const ProductManagementPage: React.FC = () => {
   
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/admin/products/${productId}/adjust-stock`,
+        `${API_BASE_URL}/api/admin/products/${productId}/adjust-stock`,
         { adjustment: adjustmentInt },
         {
           headers: {

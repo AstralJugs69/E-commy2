@@ -13,7 +13,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   stock: z.number().int().min(0, { message: "Stock cannot be negative" }).optional(),
   costPrice: z.number().positive({ message: "Cost Price must be a positive number" }).optional().nullable(),
-  imageUrl: z.string().url({ message: "Invalid image URL" }).optional().or(z.literal('')), // Allow empty string
+  imageUrls: z.array(z.string()).optional(), // Array of image URLs for multiple images
   categoryId: z.number().int().positive().optional().nullable(), // Allow null or positive int
 });
 
@@ -35,7 +35,7 @@ router.get('/', isAdmin, async (req: Request, res: Response) => {
         price: true,
         costPrice: true,
         description: true,
-        imageUrl: true,
+        images: true,
         stock: true,
         category: {
           select: {
@@ -73,22 +73,28 @@ router.post('/', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare data, ensuring optional fields are handled correctly
-  const { categoryId, stock, imageUrl, description, costPrice, ...restData } = validationResult.data;
+  const { categoryId, stock, imageUrls, description, costPrice, ...restData } = validationResult.data;
   const productData: Prisma.ProductCreateInput = {
       ...restData,
       description: description || null, // Set to null if undefined/empty
-      imageUrl: imageUrl || null, // Set to null if undefined/empty
       stock: stock ?? 0, // Default stock to 0 if not provided
       costPrice: costPrice ?? null, // Set to null if undefined/null
       // Connect to category only if categoryId is provided and valid
       ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
+      // Create product images if imageUrls are provided
+      images: {
+        create: imageUrls ? imageUrls.map(url => ({ url })) : []
+      }
   };
 
   try {
     // Create product using Prisma
     const newProduct = await prisma.product.create({
       data: productData,
-      include: { category: true } // Include category in response
+      include: { 
+        category: true,
+        images: true // Include images in response
+      }
     });
 
     // Return created product with 201 status
@@ -139,12 +145,11 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
   }
 
   // Prepare update data carefully
-  const { categoryId, costPrice, ...restData } = validationResult.data;
+  const { categoryId, costPrice, imageUrls, ...restData } = validationResult.data;
   const updateData: Prisma.ProductUpdateInput = { ...restData };
 
   // Handle optional fields explicitly setting null if empty string passed
   if ('description' in updateData) updateData.description = updateData.description || null;
-  if ('imageUrl' in updateData) updateData.imageUrl = updateData.imageUrl || null;
   if ('stock' in updateData && updateData.stock === undefined) delete updateData.stock; // Don't update stock if undefined
   
   // Handle costPrice explicitly
@@ -161,6 +166,13 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
       }
   }
 
+  // Handle product images update - only if imageUrls is explicitly provided (even if empty array)
+  if (imageUrls !== undefined) {
+    updateData.images = {
+      deleteMany: {}, // Delete all existing images
+      create: imageUrls.map(url => ({ url })) // Create new images
+    };
+  }
 
   try {
     // Update product using Prisma
@@ -168,7 +180,8 @@ router.put('/:productId', isAdmin, async (req: Request, res: Response) => {
       where: { id: productIdInt },
       data: updateData,
       include: {
-        category: true // Include category in response
+        category: true, // Include category in response
+        images: true // Include images in response
       }
     });
 
