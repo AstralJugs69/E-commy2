@@ -1,11 +1,6 @@
 /* 
  * Global custom styles for the Customer Storefront
  * Based on Bootstrap with custom overrides for consistency
- * 
- * Color Theme: Natural & Earthy Theme
- * - Primary: Sage Green (#9DB17C)
- * - Background: Cream/Linen (#FAF0E6)
- * - Text: Dark Brown (#5D4037)
  */
 
 /* Import Inter font from Google Fonts */
@@ -16,34 +11,35 @@
   /* Primary Colors */
   --primary: #9DB17C; /* Sage Green */
   --primary-rgb: 157, 177, 124;
-  --primary-hover: #8AA06B; /* Slightly Darker Sage */
-  --primary-active: #7C905B; /* Even Darker Sage */
+  --primary-hover: #8AA06B; /* Slightly Darker */
+  --primary-active: #7C905B; /* Even Darker */
   --primary-light: #B8C8A2; /* Lighter Sage */
   --primary-bg-subtle: #F0F3EC; /* Very light green/cream */
   --primary-text-on: #FFFFFF; /* White text for buttons */
+  --primary-dark: #7C905B; /* For price text and other places using primary-dark */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #343A40; /* Dark Gray - keeping as per instructions */
+  --secondary-color: #343A40; /* Dark Gray */
   --secondary-rgb: 52, 58, 64;
   --secondary-hover: #23272B; /* Neutral 600 */
   --secondary-active: #1D2124; /* Neutral 700 */
   --secondary-text-on: #FFFFFF; /* White text on dark background */
   --light-bg: #FAF0E6; /* Cream/Linen background */
   --subtle-border: #E2E8F0; /* Neutral 200 */
-  --text-muted: #A1887F; /* A muted brown/gray */
+  --text-muted: #A1887F; /* Muted brown/gray */
   --text-dark: #5D4037; /* Dark Brown for primary text */
   
   /* Neutral Colors */
-  --neutral-50: #FAF0E6; /* Aligned with light-bg */
-  --neutral-100: #F5E9DF; /* Slightly darker cream */
-  --neutral-200: #E6D7C3; /* Even darker cream for borders */
-  --neutral-300: #D4BEA6; /* Light brown */
-  --neutral-400: #BEA48E; /* Medium brown */
-  --neutral-500: #A1887F; /* Same as text-muted */
-  --neutral-600: #8D6E63; /* Medium-dark brown */
-  --neutral-700: #795548; /* Dark brown */
-  --neutral-800: #6D4C41; /* Slightly lighter brown for consistency */
-  --neutral-900: #5D4037; /* Dark Brown - matches text-dark */
+  --neutral-50: #FAF0E6;
+  --neutral-100: #F5EBE0;
+  --neutral-200: #E6DAD1;
+  --neutral-300: #D8C9BD;
+  --neutral-400: #C4B1A3;
+  --neutral-500: #A1887F;
+  --neutral-600: #8D6E63;
+  --neutral-700: #795548;
+  --neutral-800: #6D4C41;
+  --neutral-900: #5D4037;
   
   /* Accent Color */
   --accent: #8B5CF6;
@@ -310,10 +306,10 @@ th {
 /* Product Cards - Special styling for the store */
 .product-card {
   height: 100%;
-  transition: all 0.2s ease-in-out;
-  border-color: var(--neutral-200);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid var(--neutral-200);
 }
 
 .product-card:hover {
@@ -337,10 +333,10 @@ th {
 }
 
 .product-price {
-  font-weight: var(--font-weight-bold);
-  font-size: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+  font-size: 1.1rem;
   color: var(--primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .product-title {
@@ -401,7 +397,7 @@ th {
 .alert-primary {
   background-color: var(--primary-bg-subtle);
   border-color: var(--primary-light);
-  color: var(--primary-active);
+  color: var(--primary-dark);
 }
 
 .alert-success {
@@ -435,22 +431,22 @@ th {
 
 .bg-success {
   background-color: var(--success) !important;
-  color: var(--primary-text-on) !important;
+  color: #fff !important;
 }
 
 .bg-danger {
   background-color: var(--danger) !important;
-  color: var(--primary-text-on) !important;
+  color: #fff !important;
 }
 
 .bg-warning {
   background-color: var(--warning) !important;
-  color: var(--text-dark) !important;
+  color: #212529 !important;
 }
 
 .bg-info {
   background-color: var(--info) !important;
-  color: var(--primary-text-on) !important;
+  color: #fff !important;
 }
 
 .bg-light {
@@ -459,7 +455,7 @@ th {
 
 .bg-dark {
   background-color: var(--neutral-900) !important;
-  color: var(--primary-text-on) !important;
+  color: #fff !important;
 }
 
 /* Badges */
@@ -546,17 +542,17 @@ th {
 /* Footer */
 .footer {
   background-color: var(--neutral-800);
-  color: var(--neutral-100);
+  color: white;
   padding: 3rem 0;
   margin-top: 3rem;
 }
 
 .footer a {
-  color: var(--primary-light);
+  color: var(--neutral-300);
 }
 
 .footer a:hover {
-  color: var(--primary);
+  color: white;
 }
 
 .footer-heading {
@@ -585,7 +581,7 @@ th {
 }
 
 .category-item.border-primary {
-    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px var(--primary);
 }
 
 .category-image {
