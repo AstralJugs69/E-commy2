@@ -28,14 +28,20 @@ router.get('/', isUser, async (req: Request, res: Response) => {
     // Fetch all wishlist items for the user, including product details
     const wishlistItems = await prisma.wishlistItem.findMany({
       where: { userId },
-      include: {
+      select: {
+        id: true,
+        createdAt: true,
+        productId: true,
         product: {
           select: {
             id: true,
             name: true,
             price: true,
-            images: true,
-            stock: true
+            stock: true,
+            images: {
+              select: { url: true },
+              take: 1 // Only need the first image for wishlist display
+            }
           }
         }
       },

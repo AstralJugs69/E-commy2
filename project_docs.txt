@@ -16,6 +16,13 @@ The project is now supporting multiple product images rather than a single image
 - Updated Admin FE Product Form for multi-image upload/management.
 - Fixed Customer FE components (ProductCard, DetailPage, Cart, Wishlist) to correctly display images using the new `images` relation and handle image URL construction properly. [Date: 2025-04-18]
 
+### Code Review & Consistency Checks:
+- Verified database indexes on critical fields for query performance
+- Standardized API base URL usage across both frontends to prevent duplicate `/api` path segments
+- Fixed image upload endpoint in ProductManagementPage
+- Verified consistent Address model field names across backend and frontend components
+[Date: 2025-05-04]
+
 ## 1. Project Summary & Vision
 
 ### 1.1. Core Concept

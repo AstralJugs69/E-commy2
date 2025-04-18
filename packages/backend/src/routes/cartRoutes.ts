@@ -250,15 +250,20 @@ router.get('/', isUser, async (req: Request, res: Response) => {
     // Fetch all cart items for the user, including product details
     const cartItems = await prisma.cartItem.findMany({
       where: { userId: userId },
-      include: {
+      select: {
+        id: true,
+        quantity: true,
+        productId: true,
         product: {
           select: {
             id: true,
             name: true,
             price: true,
-            description: true,
-            images: true,
-            stock: true
+            stock: true,
+            images: {
+              select: { url: true },
+              take: 1 // Only need the first image for cart display
+            }
           }
         }
       }

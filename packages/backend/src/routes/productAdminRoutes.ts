@@ -35,7 +35,12 @@ router.get('/', isAdmin, async (req: Request, res: Response) => {
         price: true,
         costPrice: true,
         description: true,
-        images: true,
+        images: {
+          select: {
+            id: true,
+            url: true
+          }
+        },
         stock: true,
         category: {
           select: {
