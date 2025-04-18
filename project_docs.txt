@@ -5,6 +5,17 @@
 
 Work has commenced on the `feature/customer-ui-refinement` branch with the goal of Customer Frontend UI/UX improvements. This phase focuses on enhancing the user interface and experience of the customer-facing application.
 
+## 1.1 Current Focus: Multiple Product Images
+
+The project is now supporting multiple product images rather than a single image URL. This enhancement allows for a more comprehensive product showcase.
+
+### Status Update:
+- Updated the database schema to replace the `imageUrl` field with an `images` relation in the Product model.
+- Implemented backend API changes to support the new schema structure.
+- Created migration scripts to handle the transition from single to multiple images.
+- Updated Admin FE Product Form for multi-image upload/management.
+- Fixed Customer FE components (ProductCard, DetailPage, Cart, Wishlist) to correctly display images using the new `images` relation and handle image URL construction properly. [Date: 2025-04-18]
+
 ## 1. Project Summary & Vision
 
 ### 1.1. Core Concept
@@ -141,101 +152,4 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
     *   Implemented **location check** using Turf.js within the `POST /api/orders` transaction. Verified logic and data saving.
     *   Implemented **stock management** (check and decrement) within the `POST /api/orders` transaction. Added Admin stock adjustment endpoint.
     *   Implemented **Admin CRUD** APIs for Products, Categories, Phones, Zones.
-    *   Implemented **Admin Reporting** APIs (`/stats`, `/reports/*`).
-    *   Implemented **User Management** APIs (`/admin/users`, `/admin/users/:id`, `/api/users/me` update).
-    *   Implemented **Image Upload** API (`/admin/upload` using Multer) and static file serving.
-*   **Frontend Development (Sprints 2-7 & Polish):**
-    *   Built reusable layouts (`AdminLayout`, `Layout`) using `react-bootstrap` and `react-router-dom`.
-    *   Implemented context API for global state (`AuthContext`, `CartContext`, `WishlistContext`). Debugged `AuthContext` initialization race condition on page refresh using `isAuthLoading` state.
-    *   Integrated API calls using `axios`, handling loading states (`Spinner`) and errors (`Alert`, `react-hot-toast`). Standardized feedback mechanisms.
-    *   Implemented all corresponding UI pages/components for features listed in Backend section.
-    *   Integrated **Leaflet map** for Admin Zone display and **Leaflet Draw** for zone creation. Fixed default Leaflet icon issues.
-    *   Integrated **Chart.js** for Admin statistics display.
-    *   Implemented **mobile-first design** principles and addressed specific mobile layout issues (HomePage category/product grid, Cart table/card view, Footer size, Offcanvas menu closing).
-    *   Refactored `react-router-dom` usage in Admin FE to align syntax with v6 (while package remained v7 initially, now aligned to v6). Resolved `LinkContainer` issues using `Nav.Link as={Link}` pattern where needed.
-    *   Refined Add-to-Cart flow on Product Detail page (removed quantity input, button state reflects cart status).
-    *   Added confirmation dialogs (`window.confirm`) for destructive admin actions.
-    *   Performed multiple rounds of detailed **UI/UX polish**.
-*   **Testing & Deployment:**
-    *   Basic **automated testing infrastructure** (Vitest, RTL) set up for all packages. Minimal example tests written. *(Comprehensive testing deferred)*.
-    *   **Deployment preparation** initiated (Build scripts verified, Environment variable handling with `.env.*` files implemented). *(Actual deployment deferred)*.
-    *   **PWA setup** using `vite-plugin-pwa` completed for Customer FE (Manifest, Service Worker). *(Needs final verification in deployed environment)*.
-
-## 5. Current Application State
-
-*   **Functionality:** Feature-rich MVP+ state. Core customer lifecycle (Browse -> Detail -> Cart -> Wishlist -> Checkout -> Verify Number -> History/Profile) is functional. Core admin operations (Login -> Dashboard/Stats -> Manage Orders/Products/Categories/Zones/Phones/Users) are functional.
-*   **UI/UX:** Generally polished and consistent look using a custom Bootstrap theme (Neon Green primary). Mobile-first approach applied to Customer FE. Interactive states and loading indicators implemented.
-*   **Security:** Password hashing and secure password reset flow implemented. JWT authentication protects relevant endpoints. Input validation used on backend.
-*   **Code Quality:** Modular structure, TypeScript used, helper functions consolidated, basic test setup exists. Some technical debt remains (see Known Issues).
-*   **Deployment:** Ready for deployment preparation finalization (environment variable setup for hosting, choosing platform specifics). Builds are confirmed working.
-
-## 6. Remaining Tasks & Future Work (Prioritized - Tentative)
-
-**(Next Steps - Based on last decision: Automated Testing / Deployment)**
-
-*   **Phase: Testing & Deployment**
-    1.  **Automated Testing (Implementation):** Write unit/integration tests for critical backend logic (Auth, Order w/ Stock/Location, Cart). Write component tests for key frontend components (Login forms, ProductCard, Cart display, Checkout form).
-    2.  **Deployment Prep (Finalize):** Choose hosting (Render decided), configure production environment variables (`DATABASE_URL`, `JWT_SECRET`, `VITE_API_BASE_URL`) securely on the platform, finalize build commands if needed.
-    3.  **Deployment:** Execute deployment steps for Database (Supabase/Render), Backend (Render), Admin FE (Netlify/Render), Customer FE (Netlify/Render). Perform post-deployment testing.
-    4.  **PWA Verification (Post-Deployment):** Test installability, service worker, and caching in the deployed environment.
-
-*   **Phase: Sprint 8+ / Future Features & Deeper Refinements**
-    *   **High Priority Features:**
-        *   Address Management (Customer Profile & Checkout)
-        *   Promotions/Discounts (Basic Coupon System)
-    *   **Admin Enhancements:**
-        *   Deeper Reporting (Stock History, Profit Margins - requires Product Cost field)
-        *   Advanced Order/Product/User Filtering & Search
-        *   User Roles & Permissions
-    *   **Customer Enhancements:**
-        *   Wishlist Refinements (e.g., "Add All to Cart")
-        *   Search Enhancements (e.g., better suggestions)
-        *   Advanced PWA features (Offline mode for browsing, Push Notifications?)
-    *   **Technical / Polish:**
-        *   Refactor Phone Assignment Logic (atomic with order creation)
-        *   Hash Password Reset Tokens (Security enhancement)
-        *   Accessibility (A11y) Audit & Improvements
-        *   Performance Optimizations (Database indexing, query optimization, frontend bundle analysis)
-        *   Comprehensive Test Coverage (Unit, Integration, E2E)
-        *   CI/CD Pipeline Setup
-        *   Move Image Storage to Cloud (S3, Cloudinary, etc.) + Image Optimization
-
-## 7. Known Issues / Areas for Improvement
-
-*   **Security:** Password reset token lookup mechanism (fetch many, compare hashes) could be inefficient at scale. Refresh tokens not implemented for JWTs. Admin roles not implemented.
-*   **Scalability:** Local image storage unsuitable for production. Database may require indexing/optimization under heavy load.
-*   **Phone Assignment:** Current `GET /assign-number` has potential race condition; should be integrated into `POST /orders` transaction.
-*   **Testing:** Automated test coverage is currently minimal.
-*   **Error Handling:** Frontend could provide more specific user feedback for different API error types beyond generic toasts/alerts in some cases.
-*   **Admin Dashboard Live View:** Relies on basic polling (`setInterval`); WebSockets would be more efficient for true real-time updates (future enhancement).
-*   **Documentation:** API documentation (e.g., Swagger/OpenAPI) not generated. Inline code comments are minimal.
-
-## 8. Dev Notes / Lessons Learned *(Consolidated & Expanded)*
-
-*   **L1: UI Layout Brittleness:** Default HTML/CSS or overly specific custom CSS can be fragile. Mitigation: Use robust component libraries (like `react-bootstrap`), leverage their grid systems, use utility classes for spacing/layout, design mobile-first.
-*   **L2: Implicit Context & State:** Global state (Auth, Cart, Wishlist) is useful but requires careful management. Mitigation: Use React Context effectively, ensure providers wrap necessary components, clearly define context values/functions, handle loading states (e.g., `isAuthLoading`), be mindful of prop drilling vs context.
-*   **L3: Visual Feedback Loop:** Frequent visual testing (desktop/mobile) and user feedback (screenshots, specific descriptions) are critical for identifying UI/UX issues early. Don't rely solely on Coder output.
-*   **L4: Async & UI Responsiveness:** API calls require clear user feedback. Mitigation: Implement consistent loading states (`useState`, `Spinner` components, inline spinners in buttons), disable interactive elements during async operations, use feedback mechanisms like `react-hot-toast` for success/error notifications.
-*   **L5: Styling Strategy:** Component libraries (`react-bootstrap`) provide structure but require customization for unique branding. Utility-first (Tailwind) offers flexibility but can face tooling/configuration challenges. Mitigation: Choose approach based on team/project needs. Use CSS variables and minimal overrides for theming component libraries.
-*   **L6: Component Boundaries:** Design reusable components with clear responsibilities and well-defined props. Mitigation: Encapsulate logic, minimize prop drilling (use Context where appropriate), favor composition.
-*   **L7: MVP & Iteration:** Implement core backend functionality first. Build functional UI, then iterate on polish and features. Avoid premature optimization. Stick to the defined MVP scope initially, then layer enhancements.
-*   **L8: Manual Command Reliability:** Workflow depends on User executing `npm`, `git`, `npx prisma` commands accurately and reporting outcomes correctly. Errors here break the flow.
-*   **L9: Build System & Tooling:** Vite/TypeScript/ESLint/Prisma/Node versions can interact complexly. Config files (`vite.config`, `tsconfig`, `postcss.config`, `package.json` scripts) need care. `npm run build` is essential verification. Debugging build errors requires checking configs and dependencies.
-*   **L11: Prompt Engineering:** Clear, specific, step-by-step prompts are essential for guiding AI Coders effectively. Specify files, functions, logic intent, and expected outcomes. Break complex tasks down. Provide context or ask Coder to reference docs.
-*   **L14: AI Coder Limitations:** Coders may misunderstand, make errors, or implement unrequested changes. **User validation is non-negotiable** at every step. Review code diffs if possible.
-*   **L17: Local Development Environment:** Consistency is key. Docker issues led to local Postgres. Ensure Node/npm versions are compatible. Windows-specific path/script issues (`nodemon` quotes) require platform-aware solutions.
-*   **L18: GeoJSON Handling:** Requires backend storage (Text/JSONB), safe parsing (`try/catch JSON.parse`), frontend map libraries (`leaflet`, `react-leaflet`), potentially drawing plugins (`leaflet-draw`), and correct coordinate format ([Lon, Lat]).
-*   **L19: API Testing:** Essential, especially for backend-first development. Postman/Insomnia are invaluable. Utility scripts (`generate-token`, `seed-user`) aid testing protected endpoints.
-*   **L20: Backend State & Transactions:** Critical operations altering multiple related records (e.g., Order creation + Stock decrement + Phone assignment) **must** use database transactions (`prisma.$transaction`) for atomicity and data integrity. Handle potential race conditions explicitly.
-*   **L21: Mobile-First Design:** Requires conscious effort in component design, layout choices (stacking columns, offcanvas nav), responsive utilities (Bootstrap grid/display/spacing), and testing in mobile viewports.
-*   **L22: JWT Secret Management:** **CRITICAL** for security. Use strong secrets, store securely (env vars), ensure consistency between signing (`/login`) and verification (`isUser`/`isAdmin` middleware). Use `.env` reliably (`dotenv.config()`). **Hash password reset tokens** before DB storage.
-*   **L23: Frontend Tooling Integration:** CSS preprocessors (PostCSS), UI frameworks (Bootstrap), bundlers (Vite) need correct configuration to work together (e.g., installing `@tailwindcss/postcss`, configuring `postcss.config.js`). Follow official integration docs.
-*   **L24: Routing Library Integration:** Framework wrappers (`react-router-bootstrap`) might have bugs or context issues. Standard router components (`Link`) with framework component props (`as={Link}`) can be a reliable alternative. Router versions should ideally be consistent across related packages. v6 and v7 `react-router-dom` have different syntaxes for route definition.
-*   **L25: Security - Hashing:** `bcrypt` is standard for passwords and should be used for reset tokens too. Implementation requires updating registration/request (`hash`) and login/reset (`compare`). Test impact on existing data.
-*   **L26: Stock Management:** Needs DB field, transaction logic in order creation (check *before* create, decrement *after* create), Admin CRUD updates, Admin manual adjustment feature, and Frontend display/validation (disable buttons, check quantity in cart context/input).
-*   **L27: API Design (Public vs. Admin):** Use separate route files/prefixes. Protect admin routes with `isAdmin`. Select only necessary data fields for each context (e.g., public product list is leaner than admin list).
-*   **L28: Image Handling (Local Dev):** Requires backend (static serving, `multer` upload endpoint), Admin UI (file input, upload call using `FormData`), Customer UI (`img` tag with correct URL construction + placeholder/onError fallback). Cloud storage needed for production.
-*   **L29: PWA Setup:** Use plugins (`vite-plugin-pwa`), configure manifest, provide icons, configure service worker (asset caching initially), test using `build` + `preview` and browser dev tools. Can be finicky.
-*   **L30: Debugging FE/BE Disconnects:** Check API URLs (`import.meta.env`), CORS headers (backend), Network tab (status codes, responses), Backend console logs (startup errors, request handling, middleware logs, DB errors), Frontend console logs (API call initiation, responses, errors). Ensure servers are running on expected ports. Verify auth token presence/format in requests.
-*   **L31: UI Polish Iteration:** Requires specific, actionable feedback based on visual review. Focus on consistency (spacing, typography, color, components), hierarchy, interactive states, empty states, and responsiveness. Use Bootstrap utilities first, then minimal CSS overrides.
-*   **L32: Database Schema Evolution:** Use Prisma Migrate (`migrate dev`) for schema changes. Seed data (manually or via script) for testing new structures. Be mindful of data types (e.g., `String?` for optional text, `Json?` for flexible structures, `Float` vs `Decimal` for currency). Define relations (`@relation`) and constraints (`@unique`, `@@unique`).
+    *   Implemented **Admin Reporting** APIs (`/stats`, `/reports/*`

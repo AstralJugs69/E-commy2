@@ -1,6 +1,7 @@
 import { Container, Row, Col, Table, Button, Alert, Card, Form, Image } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { FaTrash, FaShoppingCart } from 'react-icons/fa';
 import EmptyState from '../components/EmptyState';
 
@@ -10,6 +11,7 @@ const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/u
 const CartPage = () => {
   // Get all required functions from cart context in one place
   const { cartItems, removeFromCart, clearCart, getCartTotal, updateCartItemQuantity } = useCart();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
   const cartIsEmpty = cartItems.length === 0;
@@ -22,6 +24,21 @@ const CartPage = () => {
   const formatCurrency = (value: number): string => {
     return `€${value.toFixed(2)}`;
   };
+  
+  // If not authenticated, show a message and login button
+  if (!isAuthenticated) {
+    return (
+      <Container className="py-4">
+        <h2 className="mb-4">Your Shopping Cart</h2>
+        <EmptyState
+          icon={<FaShoppingCart />}
+          title="Please Log In to View Your Cart"
+          message="You need to be logged in to view and manage your shopping cart."
+          actionButton={<Link to="/login" className="btn btn-primary px-4">Log In</Link>}
+        />
+      </Container>
+    );
+  }
   
   return (
     <Container className="py-4">
