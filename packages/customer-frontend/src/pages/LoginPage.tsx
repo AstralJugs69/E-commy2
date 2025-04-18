@@ -5,8 +5,7 @@ import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaStore } from 'react-icons/fa';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+import api from '../utils/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -39,7 +38,7 @@ const LoginPage = () => {
       console.log('Attempting login with:', { email, passwordLength: password.length });
       
       // Make API call to login endpoint
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const response = await api.post('/auth/login', {
         email,
         password
       });
