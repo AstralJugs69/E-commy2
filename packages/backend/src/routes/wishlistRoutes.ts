@@ -34,7 +34,7 @@ router.get('/', isUser, async (req: Request, res: Response) => {
             id: true,
             name: true,
             price: true,
-            imageUrl: true,
+            images: true,
             stock: true
           }
         }
@@ -96,7 +96,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
               id: true,
               name: true,
               price: true,
-              imageUrl: true,
+              images: true,
               stock: true
             }
           }

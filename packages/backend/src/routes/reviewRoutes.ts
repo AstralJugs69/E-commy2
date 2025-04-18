@@ -104,7 +104,7 @@ router.get('/user', isUser, async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            imageUrl: true
+            images: true
           }
         }
       },

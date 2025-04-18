@@ -4,14 +4,22 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const UPLOADS_URL = (import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads').replace(/\/+$/, '');
+
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
 
 interface Product {
   id: number;
   name: string;
   price: number;
   description: string | null;
-  imageUrl: string | null;
+  images?: ProductImage[];
   stock: number;
 }
 
@@ -27,27 +35,48 @@ const ProductCard: React.FC<ProductCardProps> = ({
   disableInternalLink = false 
 }) => {
   const { addOrUpdateItemQuantity } = useCart();
+  const [hover, setHover] = React.useState(false);
 
   const handleAddToCart = (product: Product) => {
-    addOrUpdateItemQuantity(product.id, 1).catch(error => {
-      console.error('Error adding to cart:', error);
-    });
+    addOrUpdateItemQuantity(product.id, 1)
+      .then(() => {
+        toast.success('Added to cart');
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        toast.error('Failed to add to cart');
+      });
   };
 
+  // Get the first image URL if available
+  const imageUrl = product.images && product.images.length > 0 ? product.images[0].url : null;
+
   return (
-    <Card className="h-100 shadow-sm mb-2 product-card">
+    <Card 
+      className="h-100 shadow-sm mb-2 product-card"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div className="position-relative">
-        {product.imageUrl ? (
+        {imageUrl ? (
           <Card.Img 
             variant="top" 
-            src={`${API_BASE_URL}${product.imageUrl}`} 
+            src={imageUrl.startsWith('/uploads/') 
+              ? `${UPLOADS_URL}${imageUrl.substring(8)}` 
+              : imageUrl.startsWith('http') 
+                ? imageUrl 
+                : `${API_BASE_URL}${imageUrl}`
+            }
             alt={product.name}
-            style={{ height: '180px', objectFit: 'cover' }}
-            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-              if (e.currentTarget.src !== '/placeholder-image.svg') {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = '/placeholder-image.svg';
-              }
+            style={{ 
+              height: '180px', 
+              objectFit: 'contain',
+              padding: '10px'
+            }}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder-image.png';
+              target.onerror = null;
             }}
           />
         ) : (

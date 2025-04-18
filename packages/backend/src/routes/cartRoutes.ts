@@ -52,7 +52,7 @@ router.post('/item', isUser, async (req: Request, res: Response) => {
           id: true,
           name: true,
           price: true,
-          imageUrl: true,
+          images: true,
           stock: true,
           description: true
         }
@@ -97,7 +97,7 @@ router.post('/item', isUser, async (req: Request, res: Response) => {
               id: true,
               name: true,
               price: true,
-              imageUrl: true,
+              images: true,
               stock: true,
               description: true
             }
@@ -168,7 +168,7 @@ router.post('/update/:productId', isUser, async (req: Request, res: Response) =>
           id: true,
           name: true,
           price: true,
-          imageUrl: true,
+          images: true,
           stock: true,
           description: true
         }
@@ -205,7 +205,7 @@ router.post('/update/:productId', isUser, async (req: Request, res: Response) =>
               id: true,
               name: true,
               price: true,
-              imageUrl: true,
+              images: true,
               stock: true,
               description: true
             }
@@ -257,7 +257,7 @@ router.get('/', isUser, async (req: Request, res: Response) => {
             name: true,
             price: true,
             description: true,
-            imageUrl: true,
+            images: true,
             stock: true
           }
         }

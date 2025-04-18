@@ -6,12 +6,20 @@ import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
 
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
+
 interface Product {
   id: number;
   name: string;
   price: number;
   description: string | null;
-  imageUrl: string | null;
+  images?: ProductImage[];
+  imageUrl?: string | null; // For backward compatibility
   stock: number;
   averageRating?: number | null;
   reviewCount?: number;
@@ -31,6 +39,7 @@ interface PaginatedProductsResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -364,16 +373,27 @@ const HomePage = () => {
                   <Card className="w-100 shadow-sm product-card">
                     <Link to={`/product/${product.id}`} className="text-decoration-none text-reset">
                       <div className="position-relative">
-                        {product.imageUrl ? (
+                        {(product.images?.length > 0 || product.imageUrl) ? (
                           <Card.Img 
                             variant="top" 
-                            src={`${API_BASE_URL}${product.imageUrl}`} 
+                            src={
+                              product.images && product.images.length > 0 
+                                ? (product.images[0].url.startsWith('/uploads/') 
+                                  ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
+                                  : product.images[0].url.startsWith('http')
+                                    ? product.images[0].url
+                                    : `${API_BASE_URL}${product.images[0].url}`)
+                                : (product.imageUrl?.startsWith('/uploads/')
+                                  ? `${UPLOADS_URL}${product.imageUrl.substring(8)}`
+                                  : product.imageUrl?.startsWith('http')
+                                    ? product.imageUrl
+                                    : `${API_BASE_URL}${product.imageUrl || ''}`)
+                            } 
                             alt={product.name}
                             style={{ height: '160px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              // Prevent infinite loop if placeholder itself fails
                               if (e.currentTarget.src !== '/placeholder-image.svg') {
-                                e.currentTarget.onerror = null; // Remove handler after first error
+                                e.currentTarget.onerror = null;
                                 e.currentTarget.src = '/placeholder-image.svg';
                               }
                             }}

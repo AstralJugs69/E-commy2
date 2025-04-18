@@ -12,6 +12,13 @@ interface Category {
   name: string;
 }
 
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -19,12 +26,12 @@ interface Product {
   costPrice?: number | null;
   description?: string;
   stock?: number;
-  imageUrl?: string;
   categoryId?: number;
   category?: {
     id: number;
     name: string;
   };
+  images?: ProductImage[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -52,13 +59,17 @@ const ProductManagementPage: React.FC = () => {
   const [formCostPrice, setFormCostPrice] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStock, setFormStock] = useState('');
-  const [formImageUrl, setFormImageUrl] = useState('');
   const [formCategoryId, setFormCategoryId] = useState('');
 
-  // File upload state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Multiple image management
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [formImageUrls, setFormImageUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Backward compatibility (temporary, can be removed later)
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Add state for inline stock adjustment
   const [adjustingProductId, setAdjustingProductId] = useState<number | null>(null);
@@ -196,6 +207,8 @@ const ProductManagementPage: React.FC = () => {
     setFormCategoryId('');
     setModalError(null);
     setSelectedFile(null);
+    setSelectedFiles([]);
+    setFormImageUrls([]);
     setUploadError(null);
     setShowModal(true);
   };
@@ -207,10 +220,21 @@ const ProductManagementPage: React.FC = () => {
     setFormCostPrice(product.costPrice?.toString() || '');
     setFormDescription(product.description || '');
     setFormStock(product.stock?.toString() || '');
-    setFormImageUrl(product.imageUrl || '');
     setFormCategoryId(product.categoryId?.toString() || '');
     setModalError(null);
     setSelectedFile(null);
+    setSelectedFiles([]);
+    
+    // Set image URLs from product images
+    if (product.images && product.images.length > 0) {
+      setFormImageUrls(product.images.map(img => img.url));
+      // For backward compatibility
+      setFormImageUrl(product.images[0].url);
+    } else {
+      setFormImageUrls([]);
+      setFormImageUrl('');
+    }
+    
     setUploadError(null);
     setShowModal(true);
   };
@@ -219,6 +243,48 @@ const ProductManagementPage: React.FC = () => {
     setShowModal(false);
     setModalError(null);
     setUploadError(null);
+    setSelectedFiles([]);
+    setFormImageUrls([]);
+  };
+
+  // Handle file selection for multiple images
+  const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const fileList = Array.from(e.target.files);
+      
+      // Check if adding these files would exceed the 5 image limit
+      const totalImagesCount = formImageUrls.length + fileList.length;
+      if (totalImagesCount > 5) {
+        setUploadError(`You can only upload up to 5 images. You already have ${formImageUrls.length} image(s).`);
+        return;
+      }
+      
+      setSelectedFiles(fileList);
+      setUploadError(null);
+      
+      // For backward compatibility
+      setSelectedFile(fileList.length > 0 ? fileList[0] : null);
+    }
+  };
+  
+  // Remove a file from selectedFiles
+  const handleRemoveSelectedFile = (index: number) => {
+    const newFiles = [...selectedFiles];
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+    
+    // Update single file state for backward compatibility
+    setSelectedFile(newFiles.length > 0 ? newFiles[0] : null);
+  };
+  
+  // Remove an existing image URL
+  const handleRemoveImageUrl = (index: number) => {
+    const newUrls = [...formImageUrls];
+    newUrls.splice(index, 1);
+    setFormImageUrls(newUrls);
+    
+    // Update single image URL for backward compatibility
+    setFormImageUrl(newUrls.length > 0 ? newUrls[0] : '');
   };
 
   const handleSaveProduct = async (event: FormEvent) => {
@@ -256,16 +322,23 @@ const ProductManagementPage: React.FC = () => {
     setModalError(null);
     setUploadError(null);
 
-    // Handle image upload if a file is selected
-    if (selectedFile) {
+    // Initialize array for final image URLs (existing + newly uploaded)
+    let finalImageUrls = [...formImageUrls];
+
+    // Handle image uploads if files are selected
+    if (selectedFiles.length > 0) {
       setIsUploading(true);
       
       try {
         // Create form data for file upload
         const formData = new FormData();
-        formData.append('productImage', selectedFile);
         
-        // Upload the image
+        // Append each file to the formData with the same field name
+        selectedFiles.forEach(file => {
+          formData.append('productImages', file);
+        });
+        
+        // Upload the images
         const uploadResponse = await axios.post(
           `${API_BASE_URL}/api/admin/upload`,
           formData,
@@ -277,12 +350,21 @@ const ProductManagementPage: React.FC = () => {
           }
         );
         
-        // Get the imageUrl from the response and update formImageUrl
-        const uploadedImageUrl = uploadResponse.data.imageUrl;
-        setFormImageUrl(uploadedImageUrl);
+        // Get the imageUrls array from the response
+        const uploadedImageUrls = uploadResponse.data.imageUrls;
         
-        // Clear the selected file state
-        setSelectedFile(null);
+        // Add the new URLs to our finalImageUrls array
+        finalImageUrls = [...finalImageUrls, ...uploadedImageUrls];
+        
+        // Ensure we don't exceed 5 images
+        if (finalImageUrls.length > 5) {
+          finalImageUrls = finalImageUrls.slice(0, 5);
+          toast.warning('Only the first 5 images were saved.');
+        }
+        
+        // Update state
+        setFormImageUrls(finalImageUrls);
+        setSelectedFiles([]);
       } catch (err) {
         // Handle upload errors
         setIsUploading(false);
@@ -308,11 +390,7 @@ const ProductManagementPage: React.FC = () => {
       costPrice: costValue,
       description: formDescription.trim() || undefined,
       stock: formStock ? parseInt(formStock, 10) : undefined,
-      imageUrl: formImageUrl.trim() 
-        ? (formImageUrl.trim().startsWith('/') 
-          ? `${API_BASE_URL}${formImageUrl.trim()}` 
-          : formImageUrl.trim())
-        : undefined,
+      imageUrls: finalImageUrls,
       categoryId: formCategoryId ? parseInt(formCategoryId, 10) : null
     };
 
@@ -523,11 +601,11 @@ const ProductManagementPage: React.FC = () => {
                     <tr key={product.id}>
                       <td>{product.id}</td>
                       <td className="text-center">
-                        {product.imageUrl ? (
+                        {product.images?.length ? (
                           <img 
-                            src={product.imageUrl.startsWith('/') 
-                              ? `${API_BASE_URL}${product.imageUrl}` 
-                              : product.imageUrl} 
+                            src={product.images[0].url.startsWith('/') 
+                              ? `${API_BASE_URL}${product.images[0].url}` 
+                              : product.images[0].url} 
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
                             style={{ width: '50px', height: '50px', objectFit: 'cover' }}
@@ -666,50 +744,84 @@ const ProductManagementPage: React.FC = () => {
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="productImageFile">
-              <Form.Label>Product Image</Form.Label>
+              <Form.Label>Product Images (Up to 5)</Form.Label>
               <Form.Control
                 type="file"
                 accept="image/png, image/jpeg, image/webp, image/gif"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  setSelectedFile(e.target.files ? e.target.files[0] : null)
-                }
+                onChange={handleFileSelection}
+                multiple
               />
               <Form.Text className="text-muted">
-                Max file size: 5MB. Supported formats: PNG, JPEG, WebP, GIF.
+                Max 5 images total. Max file size: 5MB each. Supported formats: PNG, JPEG, WebP, GIF.
               </Form.Text>
             </Form.Group>
-            {formImageUrl && (
+            
+            {/* Display selected files */}
+            {selectedFiles.length > 0 && (
               <div className="mb-3">
-                <p className="mb-1">Current Image:</p>
-                <Image 
-                  src={formImageUrl.startsWith('/') ? `${API_BASE_URL}${formImageUrl}` : formImageUrl} 
-                  alt="Product" 
-                  style={{ maxHeight: '100px', maxWidth: '100%' }}
-                />
+                <p className="mb-1 fw-medium">Selected Images:</p>
+                <div className="d-flex flex-wrap gap-2">
+                  {selectedFiles.map((file, index) => (
+                    <div 
+                      key={`selected-${index}`} 
+                      className="position-relative"
+                      style={{ width: '80px', height: '80px' }}
+                    >
+                      <Image 
+                        src={URL.createObjectURL(file)}
+                        alt={`Selected ${index + 1}`}
+                        className="rounded"
+                        style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                      />
+                      <Button 
+                        variant="danger" 
+                        size="sm" 
+                        className="position-absolute top-0 end-0 rounded-circle p-0 d-flex align-items-center justify-content-center"
+                        style={{ width: '24px', height: '24px', transform: 'translate(30%, -30%)' }}
+                        onClick={() => handleRemoveSelectedFile(index)}
+                      >
+                        &times;
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            <Form.Group controlId="formImageUrl" className="mb-3">
-              <Form.Label>Image URL</Form.Label>
-              <div className="d-flex align-items-center">
-                <Form.Control
-                  type="text"
-                  value={formImageUrl || ''}
-                  onChange={(e) => setFormImageUrl(e.target.value)}
-                  placeholder="Image URL (optional)"
-                  disabled={isUploading}
-                />
-                {formImageUrl && (
-                  <div className="ms-2">
-                    <Image 
-                      src={formImageUrl.startsWith('/') ? `${API_BASE_URL}${formImageUrl}` : formImageUrl} 
-                      alt="Preview" 
-                      thumbnail 
-                      style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                    />
-                  </div>
-                )}
+            
+            {/* Display existing images when editing */}
+            {editingProduct && formImageUrls.length > 0 && (
+              <div className="mb-3">
+                <p className="mb-1 fw-medium">Current Images:</p>
+                <div className="d-flex flex-wrap gap-2">
+                  {formImageUrls.map((url, index) => (
+                    <div 
+                      key={`existing-${index}`} 
+                      className="position-relative"
+                      style={{ width: '80px', height: '80px' }}
+                    >
+                      <Image 
+                        src={url.startsWith('/') ? `${API_BASE_URL}${url}` : url}
+                        alt={`Image ${index + 1}`}
+                        className="rounded"
+                        style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                      />
+                      <Button 
+                        variant="danger" 
+                        size="sm" 
+                        className="position-absolute top-0 end-0 rounded-circle p-0 d-flex align-items-center justify-content-center"
+                        style={{ width: '24px', height: '24px', transform: 'translate(30%, -30%)' }}
+                        onClick={() => handleRemoveImageUrl(index)}
+                      >
+                        &times;
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <small className="text-muted mt-1 d-block">
+                  {5 - formImageUrls.length} more image(s) can be added
+                </small>
               </div>
-            </Form.Group>
+            )}
             <Form.Group className="mb-3">
               <Form.Label>Category (Optional)</Form.Label>
               <Form.Select

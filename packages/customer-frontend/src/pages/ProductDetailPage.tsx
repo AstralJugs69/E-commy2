@@ -13,12 +13,19 @@ import api from '../utils/api';
 import { formatCurrency } from '../utils/formatters';
 
 // Define interface for product data matching backend response
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
+
 interface Product {
   id: number;
   name: string;
   price: number;
   description: string | null;
-  imageUrl: string | null;
+  images?: ProductImage[];
   stock: number;
   createdAt: string;
   averageRating?: number | null;
@@ -46,6 +53,7 @@ interface PaginatedProductsResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const ProductDetailPage = () => {
   // State for product
@@ -419,18 +427,27 @@ const ProductDetailPage = () => {
         {/* Product Image Column */}
         <Col xs={12} md={6} className="mb-3 mb-md-0">
           <div className="position-relative">
-            {product.imageUrl ? (
+            {product.images && product.images.length > 0 ? (
               <Card.Img 
                 variant="top" 
-                src={`${API_BASE_URL}${product.imageUrl}`} 
+                src={
+                  product.images[0].url.startsWith('/uploads/') 
+                    ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
+                    : product.images[0].url.startsWith('http') 
+                      ? product.images[0].url
+                      : `${API_BASE_URL}${product.images[0].url}`
+                } 
                 alt={product.name}
-                style={{ height: '300px', objectFit: 'cover' }}
-                className="rounded"
+                style={{ 
+                  height: '400px', 
+                  objectFit: 'contain',
+                  backgroundColor: '#f8f9fa' 
+                }}
                 onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                  // Prevent infinite loop if placeholder itself fails
                   if (e.currentTarget.src !== '/placeholder-image.svg') {
-                    e.currentTarget.onerror = null; // Remove handler after first error
+                    e.currentTarget.onerror = null;
                     e.currentTarget.src = '/placeholder-image.svg';
+                    console.warn(`Failed to load image: ${product.images[0].url}`);
                   }
                 }}
               />
@@ -439,8 +456,7 @@ const ProductDetailPage = () => {
                 variant="top" 
                 src="/placeholder-image.svg"
                 alt={product.name}
-                style={{ height: '300px', objectFit: 'cover' }}
-                className="rounded"
+                style={{ height: '400px', objectFit: 'contain' }}
               />
             )}
             {isNewProduct() && (

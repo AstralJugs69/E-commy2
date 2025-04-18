@@ -5,6 +5,7 @@ import { FaTrash, FaShoppingCart } from 'react-icons/fa';
 import EmptyState from '../components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const CartPage = () => {
   // Get all required functions from cart context in one place
@@ -52,12 +53,24 @@ const CartPage = () => {
                   <tr key={item.id}>
                     <td>
                       <div className="d-flex align-items-center">
-                        {item.imageUrl && (
+                        {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
+                        {(item.images?.[0]?.url || item.imageUrl) && (
                           <img 
-                            src={item.imageUrl} 
+                            src={item.images?.[0]?.url 
+                              ? (item.images[0].url.startsWith('/uploads/') 
+                                ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
+                                : item.images[0].url)
+                              : (item.imageUrl!.startsWith('/uploads/') 
+                                ? `${UPLOADS_URL}${item.imageUrl!.substring(8)}`
+                                : item.imageUrl!)} 
                             alt={item.name} 
-                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                            className="me-3 d-none d-sm-block rounded shadow-sm"
+                            style={{ width: '60px', height: '60px', objectFit: 'contain' }}
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                              if (e.currentTarget.src !== '/placeholder-image.svg') {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/placeholder-image.svg';
+                              }
+                            }}
                           />
                         )}
                         <div>
@@ -127,13 +140,22 @@ const CartPage = () => {
                     {/* Image Col */}
                     <Col xs={3} sm={2}>
                       <Image
-                        src={item.imageUrl ? item.imageUrl : '/placeholder-image.svg'}
+                        src={(item.images?.[0]?.url) 
+                          ? (item.images[0].url.startsWith('/uploads/') 
+                            ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
+                            : item.images[0].url)
+                          : (item.imageUrl!.startsWith('/uploads/') 
+                            ? `${UPLOADS_URL}${item.imageUrl!.substring(8)}`
+                            : item.imageUrl!)}
                         alt={item.name}
                         fluid
                         rounded
                         style={{ objectFit: 'cover', height: '60px', width: '60px' }}
-                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          e.currentTarget.src = '/placeholder-image.svg';
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          if (e.currentTarget.src !== '/placeholder-image.svg') {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder-image.svg';
+                          }
                         }}
                       />
                     </Col>

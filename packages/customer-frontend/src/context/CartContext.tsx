@@ -3,17 +3,26 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 // Define types for cart items and product
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
+
 interface Product {
   id: number;
   name: string;
   price: number;
   description: string | null;
-  imageUrl: string | null;
+  images?: ProductImage[];
   stock: number;
 }
 
 interface CartItem extends Product {
   quantity: number;
+  // For backward compatibility
+  imageUrl?: string | null;
 }
 
 interface CartContextType {
@@ -68,15 +77,24 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Cart data received:', response.data);
       
       // Update local cart state with server data
-      setCartItems(response.data.map((item: any) => ({
-        id: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        description: item.product.description,
-        imageUrl: item.product.imageUrl,
-        stock: item.product.stock,
-        quantity: item.quantity
-      })));
+      setCartItems(response.data.map((item: any) => {
+        // Extract the first image URL if available
+        const firstImageUrl = item.product.images && item.product.images.length > 0 
+          ? item.product.images[0].url 
+          : null;
+          
+        return {
+          id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          description: item.product.description,
+          images: item.product.images,
+          // For backward compatibility
+          imageUrl: firstImageUrl,
+          stock: item.product.stock,
+          quantity: item.quantity
+        };
+      }));
     } catch (err) {
       console.error("Error fetching cart:", err);
       setError("Failed to load cart items.");

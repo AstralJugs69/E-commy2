@@ -223,7 +223,7 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
         items: { // Include order items
            include: { // Include product details for each item
               product: {
-                 select: { name: true, imageUrl: true } // Select needed product fields
+                 select: { name: true, images: true } // Select needed product fields
               }
            }
         }
@@ -251,13 +251,13 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
 
 
     // Map items to include necessary details
-    const processedItems = order.items.map(item => ({
+    const processedItems = order.items.map((item: any) => ({
         id: item.id,
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
         productName: item.product?.name || item.productName || 'Unknown Product', // Use name from relation or stored name
-        imageUrl: item.product?.imageUrl // Get image URL from relation
+        imageUrl: item.product?.images?.[0]?.url // Get first image URL from relation
     }));
 
     const responseOrder = {
