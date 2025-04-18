@@ -19,7 +19,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, message, actionBut
       <Row className="justify-content-center">
         <Col xs={12} md={8} lg={6} className="text-center">
           <div className="empty-state-icon mb-4">
-            {React.cloneElement(icon, { size: 50, className: 'text-muted' })}
+            {React.cloneElement(icon as React.ReactElement, { size: 50, className: 'text-muted' } as React.SVGProps<SVGSVGElement>)}
           </div>
           <h4 className="fw-bold mb-2">{title}</h4>
           <p className="text-muted mb-4">{message}</p>
