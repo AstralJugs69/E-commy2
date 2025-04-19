@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Container, Card, Alert, Spinner } from 'react-bootstrap';
+import { Container, Card, Alert, Spinner, Accordion } from 'react-bootstrap';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -12,6 +12,15 @@ interface OrderItem {
   productName: string;
 }
 
+interface DeliveryLocation {
+  id: number;
+  name: string;
+  phone: string;
+  district: string;
+  isDefault: boolean;
+  userId: number;
+}
+
 interface Order {
   id: string;
   userId: string;
@@ -20,14 +29,7 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
-  shippingDetails: {
-    fullName: string;
-    address: string;
-    city: string;
-    zipCode: string;
-    country: string;
-    phone: string;
-  };
+  deliveryLocation?: DeliveryLocation;
 }
 
 const MAX_RETRIES = 5; // Max number of retry attempts
@@ -235,37 +237,18 @@ const OrderSuccessPage = () => {
   });
 
   return (
-    <Container className="py-4">
-      <div className="text-center mb-4">
-        <h2 className="text-success">Order Placed Successfully!</h2>
-        <p className="lead">Thank you for your purchase.</p>
-        <p>Your Order ID is: <strong>{orderId}</strong></p>
+    <Container className="py-3">
+      <div className="text-center mb-3">
+        <h2 className="text-success fw-bold">Order Placed Successfully!</h2>
+        <p>Your Order ID: <strong className="text-primary fs-5">#{orderId}</strong></p>
       </div>
 
-      <Card className="mb-4">
-        <Card.Header as="h5">Order Summary</Card.Header>
-        <Card.Body>
-          <div className="mb-3">
-            <strong>Order ID:</strong> {order.id}
-          </div>
-          <div className="mb-3">
-            <strong>Date:</strong> {formattedDate}
-          </div>
-          <div className="mb-3">
-            <strong>Status:</strong> <span className="badge bg-success">{order.status}</span>
-          </div>
-          <div className="mb-3">
-            <strong>Total Amount:</strong> €{order.totalAmount.toFixed(2)}
-          </div>
-        </Card.Body>
-      </Card>
-
-      {/* --- Verification Number Section --- */}
-      <Card bg="light" className="text-center my-4 shadow-sm">
-        <Card.Header as="h5">Order Verification</Card.Header>
-        <Card.Body>
+      {/* --- Verification Number Section --- MOVED TO TOP */}
+      <Card className="mb-3 shadow-sm border-danger">
+        <Card.Header as="h5" className="bg-light text-danger">Phone Verification Required</Card.Header>
+        <Card.Body className="p-3 text-center">
           {numberLoading && (
-            <div>
+            <div className="py-2">
               <Spinner animation="border" size="sm" className="me-2" />
               <span>Checking verification line availability...</span>
               {/* Display retry message if applicable */}
@@ -280,19 +263,21 @@ const OrderSuccessPage = () => {
           )}
 
           {!numberLoading && !numberError && verificationNumber && (
-            // Display only on final success
-            <>
-              <Card.Title className="text-danger">ACTION REQUIRED</Card.Title>
-              <Card.Text>
-                To complete your order, please call the following number immediately for verification:
+            <div className="py-2">
+              <Card.Text className="mb-2">
+                To complete your order, please call this number immediately:
               </Card.Text>
-              <h3 className="display-6 my-3">
-                <a href={`tel:${verificationNumber}`}>{verificationNumber}</a>
-              </h3>
+              <div className="bg-light py-3 px-2 rounded mb-2">
+                <h3 className="fw-bold mb-0">
+                  <a href={`tel:${verificationNumber}`} className="text-primary text-decoration-none">
+                    {verificationNumber}
+                  </a>
+                </h3>
+              </div>
               <Card.Text>
-                <small className="text-danger">Failure to call may result in order cancellation.</small>
+                <small className="text-danger fw-bold">Failure to call may result in order cancellation.</small>
               </Card.Text>
-            </>
+            </div>
           )}
           
           {!numberLoading && !numberError && !verificationNumber && (
@@ -303,52 +288,86 @@ const OrderSuccessPage = () => {
         </Card.Body>
       </Card>
 
-      <Card className="mb-4">
-        <Card.Header as="h5">Items Ordered</Card.Header>
-        <Card.Body>
-          <div className="table-responsive">
-            <table className="table table-striped">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                  <th>Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.productName}</td>
-                    <td>{item.quantity}</td>
-                    <td>€{item.price.toFixed(2)}</td>
-                    <td>€{(item.price * item.quantity).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Card className="mb-3 shadow-sm">
+        <Card.Header as="h5" className="bg-light">Order Summary</Card.Header>
+        <Card.Body className="p-3">
+          <div className="row">
+            <div className="col-6">
+              <p className="mb-2"><strong>Order ID:</strong> {order.id}</p>
+              <p className="mb-2"><strong>Date:</strong> {formattedDate}</p>
+            </div>
+            <div className="col-6">
+              <p className="mb-2">
+                <strong>Status:</strong> <span className="badge bg-success px-2 py-1 ms-1">{order.status}</span>
+              </p>
+              <p className="mb-2"><strong>Total Amount:</strong> €{order.totalAmount.toFixed(2)}</p>
+            </div>
           </div>
         </Card.Body>
       </Card>
 
-      <Card className="mb-4">
-        <Card.Header as="h5">Shipping Details</Card.Header>
-        <Card.Body>
-          <div className="mb-2"><strong>Name:</strong> {order.shippingDetails.fullName}</div>
-          <div className="mb-2"><strong>Address:</strong> {order.shippingDetails.address}</div>
-          <div className="mb-2"><strong>City:</strong> {order.shippingDetails.city}</div>
-          <div className="mb-2"><strong>Zip Code:</strong> {order.shippingDetails.zipCode}</div>
-          <div className="mb-2"><strong>Country:</strong> {order.shippingDetails.country}</div>
-          <div className="mb-2"><strong>Phone:</strong> {order.shippingDetails.phone}</div>
-        </Card.Body>
-      </Card>
+      <Accordion className="mb-3">
+        <Accordion.Item eventKey="0">
+          <Accordion.Header>Items Ordered</Accordion.Header>
+          <Accordion.Body className="p-3">
+            <div className="table-responsive">
+              <table className="table table-striped">
+                <thead className="table-light">
+                  <tr>
+                    <th style={{ width: '40%' }}>Product</th>
+                    <th style={{ width: '20%' }} className="text-center">Quantity</th>
+                    <th style={{ width: '20%' }} className="text-end">Price</th>
+                    <th style={{ width: '20%' }} className="text-end">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.items.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.productName || `Product #${item.productId}`}</td>
+                      <td className="text-center">{item.quantity}</td>
+                      <td className="text-end">€{item.price.toFixed(2)}</td>
+                      <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="table-light fw-bold">
+                  <tr>
+                    <td colSpan={3} className="text-end">Total:</td>
+                    <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </Accordion.Body>
+        </Accordion.Item>
 
-      <div className="d-flex justify-content-center gap-3 mt-4">
-        <Link to="/" className="btn btn-primary">
+        <Accordion.Item eventKey="1">
+          <Accordion.Header>Delivery Location</Accordion.Header>
+          <Accordion.Body className="p-3">
+            {order.deliveryLocation ? (
+              <>
+                <p className="mb-2">
+                  <strong>Name:</strong> {order.deliveryLocation.name}
+                  {order.deliveryLocation.isDefault && (
+                    <span className="badge bg-info ms-2 px-2">Default Location</span>
+                  )}
+                </p>
+                <p className="mb-2"><strong>District:</strong> {order.deliveryLocation.district}</p>
+                <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
+              </>
+            ) : (
+              <Alert variant="warning">No delivery location information available</Alert>
+            )}
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
+
+      <div className="d-flex justify-content-center gap-3 mt-3 mb-4">
+        <Link to="/" className="btn btn-secondary rounded px-2 py-1 fw-medium" style={{ width: '120px', fontSize: '0.9rem' }}>
           Continue Shopping
         </Link>
-        <Link to="/account/orders" className="btn btn-outline-secondary">
-          View All Orders
+        <Link to="/orders" className="btn btn-primary rounded px-2 py-1 fw-medium" style={{ width: '120px', fontSize: '0.9rem' }}>
+          View Order History
         </Link>
       </div>
     </Container>

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-hot-toast';
+import { FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const UPLOADS_URL = (import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads').replace(/\/+$/, '');
@@ -21,6 +22,8 @@ interface Product {
   description: string | null;
   images?: ProductImage[];
   stock: number;
+  discountPercentage: number;
+  category: string;
 }
 
 interface ProductCardProps {
@@ -36,9 +39,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { addOrUpdateItemQuantity } = useCart();
   const [hover, setHover] = React.useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const navigate = useNavigate();
+
+  const calculateDiscountedPrice = () => {
+    if (product.discountPercentage && product.discountPercentage > 0) {
+      const discountAmount = (product.price * product.discountPercentage) / 100;
+      return (product.price - discountAmount).toFixed(2);
+    }
+    return product.price.toFixed(2);
+  };
 
   const handleAddToCart = (product: Product) => {
-    addOrUpdateItemQuantity(product.id, 1)
+    addOrUpdateItemQuantity(product.id, quantity)
       .then(() => {
         toast.success('Added to cart');
       })
@@ -52,85 +65,77 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const imageUrl = product.images && product.images.length > 0 ? product.images[0].url : null;
 
   return (
-    <Card 
-      className="h-100 shadow-sm product-card"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div className="position-relative">
-        {imageUrl ? (
-          <Card.Img 
-            variant="top" 
-            src={imageUrl.startsWith('/uploads/') 
-              ? `${UPLOADS_URL}${imageUrl.substring(8)}` 
-              : imageUrl.startsWith('http') 
-                ? imageUrl 
-                : `${API_BASE_URL}${imageUrl}`
-            }
-            alt={product.name}
-            style={{ 
-              height: '180px', 
-              objectFit: 'contain',
-              padding: '0.75rem'
-            }}
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/placeholder-image.png';
-              target.onerror = null;
-            }}
-          />
-        ) : (
-          <Card.Img 
-            variant="top" 
-            src="/placeholder-image.svg"
-            alt={product.name}
-            style={{ height: '180px', objectFit: 'cover', padding: '0.75rem' }}
-          />
-        )}
-        {product.stock > 0 ? (
-          <Badge 
-            bg={product.stock > 10 ? "success" : "warning"} 
-            className="position-absolute top-0 end-0 m-2"
-          >
-            {product.stock > 10 ? 'In Stock' : `Only ${product.stock} left`}
-          </Badge>
-        ) : (
+    <Card className="h-100 product-card shadow-sm border-0 transition-hover">
+      <div className="product-image-wrapper position-relative">
+        <Card.Img
+          variant="top"
+          src={imageUrl ? (imageUrl.startsWith('/uploads/') ? `${UPLOADS_URL}${imageUrl.substring(8)}` : imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`) : '/placeholder-product.jpg'}
+          alt={product.name}
+          className="product-image"
+          onClick={() => navigate(`/products/${product.id}`)}
+        />
+        {product.discountPercentage > 0 && (
           <Badge 
             bg="danger" 
-            className="position-absolute top-0 end-0 m-2"
+            className="position-absolute top-0 end-0 m-2 py-2 px-3 rounded-pill fs-6 fw-medium"
           >
-            Out of Stock
+            {product.discountPercentage}% OFF
           </Badge>
         )}
       </div>
-      {disableInternalLink ? (
-        <Card.Body className="d-flex flex-column px-3 py-2 text-center">
-          <Card.Title className="text-dark fw-semibold mb-2 product-title">{product.name}</Card.Title>
-          <Card.Subtitle className="mb-3 product-price fw-bold">€{product.price.toFixed(2)}</Card.Subtitle>
-          <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block mb-0">{product.description || ''}</Card.Text>
-        </Card.Body>
-      ) : (
-        <Link to={`/product/${product.id}`} className="text-decoration-none">
-          <Card.Body className="d-flex flex-column px-3 py-2 text-center">
-            <Card.Title className="text-dark fw-semibold mb-2 product-title">{product.name}</Card.Title>
-            <Card.Subtitle className="mb-3 product-price fw-bold">€{product.price.toFixed(2)}</Card.Subtitle>
-            <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block mb-0">{product.description || ''}</Card.Text>
-          </Card.Body>
-        </Link>
-      )}
-      {!hideAddToCart && (
-        <Card.Footer className="bg-white border-0 pt-0 p-3 text-center">
-          <Button 
-            variant="primary" 
-            size="sm"
-            className="w-100 rounded-pill fw-medium"
-            onClick={() => handleAddToCart(product)}
-            disabled={product.stock <= 0}
-          >
-            {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-          </Button>
-        </Card.Footer>
-      )}
+      <Card.Body className="d-flex flex-column p-3">
+        <Card.Title 
+          className="product-name mb-2 fw-semibold" 
+          onClick={() => navigate(`/products/${product.id}`)}
+        >
+          {product.name}
+        </Card.Title>
+        <div className="mb-3">
+          <span className="text-muted small">{product.category}</span>
+        </div>
+        <div className="d-flex align-items-center mb-3">
+          {product.discountPercentage > 0 ? (
+            <>
+              <span className="text-danger fw-bold fs-5">₹{calculateDiscountedPrice()}</span>
+              <span className="text-muted text-decoration-line-through ms-2">
+                ₹{product.price.toFixed(2)}
+              </span>
+            </>
+          ) : (
+            <span className="fw-bold fs-5">₹{product.price.toFixed(2)}</span>
+          )}
+        </div>
+        <div className="mt-auto">
+          <div className="d-flex gap-3 align-items-center">
+            <div className="quantity-control d-flex align-items-center border rounded">
+              <Button
+                variant="light"
+                size="sm"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="border-0 py-1 px-2"
+              >
+                <FaMinus />
+              </Button>
+              <span className="px-3">{quantity}</span>
+              <Button
+                variant="light"
+                size="sm"
+                onClick={() => setQuantity(quantity + 1)}
+                className="border-0 py-1 px-2"
+              >
+                <FaPlus />
+              </Button>
+            </div>
+            <Button
+              variant="primary"
+              className="flex-grow-1 rounded-pill py-2 px-4"
+              onClick={() => handleAddToCart(product)}
+            >
+              <FaShoppingCart className="me-2" /> Add
+            </Button>
+          </div>
+        </div>
+      </Card.Body>
     </Card>
   );
 };

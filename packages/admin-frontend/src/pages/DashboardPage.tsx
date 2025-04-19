@@ -14,13 +14,12 @@ interface AdminStats {
   }[];
 }
 
-interface ShippingDetails {
-  fullName: string;
+interface DeliveryLocation {
+  id: number;
+  name: string;
   phone: string;
-  address: string;
-  city: string;
-  zipCode: string;
-  country: string;
+  district: string;
+  isDefault: boolean;
 }
 
 interface AdminOrder {
@@ -30,8 +29,11 @@ interface AdminOrder {
   totalAmount: number;
   createdAt: string;
   updatedAt: string;
-  shippingDetails: ShippingDetails;
+  deliveryLocation?: DeliveryLocation;
   customerName: string;
+  user?: {
+    email: string;
+  };
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
@@ -279,10 +281,10 @@ const DashboardPage = () => {
                     </Card.Header>
                     <Card.Body>
                       <div className="mb-2">
-                        <strong>Customer:</strong> {order.shippingDetails?.fullName || order.customerName || 'N/A'}
+                        <strong>Customer:</strong> {order.deliveryLocation?.name || order.customerName || 'N/A'}
                       </div>
                       <div className="mb-2">
-                        <strong>Phone:</strong> {order.shippingDetails?.phone || 'N/A'}
+                        <strong>Phone:</strong> {order.deliveryLocation?.phone || 'N/A'}
                       </div>
                       <div className="mb-2">
                         <strong>Total:</strong> {formatCurrency(order.totalAmount)}

@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck } from 'react-icons/fa';
 import api from '../utils/api';
-import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 
 // Interfaces based on expected API response for GET /api/orders/:id
 interface OrderItem {
@@ -124,6 +124,7 @@ const CustomerOrderDetailPage = () => {
               </Col>
               <Col xs={12} sm={6} className="text-sm-end">
                 <Badge bg={getStatusBadgeVariant(order.status)}>{order.status || 'Unknown'}</Badge>
+                <div className="text-muted small mt-1">{getOrderStatusDescription(order.status)}</div>
               </Col>
             </Row>
           </Card.Header>
@@ -133,6 +134,11 @@ const CustomerOrderDetailPage = () => {
                 <h5 className="border-bottom pb-2">Order Summary</h5>
                 <p className="mb-2"><strong>Date Placed:</strong> {formatDateTime(order.createdAt)}</p>
                 <p><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
+                {order.status === 'Pending Call' && (
+                  <p className="text-danger small mt-2">
+                    Remember to call the verification number provided after checkout to complete your order.
+                  </p>
+                )}
               </Col>
               <Col xs={12} md={6}>
                 <h5 className="border-bottom pb-2">Shipping Details</h5>

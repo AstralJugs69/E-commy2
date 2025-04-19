@@ -5,11 +5,18 @@ import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-b
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { FaImage } from 'react-icons/fa';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
   name: string;
   price: number;
+  images?: ProductImage[];
+}
+
+interface ProductImage {
+  id: number;
+  url: string;
 }
 
 interface OrderItemDetail {
@@ -25,13 +32,12 @@ interface OrderUser {
   email: string;
 }
 
-interface ShippingDetails {
-  fullName: string;
-  address: string;
-  city: string;
-  zipCode: string;
-  country: string;
+interface DeliveryLocation {
+  id: number;
+  name: string;
   phone: string;
+  district: string;
+  isDefault: boolean;
 }
 
 interface OrderDetail {
@@ -41,7 +47,7 @@ interface OrderDetail {
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
-  shippingDetails: ShippingDetails;
+  deliveryLocation?: DeliveryLocation;
   user: OrderUser;
   items: OrderItemDetail[];
 }
@@ -52,7 +58,73 @@ interface ServiceZone {
   geoJsonPolygon: string; // The raw GeoJSON string
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = API_BASE_URL;
+
+// A separate component for the Map to ensure it only renders when valid coordinates are provided
+const OrderLocationMap: React.FC<{
+  latitude: number;
+  longitude: number;
+  zones: ServiceZone[];
+  isLoadingZones: boolean;
+  zoneError: string | null;
+}> = ({ latitude, longitude, zones, isLoadingZones, zoneError }) => {
+  // Additional safety check to ensure latitude and longitude are valid numbers
+  if (typeof latitude !== 'number' || typeof longitude !== 'number' || 
+      isNaN(latitude) || isNaN(longitude)) {
+    return <Alert variant="warning">Invalid location coordinates</Alert>;
+  }
+
+  return (
+    <div style={{ height: '300px', width: '100%' }}>
+      <MapContainer 
+        center={[latitude, longitude]} 
+        zoom={13} 
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        <Marker position={[latitude, longitude]}>
+          <Popup>
+            Customer Location<br />
+            (Approximate)
+          </Popup>
+        </Marker>
+        
+        {/* Display service zones if available */}
+        {Array.isArray(zones) && zones.length > 0 && zones.map(zone => {
+          try {
+            const geoJsonData = JSON.parse(zone.geoJsonPolygon);
+            return (
+              <GeoJSON 
+                key={zone.id}
+                data={geoJsonData}
+                pathOptions={{ color: 'red', weight: 2, fillOpacity: 0.1 }}
+              />
+            );
+          } catch (err) {
+            console.error(`Error parsing GeoJSON for zone ${zone.id}:`, err);
+            return null;
+          }
+        })}
+      </MapContainer>
+      
+      {isLoadingZones && (
+        <div className="text-center mt-2">
+          <small>Loading service zones...</small>
+        </div>
+      )}
+      
+      {zoneError && (
+        <div className="text-center mt-2">
+          <small className="text-danger">{zoneError}</small>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const OrderDetailPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -86,7 +158,7 @@ const OrderDetailPage: React.FC = () => {
       setError(null);
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/admin/orders/${orderId}`, {
+        const response = await axios.get(`${API_BASE_URL}/api/admin/orders/${orderId}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -129,7 +201,7 @@ const OrderDetailPage: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/admin/serviceareas`, {
+        const response = await axios.get(`${API_BASE_URL}/api/admin/serviceareas`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -202,12 +274,12 @@ const OrderDetailPage: React.FC = () => {
             <Card className="mb-3">
               <Card.Body>
                 <Card.Title>Customer</Card.Title>
-                <p><strong>Name:</strong> {order.shippingDetails?.fullName || 'No name provided'}</p>
-                <p><strong>Phone:</strong> {order.shippingDetails?.phone || 'No phone provided'}</p>
+                <p><strong>Name:</strong> {order.deliveryLocation?.name || 'No name provided'}</p>
+                <p><strong>Phone:</strong> {order.deliveryLocation?.phone || 'No phone provided'}</p>
                 <p><strong>Email:</strong> {order.user?.email || 'No email available'}</p>
                 <p><strong>Address:</strong> {
-                  order.shippingDetails?.address ? 
-                  `${order.shippingDetails.address}, ${order.shippingDetails.city || ''}, ${order.shippingDetails.zipCode || ''}, ${order.shippingDetails.country || ''}` : 
+                  order.deliveryLocation?.district ? 
+                  `${order.deliveryLocation.district}, ${order.deliveryLocation.name || ''}` : 
                   'No address provided'
                 }</p>
               </Card.Body>
@@ -217,54 +289,15 @@ const OrderDetailPage: React.FC = () => {
             <Card className="mb-3">
               <Card.Body>
                 <Card.Title>Delivery Location</Card.Title>
-                {order.latitude !== null && order.longitude !== null ? (
-                  <div style={{ height: '300px', width: '100%' }}>
-                    <MapContainer 
-                      center={[order.latitude, order.longitude]} 
-                      zoom={13} 
-                      style={{ height: '100%', width: '100%' }}
-                    >
-                      <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      />
-                      <Marker position={[order.latitude, order.longitude]}>
-                        <Popup>
-                          Customer Location<br />
-                          (Approximate)
-                        </Popup>
-                      </Marker>
-                      
-                      {/* Display service zones if available */}
-                      {!isLoadingZones && !zoneError && zones.length > 0 && zones.map(zone => {
-                        try {
-                          const geoJsonData = JSON.parse(zone.geoJsonPolygon);
-                          return (
-                            <GeoJSON 
-                              key={zone.id}
-                              data={geoJsonData}
-                              pathOptions={{ color: 'red', weight: 2, fillOpacity: 0.1 }}
-                            />
-                          );
-                        } catch (err) {
-                          console.error(`Error parsing GeoJSON for zone ${zone.id}:`, err);
-                          return null;
-                        }
-                      })}
-                    </MapContainer>
-                    
-                    {isLoadingZones && (
-                      <div className="text-center mt-2">
-                        <small>Loading service zones...</small>
-                      </div>
-                    )}
-                    
-                    {zoneError && (
-                      <div className="text-center mt-2">
-                        <small className="text-danger">{zoneError}</small>
-                      </div>
-                    )}
-                  </div>
+                {order.latitude != null && order.longitude != null && 
+                 typeof order.latitude === 'number' && typeof order.longitude === 'number' ? (
+                  <OrderLocationMap 
+                    latitude={order.latitude}
+                    longitude={order.longitude}
+                    zones={zones}
+                    isLoadingZones={isLoadingZones}
+                    zoneError={zoneError}
+                  />
                 ) : (
                   <Alert variant="info">
                     No location data available for this order.
@@ -283,6 +316,7 @@ const OrderDetailPage: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Product</th>
+                      <th>Image</th>
                       <th>Quantity</th>
                       <th>Unit Price</th>
                       <th>Subtotal</th>
@@ -292,6 +326,24 @@ const OrderDetailPage: React.FC = () => {
                     {order.items.map(item => (
                       <tr key={item.id}>
                         <td>{item.productName || item.product?.name || 'Unknown Product'}</td>
+                        <td className="text-center">
+                          {item.product?.images && item.product.images.length > 0 ? (
+                            <img 
+                              src={item.product.images[0].url.startsWith('/') 
+                                ? `${API_BASE_URL}${item.product.images[0].url}` 
+                                : item.product.images[0].url}
+                              alt={item.product.name}
+                              style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                                (e.target as HTMLImageElement).src = `${API_BASE_URL}/placeholder.png`;
+                              }}
+                            />
+                          ) : (
+                            <div className="d-flex align-items-center justify-content-center bg-light rounded" style={{ width: '40px', height: '40px', margin: '0 auto' }}>
+                              <FaImage className="text-secondary" />
+                            </div>
+                          )}
+                        </td>
                         <td>{item.quantity}</td>
                         <td>{formatCurrency(item.price)}</td>
                         <td>{formatCurrency(item.quantity * item.price)}</td>
@@ -300,7 +352,7 @@ const OrderDetailPage: React.FC = () => {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={3} className="text-end"><strong>Total:</strong></td>
+                      <td colSpan={4} className="text-end"><strong>Total:</strong></td>
                       <td><strong>{formatCurrency(order.totalAmount)}</strong></td>
                     </tr>
                   </tfoot>

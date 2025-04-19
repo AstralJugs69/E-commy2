@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
 import api from '../utils/api';
-import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
+import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
 
 interface UserOrder {
@@ -124,6 +124,7 @@ const OrderHistoryPage = () => {
                         >
                           {order.status || 'Unknown'}
                         </Badge>
+                        <div className="text-muted small mt-1">{getOrderStatusDescription(order.status)}</div>
                       </div>
                     </div>
                   </Card.Header>

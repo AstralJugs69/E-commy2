@@ -509,7 +509,7 @@ const ProductManagementPage: React.FC = () => {
                     <tr key={product.id}>
                       <td>{product.id}</td>
                       <td className="text-center">
-                        {product.images?.length ? (
+                        {product.images && product.images.length > 0 ? (
                           <img 
                             src={product.images[0].url.startsWith('/') 
                               ? `${API_URL}${product.images[0].url}` 
@@ -517,6 +517,9 @@ const ProductManagementPage: React.FC = () => {
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
                             style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                              (e.target as HTMLImageElement).src = `${API_URL}/placeholder.png`;
+                            }}
                           />
                         ) : (
                           <div className="product-thumbnail d-flex align-items-center justify-content-center bg-light rounded shadow-sm" style={{ width: '50px', height: '50px' }}>

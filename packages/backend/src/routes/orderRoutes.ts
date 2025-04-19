@@ -2,8 +2,6 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client'; // Import Prisma type
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
-import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { point as turfPoint } from '@turf/helpers';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -21,26 +19,9 @@ const cartItemSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
-
-const shippingDetailsSchema = z.object({
-  fullName: z.string().min(1, { message: "Full name is required" }),
-  phone: z.string().min(1, { message: "Phone number is required" }),
-  address: z.string().optional(), // Made optional
-  city: z.string().optional(),
-  zipCode: z.string().optional(),
-  country: z.string().optional(),
-});
-
-const locationSchema = z.object({
-  lat: z.number({ invalid_type_error: "Latitude must be a number" }),
-  lng: z.number({ invalid_type_error: "Longitude must be a number" })
-}).optional(); // Location object itself is optional
-
 const createOrderSchema = z.object({
   items: z.array(cartItemSchema).min(1, { message: "At least one product is required" }),
-  // Shipping details are required, but address fields within are optional
-  shippingDetails: shippingDetailsSchema,
-  location: locationSchema, // Location might not be provided
+  deliveryLocationId: z.number().int().positive({ message: "Valid Delivery Location ID is required" }),
   totalAmount: z.number().positive({ message: "Total amount must be positive" })
 });
 
@@ -58,7 +39,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    const { items, shippingDetails, location, totalAmount } = validationResult.data;
+    const { items, deliveryLocationId, totalAmount } = validationResult.data;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -67,56 +48,21 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    // Extract lat/lng if location exists
-    const latitude = location?.lat ?? null;
-    const longitude = location?.lng ?? null;
-
-    let locationCheckResult: string | null = null; // Initialize as null
-    let checkedZoneName: string | null = null; // Optional: store name of zone found
-
-    // --- Perform Location Check (only if coordinates provided) ---
-    if (latitude !== null && longitude !== null) {
-      locationCheckResult = "Outside Zone"; // Default to Outside if coords are provided
-      console.log(`Performing location check for coords: Lat=${latitude}, Lon=${longitude}`);
-      try {
-        const serviceAreas = await prisma.serviceArea.findMany({
-          select: { id: true, name: true, geoJsonPolygon: true }
-        });
-        console.log(`Checking against ${serviceAreas.length} service areas.`);
-
-        const customerLocation = turfPoint([longitude, latitude]); // GeoJSON format: [Lon, Lat]
-
-        for (const area of serviceAreas) {
-          try {
-            const polygon = JSON.parse(area.geoJsonPolygon);
-            if (polygon && (polygon.type === 'Polygon' || polygon.type === 'MultiPolygon') && polygon.coordinates) {
-              if (booleanPointInPolygon(customerLocation, polygon)) {
-                locationCheckResult = `Inside Zone`; // Simplified result
-                checkedZoneName = area.name;
-                console.log(`Point IS INSIDE zone: ${area.name} (ID: ${area.id})`);
-                break;
-              } else {
-                 console.log(`Point is outside zone: ${area.name} (ID: ${area.id})`);
-              }
-            } else {
-              console.warn(`Skipping invalid GeoJSON structure for ServiceArea ID ${area.id}`);
-            }
-          } catch (parseError) {
-            console.error(`Error parsing GeoJSON for ServiceArea ID ${area.id}:`, parseError);
-          }
-        }
-      } catch (dbError) {
-        console.error("Error fetching service areas for location check:", dbError);
-        locationCheckResult = "Check Failed (DB Error)";
-      }
-    } else {
-      console.log("Latitude/Longitude not provided, skipping location check.");
-      locationCheckResult = "Not Provided"; // Indicate coords were missing
-    }
-    // --- End Location Check ---
-
     // Create the order and order items in a transaction
     const order = await prisma.$transaction(async (tx) => {
+      // --- Verify DeliveryLocation exists and belongs to the user ---
+      console.log(`Verifying delivery location ID ${deliveryLocationId} belongs to user ${userId}`);
+      await tx.deliveryLocation.findFirstOrThrow({
+        where: {
+          id: deliveryLocationId,
+          userId: userId, // Ensure it belongs to the user placing the order
+        }
+      }).catch(() => {
+        // Throw specific error if location not found or doesn't belong to user
+        throw new Error(`Invalid Delivery Location ID: ${deliveryLocationId}`);
+      });
+      console.log(`Delivery location verification passed for ID: ${deliveryLocationId}`);
+
       // --- Stock Check ---
       console.log("Checking stock for items:", items);
       for (const item of items) {
@@ -142,10 +88,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
           userId: userId,
           status: 'Pending Call', // Initial status
           totalAmount: totalAmount,
-          shippingDetails: shippingDetails as any, // Store the shippingDetails JSON
-          latitude: latitude,
-          longitude: longitude,
-          locationCheckResult: locationCheckResult, // Save the result
+          deliveryLocationId: deliveryLocationId, // Link to the chosen delivery location
         },
       });
       console.log(`Order created with ID: ${newOrder.id}`);
@@ -187,9 +130,11 @@ router.post('/', isUser, async (req: Request, res: Response) => {
 
   } catch (error: any) {
     // Check for specific errors thrown from transaction
-    if (error.message?.startsWith('Insufficient stock') || error.message?.startsWith('Product with ID')) {
+    if (error.message?.startsWith('Insufficient stock') || 
+        error.message?.startsWith('Product with ID') ||
+        error.message?.startsWith('Invalid Delivery Location ID')) {
        console.warn(`Order creation failed due to validation: ${error.message}`);
-       res.status(400).json({ message: error.message }); // Return specific stock/product error
+       res.status(400).json({ message: error.message }); // Return specific error
        return;
     }
     // Handle other errors (DB errors, etc.)
@@ -226,6 +171,14 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
                  select: { name: true, images: true } // Select needed product fields
               }
            }
+        },
+        deliveryLocation: { // Include the delivery location details
+          select: {
+            name: true,
+            district: true,
+            phone: true,
+            isDefault: true // Added isDefault field to be returned to the frontend
+          }
         }
         // Optionally include user details if needed, but usually not required here
       }
@@ -237,19 +190,6 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    // Parse shippingDetails if it's a string (it should be JSON from creation)
-    let parsedShippingDetails = order.shippingDetails;
-    if (typeof order.shippingDetails === 'string') {
-        try {
-            parsedShippingDetails = JSON.parse(order.shippingDetails);
-        } catch (e) {
-            console.error(`Failed to parse shippingDetails JSON for order ${order.id}`);
-            // Keep it as null or original string if parse fails? Or return empty object?
-            parsedShippingDetails = null;
-        }
-    }
-
-
     // Map items to include necessary details
     const processedItems = order.items.map((item: any) => ({
         id: item.id,
@@ -260,12 +200,12 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
         imageUrl: item.product?.images?.[0]?.url // Get first image URL from relation
     }));
 
+    // Include the order data with processed items and delivery location
     const responseOrder = {
         ...order,
-        shippingDetails: parsedShippingDetails, // Send parsed JSON or null
-        items: processedItems
+        items: processedItems,
+        // Keep deliveryLocation as is from the query
     };
-
 
     res.status(200).json(responseOrder);
   } catch (error) {
@@ -273,7 +213,6 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
     res.status(500).json({ message: "An internal server error occurred" });
   }
 });
-
 
 // GET /api/orders - Get all orders for the authenticated user
 router.get('/', isUser, async (req: Request, res: Response) => {
@@ -310,7 +249,6 @@ router.get('/', isUser, async (req: Request, res: Response) => {
     res.status(500).json({ message: "An internal server error occurred" });
   }
 });
-
 
 // GET /api/orders/assign-number/:orderId - Assign a phone number to an order
 router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response) => {
@@ -387,6 +325,5 @@ router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response
     res.status(500).json({ message: 'Error assigning verification phone number' });
   }
 });
-
 
 export default router;

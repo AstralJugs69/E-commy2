@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
+import { rateLimit } from 'express-rate-limit';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -12,6 +13,33 @@ const prisma = new PrismaClient();
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'hybrid_ecommerce_secret_key_for_development_only';
 const SALT_ROUNDS = 10;
+
+// Basic limiter for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after 15 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Stricter limiter for password reset requests
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 reset requests per hour
+  message: 'Too many password reset requests from this IP, please try again after an hour',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limiter for registration
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit each IP to 10 registration attempts per hour
+  message: 'Too many accounts created from this IP, please try again after an hour',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Zod schema for registration
 const registerSchema = z.object({
@@ -46,7 +74,7 @@ const changePasswordSchema = z.object({
 });
 
 // POST /api/auth/register - Register new user
-router.post('/register', (async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, (async (req: Request, res: Response) => {
   try {
     // Validate request body
     const validationResult = registerSchema.safeParse(req.body);
@@ -94,7 +122,7 @@ router.post('/register', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // POST /api/auth/login - Login user
-router.post('/login', (async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, (async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     
@@ -149,7 +177,7 @@ router.post('/login', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // POST /api/auth/request-password-reset
-router.post('/request-password-reset', (async (req: Request, res: Response) => {
+router.post('/request-password-reset', passwordResetLimiter, (async (req: Request, res: Response) => {
   const genericSuccessMessage = "If an account with that email exists, a password reset link has been sent.";
 
   try {

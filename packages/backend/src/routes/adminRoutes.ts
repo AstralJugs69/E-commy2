@@ -64,20 +64,21 @@ router.get('/stats', isAdmin, async (req: Request, res: Response) => {
                 status: true,
                 totalAmount: true,
                 createdAt: true,
-                shippingDetails: true, // Fetch the JSON
+                deliveryLocation: {
+                    select: {
+                        name: true,
+                        phone: true,
+                        district: true
+                    }
+                }
             }
         });
 
-        // Process shippingDetails to extract customer name if needed
+        // Process to extract customer name from delivery location
         const processedRecentOrders = recentOrders.map(order => {
              let customerName = '(N/A)';
-             if (typeof order.shippingDetails === 'object' && order.shippingDetails !== null && 'fullName' in order.shippingDetails) {
-                  customerName = (order.shippingDetails as any).fullName || customerName;
-             } else if (typeof order.shippingDetails === 'string') {
-                 try {
-                     const details = JSON.parse(order.shippingDetails);
-                     customerName = details?.fullName || customerName;
-                 } catch { /* ignore parse error */ }
+             if (order.deliveryLocation) {
+                  customerName = order.deliveryLocation.name || customerName;
              }
              return {
                  id: order.id,
@@ -174,12 +175,17 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
         id: true,
         status: true,
         totalAmount: true,
-        shippingDetails: true,
-        latitude: true,
-        longitude: true,
         createdAt: true,
         updatedAt: true,
         userId: true,
+        deliveryLocationId: true,
+        deliveryLocation: {
+          select: {
+            name: true,
+            phone: true,
+            district: true
+          }
+        },
         user: {
           select: {
             email: true
@@ -199,36 +205,27 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       }
     });
 
-    // Process orders to ensure consistent shippingDetails format and extract customer name
+    // Process orders to extract customer information from delivery location
     const processedOrders = orders.map(order => {
-      // Ensure shippingDetails exists and is properly formatted
-      let formattedShippingDetails = order.shippingDetails;
       let customerName = '(N/A)';
+      let customerPhone = '';
+      let deliveryDistrict = '';
       
-      // If shippingDetails is a string (JSON), parse it
-      if (typeof order.shippingDetails === 'string') {
-        try {
-          formattedShippingDetails = JSON.parse(order.shippingDetails);
-          if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
-            customerName = (formattedShippingDetails as any).fullName || customerName;
-          }
-        } catch (e) {
-          console.warn(`Could not parse shippingDetails for order ${order.id}`);
-          formattedShippingDetails = {};
-        }
-      } else if (formattedShippingDetails && typeof formattedShippingDetails === 'object' && 'fullName' in formattedShippingDetails) {
-        customerName = (formattedShippingDetails as any).fullName || customerName;
-      }
-      
-      // If shippingDetails doesn't exist or is null, provide an empty object
-      if (!formattedShippingDetails) {
-        formattedShippingDetails = {};
+      // Extract customer information from delivery location
+      if (order.deliveryLocation) {
+        customerName = order.deliveryLocation.name || customerName;
+        customerPhone = order.deliveryLocation.phone || '';
+        deliveryDistrict = order.deliveryLocation.district || '';
       }
       
       return {
         ...order,
-        shippingDetails: formattedShippingDetails,
-        customerName: customerName
+        customerName,
+        deliveryInfo: {
+          name: customerName,
+          phone: customerPhone,
+          district: deliveryDistrict
+        }
       };
     });
 
@@ -370,6 +367,14 @@ router.get('/orders/:orderId', isAdmin, async (req: Request, res: Response) => {
         // Include user email for reference
         user: {
           select: { email: true }
+        },
+        // Include delivery location details
+        deliveryLocation: {
+          select: {
+            name: true,
+            phone: true,
+            district: true
+          }
         },
         // Include the items associated with this order
         items: {

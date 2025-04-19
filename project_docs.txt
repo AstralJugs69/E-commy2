@@ -3,9 +3,28 @@
 
 ## 1. Current Progress
 
-Work has commenced on the `feature/customer-ui-refinement` branch with the goal of Customer Frontend UI/UX improvements. This phase focuses on enhancing the user interface and experience of the customer-facing application.
+Work has commenced on the `feature/customer-address-management` branch with the goal of enhancing the customer address management capabilities. This phase focuses on improving the user experience for managing shipping addresses and streamlining the checkout process.
 
-## 1.1 Current Focus: Multiple Product Images
+## 1.1 Current Focus: Delivery Location Management
+
+### Goal: 
+Allow authenticated customers to save, edit, delete, and set default delivery locations on their profile (Settings page) and select a saved location during checkout.
+
+### Branch: 
+`feature/customer-address-management`
+
+### Progress:
+- Refactored Prisma Schema (Address -> DeliveryLocation), Migrated.
+- Added `/api/districts` endpoint.
+- Refactored `/api/addresses` routes for DeliveryLocation CRUD.
+- Refactored `POST /api/orders` to use `deliveryLocationId`, removed old geo/shipping logic. [Date: 2025-05-15]
+
+### Plan:
+1. Update Settings Page UI: Ensure the 'Delivery Locations' tab allows adding, viewing, editing, deleting, and setting default locations via the modal.
+2. Update Checkout Page (`CheckoutPage.tsx`): Allow users to select from saved delivery locations or create a new one. Pass the selected location ID correctly when placing the order.
+3. (Optional) Display selected/default location elsewhere if needed (e.g., simple display on main profile).
+
+## 1.2 Completed: Multiple Product Images
 
 The project is now supporting multiple product images rather than a single image URL. This enhancement allows for a more comprehensive product showcase.
 
@@ -23,7 +42,7 @@ The project is now supporting multiple product images rather than a single image
 - Verified consistent Address model field names across backend and frontend components
 [Date: 2025-05-04]
 
-## 1.2 Refactor/Review Phase (`refactor/code-review-performance-ux` branch)
+## 1.3 Completed: Refactor/Review Phase (`refactor/code-review-performance-ux` branch)
 
 ### Progress:
 - Added Database Indexes to schema and migrated.
@@ -36,12 +55,18 @@ The project is now supporting multiple product images rather than a single image
 - Performed general aesthetics pass (spacing, alignment, button/card/form consistency).
 - Refined Settings page UX (tab clarity, list item affordance, icon colors), fixed UI hydration errors. [Date: 2025-05-12]
 
-## 1. Project Summary & Vision
+Branch merged into main. [Date: 2025-05-12]
 
-### 1.1. Core Concept
+- Added user-friendly descriptions for order statuses.
+- Implemented basic rate limiting on backend auth routes.
+- Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
+
+## 2. Project Summary & Vision
+
+### 2.1. Core Concept
 This project implements a **Hybrid E-commerce Platform**, designed primarily for businesses requiring a manual verification step after an online order is placed. It combines the convenience of a modern, **mobile-first e-commerce storefront** (product discovery, cart management, online checkout) with a mandatory **customer-initiated phone call** for final order confirmation and verification.
 
-### 1.2. Unique Workflow
+### 2.2. Unique Workflow
 1.  Customers browse products via a **React-based Customer Frontend** (intended as a PWA).
 2.  During checkout, the customer provides necessary details and their **geolocation** is captured via the browser API.
 3.  Upon submitting the online order, the **Node.js/Express Backend API** performs several actions atomically:
@@ -61,7 +86,7 @@ This project implements a **Hybrid E-commerce Platform**, designed primarily for
     *   Manage Users (View list with aggregates like order count/total spent, View user details including order history).
     *   View Dashboard/Statistics (Counts, Revenue, Recent Orders, Sales/User timeline charts).
 
-### 1.3. Problem Solved
+### 2.3. Problem Solved
 This platform caters to businesses where automated fulfillment isn't feasible or desired due to:
 *   High-value items requiring verification.
 *   Complex delivery logistics needing confirmation.
@@ -70,9 +95,9 @@ This platform caters to businesses where automated fulfillment isn't feasible or
 *   Regulatory requirements.
 It bridges the gap between purely manual (phone/in-person) ordering and fully automated e-commerce, offering customers online convenience while retaining essential manual checks for the business.
 
-## 2. Goals
+## 3. Goals
 
-### 2.1. Business Goals
+### 3.1. Business Goals
 *   **Increase Order Volume:** Capture online sales potential.
 *   **Improve Order Accuracy:** Reduce manual transcription errors.
 *   **Enhance Operational Control:** Centralized digital system for orders, inventory (stock tracking), customer data, service zones, and phone line availability via Admin Panel.
@@ -80,7 +105,7 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
 *   **Build Brand Credibility:** Professional, modern online presence.
 *   **Efficient Verification:** Streamline the process of connecting customers to available staff for verification calls.
 
-### 2.2. Customer Experience (UX) Goals (Mobile-First Priority)
+### 3.2. Customer Experience (UX) Goals (Mobile-First Priority)
 *   **Intuitive Browsing:** Easy product discovery (search, filtering by category/sorting).
 *   **Seamless Cart/Checkout:** Simple client-side cart (MVP+ includes backend persistence), straightforward checkout form (optional address), clear location permission request.
 *   **Clear Post-Order Flow:** Unambiguous instructions on the Order Success page, including the correct, dynamically assigned verification phone number (with `tel:` link).
@@ -89,19 +114,19 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
 *   **Performance:** Fast page loads and interactions.
 *   **PWA Features (Basic):** Installable application icon, basic asset caching via Service Worker. *(Setup complete, needs final verification/refinement)*.
 
-### 2.3. Admin Experience (UX) Goals
+### 3.3. Admin Experience (UX) Goals
 *   **Efficient Workflows:** Streamlined processes for managing orders (live view dashboard, status updates, filtering), products (CRUD w/ modal), categories, zones (map interface), phones, and users.
 *   **Data Clarity:** Clear presentation of data in tables, cards, and detail views. Visual map display for customer location on order details and zone management. Dashboard statistics and charts for quick insights.
 *   **Ease of Management:** Simple interfaces for core administrative tasks.
 
-### 2.4. Technical Goals
+### 3.4. Technical Goals
 *   **Reliability:** High uptime, robust error handling, atomic transactions for critical state changes (order creation, stock updates).
 *   **Security:** Secure password handling (bcrypt hashing for storage and reset tokens), JWT-based session management, input validation (Zod on backend, basic frontend), authorization checks (middleware), HTTPS (deployment requirement). Protection against common vulnerabilities (XSS, SQLi via ORM/validation).
 *   **Performance:** Responsive APIs (<500ms target), efficient database queries (Prisma ORM, indexing considered), optimized frontend builds (Vite), fast initial load times (code splitting, PWA caching).
 *   **Maintainability:** Modular code structure (monorepo, separate routes/contexts/components), TypeScript for type safety, consistent coding patterns, meaningful commit history, this documentation file, basic automated test infrastructure initiated.
 *   **Scalability:** Stateless API design where feasible, potential for database read replicas, capable underlying technologies (Node.js, PostgreSQL). Local image storage identified as a scalability limitation for production.
 
-## 3. Architecture & Technology Stack
+## 4. Architecture & Technology Stack
 
 *   **Architecture:** Monorepo managed via `npm` workspaces. Three distinct packages: `backend`, `customer-frontend`, `admin-frontend`. Communication via RESTful JSON API. Client-side state management via React Context.
 *   **Monorepo Tool:** `npm` 7+ (workspaces feature)
@@ -147,7 +172,7 @@ It bridges the gap between purely manual (phone/in-person) ordering and fully au
     *   Jest DOM Matchers (`@testing-library/jest-dom`)
 *   **Development Environment:** Local PostgreSQL instance preferred over initial Docker attempt due to user setup issues. Node managed via system install/nvm.
 
-## 4. Development Log, Key Decisions & Issues
+## 5. Development Log, Key Decisions & Issues
 
 *   **Initial Planning:** Defined detailed requirements for a hybrid e-commerce model with phone verification. Established MVP scope focusing on core order flow, basic product display, and minimal admin controls.
 *   **Framework Selection:**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { FaUser } from 'react-icons/fa';
 import { FaChevronRight } from 'react-icons/fa';
 import { FaInfoCircle } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
+import { FaExclamationTriangle } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -24,14 +25,11 @@ interface UserProfile {
   createdAt?: string;
 }
 
-interface Address {
+interface DeliveryLocation {
   id: number;
-  fullName: string;
+  name: string;
   phone: string;
-  address: string;
-  city: string;
-  zipCode: string;
-  country: string;
+  district: string;
   isDefault: boolean;
   userId: number;
 }
@@ -57,29 +55,39 @@ const SettingsPage = () => {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
   
-  // Address management state
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [addressError, setAddressError] = useState<string | null>(null);
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  // Delivery location management state
+  const [deliveryLocations, setDeliveryLocations] = useState<DeliveryLocation[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<DeliveryLocation | null>(null);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
+  
+  // Districts state
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [districtError, setDistrictError] = useState<string | null>(null);
   
   // Profile edit modal state
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   
-  // Address form state
-  const [addressForm, setAddressForm] = useState({
-    fullName: '',
+  // Location form state
+  const [locationForm, setLocationForm] = useState({
+    name: '',
     phone: '',
-    address: '',
-    city: '',
-    zipCode: '',
-    country: '',
+    district: ''
   });
   
   // Tab state
   const [activeTab, setActiveTab] = useState('account');
+  
+  // Add form validation errors state
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [modalError, setModalError] = useState<string | null>(null);
+  
+  // Add state for tracking operations in progress
+  const [isSettingDefault, setIsSettingDefault] = useState<number | null>(null);
+  const [isDeletingLocation, setIsDeletingLocation] = useState<number | null>(null);
   
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
@@ -123,39 +131,70 @@ const SettingsPage = () => {
     fetchProfile();
   }, [token, isAuthenticated, isAuthLoading]);
 
-  // Fetch addresses
+  // Fetch delivery locations
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated || !token) {
       return;
     }
 
-    const fetchAddresses = async () => {
-      setIsLoadingAddresses(true);
-      setAddressError(null);
-
-      try {
-        const response = await axios.get(`${API_BASE_URL}/addresses`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        setAddresses(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          setAddressError(err.response.data.message || 'Failed to fetch addresses.');
-          console.error('Error fetching addresses:', err.response.data);
-        } else {
-          setAddressError('Network error. Please check your connection.');
-          console.error('Network error:', err);
-        }
-      } finally {
-        setIsLoadingAddresses(false);
-      }
-    };
-
-    fetchAddresses();
+    fetchLocations();
   }, [token, isAuthenticated, isAuthLoading]);
+
+  // Fetch districts
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated || !token) {
+      return;
+    }
+
+    fetchDistricts();
+  }, [token, isAuthenticated, isAuthLoading]);
+
+  // Extracted function to fetch delivery locations (for reuse with the "Try Again" button)
+  const fetchLocations = async () => {
+    setIsLoadingLocations(true);
+    setLocationError(null);
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/addresses`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      setDeliveryLocations(response.data);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setLocationError(err.response.data.message || 'Failed to fetch delivery locations.');
+        console.error('Error fetching delivery locations:', err.response.data);
+      } else {
+        setLocationError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  // Function to fetch districts
+  const fetchDistricts = async () => {
+    setIsLoadingDistricts(true);
+    setDistrictError(null);
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/districts`);
+      setDistricts(response.data);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setDistrictError(err.response.data.message || 'Failed to fetch districts.');
+        console.error('Error fetching districts:', err.response.data);
+      } else {
+        setDistrictError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
 
   // Handler to toggle edit profile modal
   const handleEditToggle = () => {
@@ -227,47 +266,51 @@ const SettingsPage = () => {
     }
   };
   
-  // Address Modal Handlers
-  const handleShowAddressModal = () => {
-    setEditingAddress(null);
-    setAddressForm({
-      fullName: '',
+  // Location Modal Handlers
+  const handleShowLocationModal = () => {
+    setEditingLocation(null);
+    // Initialize district with first available district or empty string
+    const initialDistrict = districts.length > 0 ? districts[0] : '';
+    setLocationForm({
+      name: '',
       phone: '',
-      address: '',
-      city: '',
-      zipCode: '',
-      country: '',
+      district: initialDistrict,
     });
-    setShowAddressModal(true);
+    // Clear any previous errors
+    setFormErrors({});
+    setModalError(null);
+    setShowLocationModal(true);
   };
   
-  const handleCloseAddressModal = () => {
-    setShowAddressModal(false);
-    setEditingAddress(null);
+  const handleCloseLocationModal = () => {
+    setShowLocationModal(false);
+    setEditingLocation(null);
+    setFormErrors({});
+    setModalError(null);
   };
   
-  const handleEditAddress = (address: Address) => {
-    setEditingAddress(address);
-    setAddressForm({
-      fullName: address.fullName,
-      phone: address.phone,
-      address: address.address,
-      city: address.city,
-      zipCode: address.zipCode,
-      country: address.country,
+  const handleEditLocation = (location: DeliveryLocation) => {
+    setEditingLocation(location);
+    setLocationForm({
+      name: location.name,
+      phone: location.phone,
+      district: location.district,
     });
-    setShowAddressModal(true);
+    // Clear any previous errors
+    setFormErrors({});
+    setModalError(null);
+    setShowLocationModal(true);
   };
   
-  const handleAddressFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLocationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setAddressForm((prev) => ({
+    setLocationForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
   
-  const handleSaveAddress = async (e: FormEvent) => {
+  const handleSaveLocation = async (e: FormEvent) => {
     e.preventDefault();
     
     if (!token) {
@@ -275,16 +318,28 @@ const SettingsPage = () => {
       return;
     }
     
-    setIsSavingAddress(true);
+    // Basic validation
+    const errors: {[key: string]: string} = {};
+    if (!locationForm.name.trim()) errors.name = "Location name is required";
+    if (!locationForm.phone.trim()) errors.phone = "Phone number is required";
+    if (!locationForm.district.trim()) errors.district = "District is required";
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setIsSavingLocation(true);
+    setModalError(null);
     
     try {
       let response;
       
-      if (editingAddress) {
-        // Update existing address
+      if (editingLocation) {
+        // Update existing location
         response = await axios.put(
-          `${API_BASE_URL}/addresses/${editingAddress.id}`,
-          addressForm,
+          `${API_BASE_URL}/addresses/${editingLocation.id}`,
+          locationForm,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -292,12 +347,12 @@ const SettingsPage = () => {
             }
           }
         );
-        toast.success("Address updated successfully!");
+        toast.success("Delivery location updated successfully!");
       } else {
-        // Create new address
+        // Create new location
         response = await axios.post(
           `${API_BASE_URL}/addresses`,
-          addressForm,
+          locationForm,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -305,33 +360,38 @@ const SettingsPage = () => {
             }
           }
         );
-        toast.success("Address added successfully!");
+        toast.success("Delivery location added successfully!");
       }
       
-      // Refresh addresses
-      const addressesResponse = await axios.get(`${API_BASE_URL}/addresses`, {
+      // Refresh locations
+      const locationsResponse = await axios.get(`${API_BASE_URL}/addresses`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      setAddresses(addressesResponse.data);
-      setShowAddressModal(false);
+      setDeliveryLocations(locationsResponse.data);
+      setShowLocationModal(false);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data.message || 'Failed to save address.');
-        console.error('Error saving address:', err.response.data);
+        // Check if the error response contains field-specific validation errors
+        if (err.response.data.errors && typeof err.response.data.errors === 'object') {
+          setFormErrors(err.response.data.errors);
+        } else {
+          setModalError(err.response.data.message || 'Failed to save delivery location.');
+        }
+        console.error('Error saving delivery location:', err.response.data);
       } else {
-        toast.error('Network error. Please check your connection.');
+        setModalError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
     } finally {
-      setIsSavingAddress(false);
+      setIsSavingLocation(false);
     }
   };
   
-  const handleDeleteAddress = async (addressId: number) => {
-    if (!window.confirm('Are you sure you want to delete this address?')) {
+  const handleDeleteLocation = async (locationId: number) => {
+    if (!window.confirm('Are you sure you want to delete this delivery location?')) {
       return;
     }
     
@@ -340,41 +400,46 @@ const SettingsPage = () => {
       return;
     }
     
+    setIsDeletingLocation(locationId);
+    
     try {
-      await axios.delete(`${API_BASE_URL}/addresses/${addressId}`, {
+      await axios.delete(`${API_BASE_URL}/addresses/${locationId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
       // Remove from state
-      setAddresses((prevAddresses) => 
-        prevAddresses.filter((addr) => addr.id !== addressId)
+      setDeliveryLocations((prevLocations) => 
+        prevLocations.filter((loc) => loc.id !== locationId)
       );
       
-      toast.success("Address deleted successfully!");
+      toast.success("Delivery location deleted successfully!");
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data.message || 'Failed to delete address.');
-        console.error('Error deleting address:', err.response.data);
+        toast.error(err.response.data.message || 'Failed to delete delivery location.');
+        console.error('Error deleting delivery location:', err.response.data);
       } else {
         toast.error('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+    } finally {
+      setIsDeletingLocation(null);
     }
   };
   
-  const handleSetDefaultAddress = async (addressId: number) => {
+  const handleSetDefaultLocation = async (locationId: number) => {
     if (!token) {
       toast.error("You're not logged in. Please login and try again.");
       return;
     }
     
+    setIsSettingDefault(locationId);
+    
     try {
-      // Use the standard address update endpoint and include isDefault in the payload
-      await axios.put(
-        `${API_BASE_URL}/addresses/${addressId}`,
-        { isDefault: true },
+      await axios.post(
+        `${API_BASE_URL}/addresses/${locationId}/set-default`,
+        {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -384,22 +449,24 @@ const SettingsPage = () => {
       );
       
       // Update local state
-      setAddresses((prevAddresses) => 
-        prevAddresses.map((addr) => ({
-          ...addr,
-          isDefault: addr.id === addressId
+      setDeliveryLocations((prevLocations) => 
+        prevLocations.map((loc) => ({
+          ...loc,
+          isDefault: loc.id === locationId
         }))
       );
       
-      toast.success("Default address updated successfully!");
+      toast.success("Default delivery location updated successfully!");
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data.message || 'Failed to update default address.');
-        console.error('Error updating default address:', err.response.data);
+        toast.error(err.response.data.message || 'Failed to update default delivery location.');
+        console.error('Error updating default delivery location:', err.response.data);
       } else {
         toast.error('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+    } finally {
+      setIsSettingDefault(null);
     }
   };
 
@@ -500,74 +567,132 @@ const SettingsPage = () => {
               {/* Shipping Tab */}
               <Tab.Pane eventKey="shipping" className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h4 className="mb-0 fs-5 fw-semibold">My Shipping Addresses</h4>
+                  <h4 className="mb-0 fs-5 fw-semibold">My Delivery Locations</h4>
                   <Button 
                     variant="outline-primary" 
                     size="sm"
-                    onClick={handleShowAddressModal}
+                    onClick={handleShowLocationModal}
                     className="d-flex align-items-center rounded-pill px-3 py-2"
+                    disabled={isLoadingLocations}
                   >
-                    <FaPlus className="me-2" /> Add New Address
+                    <FaPlus className="me-2" /> Add New Location
                   </Button>
                 </div>
                 
-                {isLoadingAddresses ? (
-                  <div className="text-center py-4">
-                    <Spinner animation="border" size="sm" role="status" variant="primary">
-                      <span className="visually-hidden">Loading addresses...</span>
+                {isLoadingLocations ? (
+                  <div className="text-center py-5">
+                    <Spinner animation="border" role="status" variant="primary">
+                      <span className="visually-hidden">Loading delivery locations...</span>
                     </Spinner>
-                    <p className="mb-0 mt-3">Loading your addresses...</p>
+                    <p className="mt-3 text-muted">Loading your delivery locations...</p>
                   </div>
-                ) : addressError ? (
+                ) : locationError ? (
                   <Alert variant="danger" className="shadow-sm">
-                    {addressError}
+                    <div className="d-flex align-items-center">
+                      <FaExclamationTriangle className="text-danger me-2" size={20} />
+                      <div>
+                        <p className="mb-1 fw-semibold">Error loading delivery locations</p>
+                        <p className="mb-0 small">{locationError}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Button 
+                        variant="outline-danger" 
+                        size="sm" 
+                        onClick={() => fetchLocations()}
+                        className="rounded-pill px-3"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
                   </Alert>
-                ) : addresses.length === 0 ? (
-                  <Alert variant="info" className="shadow-sm">
-                    You don't have any saved addresses yet. Add your first address to make checkout faster.
-                  </Alert>
+                ) : deliveryLocations.length === 0 ? (
+                  <div className="address-empty-state shadow-sm">
+                    <div className="address-empty-state-icon">
+                      <FaMapMarkerAlt />
+                    </div>
+                    <p className="address-empty-state-text">
+                      You don't have any saved delivery locations yet. Add your first location to make checkout faster.
+                    </p>
+                    <Button 
+                      variant="primary" 
+                      onClick={handleShowLocationModal}
+                      className="rounded-pill px-4"
+                    >
+                      <FaPlus className="me-2" /> Add Your First Location
+                    </Button>
+                  </div>
                 ) : (
                   <ListGroup className="address-list shadow-sm">
-                    {addresses.map((address) => (
-                      <ListGroup.Item key={address.id} className="d-flex flex-column p-3">
+                    {deliveryLocations.map((location) => (
+                      <ListGroup.Item key={location.id} className="d-flex flex-column p-3">
                         <div className="d-flex justify-content-between align-items-start mb-3">
                           <div className="address-info">
-                            <div className="fw-semibold">{address.fullName}</div>
-                            <div>{address.phone}</div>
-                            <div>{address.address}</div>
-                            <div>{address.city}, {address.zipCode}</div>
-                            <div>{address.country}</div>
+                            <div className="fw-semibold">{location.name}</div>
+                            <div>{location.phone}</div>
+                            <div>{location.district}</div>
                           </div>
-                          {address.isDefault && (
+                          {location.isDefault && (
                             <Badge bg="success" pill className="default-badge">Default</Badge>
                           )}
                         </div>
                         <div className="d-flex justify-content-end mt-2 address-actions">
-                          {!address.isDefault && (
+                          {!location.isDefault && (
                             <Button 
                               variant="outline-success" 
                               size="sm"
-                              onClick={() => handleSetDefaultAddress(address.id)}
-                              className="me-2 address-action-btn rounded-pill px-3"
+                              onClick={() => handleSetDefaultLocation(location.id)}
+                              disabled={isSettingDefault !== null || isDeletingLocation !== null}
+                              className="address-action-btn rounded-pill px-3"
                             >
-                              Set as Default
+                              {isSettingDefault === location.id ? (
+                                <>
+                                  <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-1"
+                                  />
+                                  <span className="visually-hidden">Setting as default...</span>
+                                </>
+                              ) : 'Set as Default'}
                             </Button>
                           )}
                           <Button 
                             variant="outline-primary"
                             size="sm"
-                            onClick={() => handleEditAddress(address)}
-                            className="me-2 address-action-btn rounded-pill px-3"
+                            onClick={() => handleEditLocation(location)}
+                            disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                            className="address-action-btn rounded-pill px-3"
                           >
                             <FaEdit className="me-1" /> Edit
                           </Button>
                           <Button 
                             variant="outline-danger"
                             size="sm"
-                            onClick={() => handleDeleteAddress(address.id)}
+                            onClick={() => handleDeleteLocation(location.id)}
+                            disabled={isDeletingLocation !== null || isSettingDefault !== null}
                             className="address-action-btn rounded-pill px-3"
                           >
-                            <FaTrash className="me-1" /> Delete
+                            {isDeletingLocation === location.id ? (
+                              <>
+                                <Spinner
+                                  as="span"
+                                  animation="border"
+                                  size="sm"
+                                  role="status"
+                                  aria-hidden="true"
+                                  className="me-1"
+                                />
+                                <span className="visually-hidden">Deleting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaTrash className="me-1" /> Delete
+                              </>
+                            )}
                           </Button>
                         </div>
                       </ListGroup.Item>
@@ -653,26 +778,36 @@ const SettingsPage = () => {
         </Modal.Body>
       </Modal>
       
-      {/* Address Modal */}
-      <Modal show={showAddressModal} onHide={handleCloseAddressModal} centered>
+      {/* Location Modal */}
+      <Modal show={showLocationModal} onHide={handleCloseLocationModal} centered>
         <Modal.Header closeButton className="border-bottom">
-          <Modal.Title className="fw-semibold">{editingAddress ? 'Edit Address' : 'Add New Address'}</Modal.Title>
+          <Modal.Title className="fw-semibold">{editingLocation ? 'Edit Delivery Location' : 'Add New Delivery Location'}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
-          <Form onSubmit={handleSaveAddress}>
+          {modalError && (
+            <Alert variant="danger" className="mb-3">
+              {modalError}
+            </Alert>
+          )}
+          
+          <Form onSubmit={handleSaveLocation} noValidate>
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Full Name</Form.Label>
+                  <Form.Label className="fw-medium">Location Name</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Full name"
-                    name="fullName"
-                    value={addressForm.fullName}
-                    onChange={handleAddressFormChange}
+                    placeholder="Home, Work, etc."
+                    name="name"
+                    value={locationForm.name}
+                    onChange={handleLocationFormChange}
                     required
                     className="auth-input"
+                    isInvalid={!!formErrors.name}
                   />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.name}
+                  </Form.Control.Feedback>
                 </Form.Group>
               </Col>
             </Row>
@@ -685,59 +820,15 @@ const SettingsPage = () => {
                     type="text"
                     placeholder="Phone number"
                     name="phone"
-                    value={addressForm.phone}
-                    onChange={handleAddressFormChange}
+                    value={locationForm.phone}
+                    onChange={handleLocationFormChange}
                     required
                     className="auth-input"
+                    isInvalid={!!formErrors.phone}
                   />
-                </Form.Group>
-              </Col>
-            </Row>
-            
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label className="fw-medium">Address</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Street address"
-                    name="address"
-                    value={addressForm.address}
-                    onChange={handleAddressFormChange}
-                    required
-                    className="auth-input"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            
-            <Row className="mb-3">
-              <Col xs={12} sm={6} className="mb-3 mb-sm-0">
-                <Form.Group>
-                  <Form.Label className="fw-medium">City</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="City"
-                    name="city"
-                    value={addressForm.city}
-                    onChange={handleAddressFormChange}
-                    required
-                    className="auth-input"
-                  />
-                </Form.Group>
-              </Col>
-              <Col xs={12} sm={6}>
-                <Form.Group>
-                  <Form.Label className="fw-medium">Postal Code</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Postal code"
-                    name="zipCode"
-                    value={addressForm.zipCode}
-                    onChange={handleAddressFormChange}
-                    required
-                    className="auth-input"
-                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.phone}
+                  </Form.Control.Feedback>
                 </Form.Group>
               </Col>
             </Row>
@@ -745,16 +836,23 @@ const SettingsPage = () => {
             <Row className="mb-4">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Country</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Country"
-                    name="country"
-                    value={addressForm.country}
-                    onChange={handleAddressFormChange}
+                  <Form.Label className="fw-medium">District</Form.Label>
+                  <Form.Select
+                    name="district"
+                    value={locationForm.district}
+                    onChange={handleLocationFormChange}
                     required
                     className="auth-input"
-                  />
+                    isInvalid={!!formErrors.district}
+                  >
+                    <option value="" disabled>-- Select District --</option>
+                    {districts.map((district) => (
+                      <option key={district} value={district}>{district}</option>
+                    ))}
+                  </Form.Select>
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.district}
+                  </Form.Control.Feedback>
                 </Form.Group>
               </Col>
             </Row>
@@ -763,15 +861,15 @@ const SettingsPage = () => {
               <Button 
                 variant="primary" 
                 type="submit" 
-                disabled={isSavingAddress}
+                disabled={isSavingLocation}
                 className="rounded-pill py-2 fw-medium"
               >
-                {isSavingAddress ? (
+                {isSavingLocation ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
                     Saving...
                   </>
-                ) : (editingAddress ? 'Update Address' : 'Add Address')}
+                ) : (editingLocation ? 'Update Location' : 'Add Location')}
               </Button>
             </div>
           </Form>

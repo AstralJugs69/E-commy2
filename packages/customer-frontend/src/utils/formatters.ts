@@ -68,4 +68,28 @@ export const formatDate = (
 ): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+};
+
+/**
+ * Get a user-friendly description for each order status
+ * @param status Order status string
+ * @returns Human-readable description of the status
+ */
+export const getOrderStatusDescription = (status: string): string => {
+  switch (status) {
+    case 'Pending Call':
+      return "Awaiting phone verification call.";
+    case 'Verified':
+      return "Order verified, preparing for processing.";
+    case 'Processing':
+      return "Your order is being processed.";
+    case 'Shipped':
+      return "Your order has shipped.";
+    case 'Delivered':
+      return "Your order has been delivered.";
+    case 'Cancelled':
+      return "Order cancelled.";
+    default:
+      return "Status unknown.";
+  }
 }; 

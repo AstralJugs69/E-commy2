@@ -55,20 +55,20 @@ const CartPage = () => {
         <>
           {/* Desktop/Tablet Cart Table - Hidden on small screens */}
           <div className="table-responsive mb-4 d-none d-lg-block">
-            <Table hover responsive className="mb-0 shadow-sm">
+            <Table hover responsive className="mb-0 shadow-sm rounded">
               <thead>
                 <tr className="bg-light">
-                  <th className="py-3">Product</th>
+                  <th className="py-3 px-4">Product</th>
                   <th className="text-center py-3">Price</th>
                   <th className="text-center py-3">Quantity</th>
                   <th className="text-center py-3">Total</th>
-                  <th className="text-center py-3">Action</th>
+                  <th className="text-center py-3 px-4">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {cartItems.map((item) => (
                   <tr key={item.id}>
-                    <td className="py-3">
+                    <td className="py-3 px-4">
                       <div className="d-flex align-items-center">
                         {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
                         {(item.images?.[0]?.url || item.imageUrl) && (
@@ -81,8 +81,8 @@ const CartPage = () => {
                                 ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
                                 : item.imageUrl || '/placeholder-image.svg')} 
                             alt={item.name} 
-                            style={{ width: '60px', height: '60px', objectFit: 'contain' }}
-                            className="me-3"
+                            style={{ width: '70px', height: '70px', objectFit: 'contain' }}
+                            className="me-3 border rounded p-1"
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                               if (e.currentTarget.src !== '/placeholder-image.svg') {
                                 e.currentTarget.onerror = null;
@@ -92,48 +92,67 @@ const CartPage = () => {
                           />
                         )}
                         <div>
-                          <div className="fw-semibold text-truncate" style={{ maxWidth: '150px' }}>{item.name}</div>
+                          <div className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>{item.name}</div>
                           <small className="text-muted d-none d-md-inline">{item.id}</small>
                         </div>
                       </div>
                     </td>
-                    <td className="text-center align-middle py-3">{formatCurrency(item.price)}</td>
-                    <td className="text-center align-middle py-3" style={{ minWidth: '100px' }}>
-                      <Form.Control
-                        type="number"
-                        size="sm"
-                        min={1} // Minimum quantity
-                        max={item.stock} // Set max based on available stock
-                        value={item.quantity}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const newQuantityStr = e.target.value;
-                          // Allow empty string temporarily while typing, but treat as 0 for validation
-                          const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
-
-                          // Update only if it's a valid integer (prevents partial input like '1.')
-                          // Let the context handle the logic for quantity < 1 (removal)
-                          if (!isNaN(newQuantity)) {
+                    <td className="text-center align-middle py-3 fw-medium">{formatCurrency(item.price)}</td>
+                    <td className="text-center align-middle py-3" style={{ minWidth: '120px' }}>
+                      <div className="d-flex align-items-center justify-content-center">
+                        <Button
+                          variant="light"
+                          size="sm"
+                          className="border rounded-start px-2"
+                          onClick={() => {
+                            const newQuantity = Math.max(1, item.quantity - 1);
                             updateCartItemQuantity(item.id, newQuantity);
-                          }
-                          // If input becomes empty or invalid temporarily, onChange still fires,
-                          // but the context/backend call might wait or handle it.
-                        }}
-                        style={{ width: '70px', margin: 'auto', textAlign: 'center' }} // Center text in input
-                        aria-label={`Quantity for ${item.name}`}
-                      />
+                          }}
+                        >
+                          -
+                        </Button>
+                        <Form.Control
+                          type="number"
+                          size="sm"
+                          min={1}
+                          max={item.stock}
+                          value={item.quantity}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const newQuantityStr = e.target.value;
+                            const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
+                            if (!isNaN(newQuantity)) {
+                              updateCartItemQuantity(item.id, newQuantity);
+                            }
+                          }}
+                          style={{ width: '50px', textAlign: 'center', borderRadius: 0 }}
+                          className="border-start-0 border-end-0"
+                          aria-label={`Quantity for ${item.name}`}
+                        />
+                        <Button
+                          variant="light"
+                          size="sm"
+                          className="border rounded-end px-2"
+                          onClick={() => {
+                            const newQuantity = Math.min(item.stock, item.quantity + 1);
+                            updateCartItemQuantity(item.id, newQuantity);
+                          }}
+                        >
+                          +
+                        </Button>
+                      </div>
                     </td>
-                    <td className="text-center align-middle py-3 fw-semibold">
+                    <td className="text-center align-middle py-3 fw-bold">
                       {formatCurrency(item.price * item.quantity)}
                     </td>
-                    <td className="text-center align-middle py-3">
+                    <td className="text-center align-middle py-3 px-4">
                       <Button 
                         variant="outline-danger" 
                         size="sm"
-                        className="rounded-pill px-2 py-1"
+                        className="rounded-pill px-3 py-1"
                         onClick={() => removeFromCart(item.id)}
                         aria-label={`Remove ${item.name} from cart`}
                       >
-                        <FaTrash />
+                        <FaTrash className="me-1" /> Remove
                       </Button>
                     </td>
                   </tr>
@@ -141,7 +160,7 @@ const CartPage = () => {
               </tbody>
               <tfoot>
                 <tr className="bg-light">
-                  <td colSpan={3} className="text-end fw-bold py-3">Total:</td>
+                  <td colSpan={3} className="text-end fw-bold py-3 px-4">Total:</td>
                   <td className="text-center tfoot-total py-3 fw-bold">{formatCurrency(getCartTotal())}</td>
                   <td></td>
                 </tr>
@@ -152,7 +171,7 @@ const CartPage = () => {
           {/* Mobile Cart Items View */}
           <div className="d-block d-lg-none mb-3">
             {cartItems.map((item) => (
-              <Card key={item.id} className="mb-3 shadow-sm">
+              <Card key={item.id} className="mb-3 shadow-sm border-0">
                 <Card.Body className="p-3">
                   <Row className="g-3 align-items-center">
                     {/* Image Col */}
@@ -167,8 +186,8 @@ const CartPage = () => {
                             : item.imageUrl || '/placeholder-image.svg')}
                         alt={item.name}
                         fluid
-                        rounded
-                        style={{ objectFit: 'cover', height: '60px', width: '60px' }}
+                        className="rounded border p-1"
+                        style={{ objectFit: 'cover', height: '70px', width: '70px' }}
                         onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                           if (e.currentTarget.src !== '/placeholder-image.svg') {
                             e.currentTarget.onerror = null;
@@ -179,9 +198,21 @@ const CartPage = () => {
                     </Col>
                     {/* Details Col */}
                     <Col xs={6} sm={7}>
-                      <div className="fw-bold small text-truncate">{item.name}</div>
-                      <div className="text-muted small">{formatCurrency(item.price)}</div>
-                      <div className="mt-1">
+                      <div className="fw-bold small text-truncate mb-1">{item.name}</div>
+                      <div className="text-muted small mb-2">{formatCurrency(item.price)}</div>
+                      <div className="d-flex align-items-center">
+                        <Button
+                          variant="light"
+                          size="sm"
+                          className="border rounded-start p-0"
+                          style={{ width: '24px', height: '24px' }}
+                          onClick={() => {
+                            const newQuantity = Math.max(1, item.quantity - 1);
+                            updateCartItemQuantity(item.id, newQuantity);
+                          }}
+                        >
+                          -
+                        </Button>
                         <Form.Control
                           type="number"
                           size="sm"
@@ -190,17 +221,27 @@ const CartPage = () => {
                           value={item.quantity}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             const newQuantityStr = e.target.value;
-                            // Allow empty string temporarily while typing, but treat as 0 for validation
                             const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
                             
-                            // Update only if it's a valid integer
                             if (!isNaN(newQuantity)) {
                               updateCartItemQuantity(item.id, newQuantity);
                             }
                           }}
-                          style={{ width: '60px', display: 'inline-block', padding: '0.2rem 0.5rem' }}
-                          className="me-2"
+                          style={{ width: '35px', textAlign: 'center', borderRadius: 0, height: '24px', padding: '0' }}
+                          className="border-start-0 border-end-0"
                         />
+                        <Button
+                          variant="light"
+                          size="sm"
+                          className="border rounded-end p-0"
+                          style={{ width: '24px', height: '24px' }}
+                          onClick={() => {
+                            const newQuantity = Math.min(item.stock, item.quantity + 1);
+                            updateCartItemQuantity(item.id, newQuantity);
+                          }}
+                        >
+                          +
+                        </Button>
                       </div>
                     </Col>
                     {/* Price/Remove Col */}
@@ -224,13 +265,30 @@ const CartPage = () => {
           </div>
 
           {/* Summary and Buttons Section (Visible on all sizes) */}
-          <Card className="mb-4 shadow-sm">
+          <Card className="mb-4 shadow-sm border-0">
             <Card.Body className="p-4">
               <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
-              <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                <Button variant="outline-secondary" className="rounded-pill px-3 py-2 fw-medium" onClick={() => clearCart()}>Clear Cart</Button>
-                <Link to="/" className="btn btn-secondary rounded-pill px-3 py-2 fw-medium">Continue Shopping</Link>
-                <Button variant="success" className="rounded-pill px-4 py-2 fw-medium" onClick={handleCheckout}>Proceed to Checkout</Button>
+              <div className="d-grid gap-3 d-md-flex justify-content-md-end">
+                <Button 
+                  variant="outline-secondary" 
+                  className="rounded-pill px-4 py-2 fw-medium" 
+                  onClick={() => clearCart()}
+                >
+                  Clear Cart
+                </Button>
+                <Link 
+                  to="/" 
+                  className="btn btn-secondary rounded-pill px-4 py-2 fw-medium"
+                >
+                  Continue Shopping
+                </Link>
+                <Button 
+                  variant="primary" 
+                  className="rounded-pill px-4 py-2 fw-medium" 
+                  onClick={handleCheckout}
+                >
+                  Proceed to Checkout
+                </Button>
               </div>
             </Card.Body>
           </Card>

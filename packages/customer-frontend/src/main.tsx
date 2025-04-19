@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AuthProvider> {/* Wrap App */}
       <CartProvider> {/* Wrap App */}
         <WishlistProvider> {/* Wrap App */}
-          <Toaster position="bottom-center" />
+          <Toaster position="top-center" />
           <App />
         </WishlistProvider>
       </CartProvider>

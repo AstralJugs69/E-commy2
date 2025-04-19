@@ -16,6 +16,7 @@ import reportsAdminRoutes from './routes/reportsAdminRoutes';
 import cartRoutes from './routes/cartRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import addressRoutes from './routes/addressRoutes';
+import districtRoutes from './routes/districtRoutes';
 
 dotenv.config(); // Load .env file variables
 
@@ -50,6 +51,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/districts', districtRoutes);
 
 // Start Server
 const server = app.listen(port, () => {
