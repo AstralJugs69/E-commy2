@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Container, Table, Form, Button, Alert, Spinner, Row, Col, Card } from 'react-bootstrap';
-import { MapContainer, TileLayer, GeoJSON, FeatureGroup, useMap } from 'react-leaflet';
 import L, { LatLngExpression, Layer } from 'leaflet';
+import { MapContainer, TileLayer, GeoJSON, FeatureGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw';
+
+// Map loading fallback component
+const MapLoadingFallback = () => (
+  <div className="d-flex justify-content-center align-items-center" style={{ height: '500px', backgroundColor: '#f8f9fa' }}>
+    <Spinner animation="border" variant="primary" />
+    <span className="ms-2">Loading map...</span>
+  </div>
+);
 
 interface ServiceZone {
   id: number;
@@ -37,6 +45,13 @@ interface EditControlProps {
 }
 
 const EditControl: React.FC<EditControlProps> = (props) => {
+  return (
+    <MapHookWrapper {...props} />
+  );
+};
+
+// Separate component to use the useMap hook
+const MapHookWrapper: React.FC<EditControlProps> = (props) => {
   const { position, onCreated, onEdited, onDeleted, draw, edit, featureGroupRef } = props;
   const map = useMap();
   
@@ -89,6 +104,9 @@ const ZoneManagementPage = () => {
   // State for drawn/edited polygon
   const [editableLayerGeoJson, setEditableLayerGeoJson] = useState<any>(null);
   
+  // Map visibility state
+  const [showMap, setShowMap] = useState(false);
+  
   // Ref for editable layer group
   const editableFG = useRef<L.FeatureGroup | null>(null);
 
@@ -99,6 +117,13 @@ const ZoneManagementPage = () => {
   useEffect(() => {
     fetchZones();
   }, []);
+  
+  // Show map after data is loaded
+  useEffect(() => {
+    if (!isLoadingList) {
+      setShowMap(true);
+    }
+  }, [isLoadingList]);
 
   const fetchZones = async () => {
     setIsLoadingList(true);
@@ -320,8 +345,14 @@ const ZoneManagementPage = () => {
             <Card.Body>
               <h3>Service Zone Map</h3>
               <div style={{ height: '600px', width: '100%' }}>
-                {!isLoadingList ? (
+                {isLoadingList ? (
+                  <div className="d-flex justify-content-center align-items-center h-100">
+                    <Spinner animation="border" />
+                    <span className="ms-2">Loading zones...</span>
+                  </div>
+                ) : showMap ? (
                   <MapContainer 
+                    key={`zone-map-${Date.now()}`}
                     center={mapCenter} 
                     zoom={mapZoom} 
                     style={{ height: '100%', width: '100%' }}
@@ -394,9 +425,7 @@ const ZoneManagementPage = () => {
                     })}
                   </MapContainer>
                 ) : (
-                  <div className="d-flex justify-content-center align-items-center h-100">
-                    <Spinner animation="border" />
-                  </div>
+                  <MapLoadingFallback />
                 )}
               </div>
             </Card.Body>

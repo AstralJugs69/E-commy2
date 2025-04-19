@@ -70,7 +70,12 @@ router.get('/', (async (req: Request, res: Response) => {
         name: true,
         price: true,
         description: true,
-        images: true,
+        images: {
+          select: {
+            url: true
+          },
+          take: 1 // Only need first image for list view
+        },
         stock: true,
         averageRating: true,
         reviewCount: true,

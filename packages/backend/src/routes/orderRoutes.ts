@@ -293,11 +293,14 @@ router.get('/', isUser, async (req: Request, res: Response) => {
           status: true,
           totalAmount: true,
           createdAt: true,
-          // Optionally include a summary of items if needed for display
-          // items: {
-          //     take: 1, // Take only the first item for summary display maybe?
-          //     select: { productName: true }
-          // }
+          // Optional: include first item details if needed for UI
+          items: {
+              take: 1, // Take only the first item for summary display
+              select: { 
+                productName: true,
+                productId: true
+              }
+          }
       }
     });
 

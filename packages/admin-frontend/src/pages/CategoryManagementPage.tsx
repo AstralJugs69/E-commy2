@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
+import { FaTrashAlt } from 'react-icons/fa';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 interface Category {
   id: number;

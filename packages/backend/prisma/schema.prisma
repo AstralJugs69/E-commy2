@@ -22,6 +22,8 @@ model User {
   cartItems            CartItem[]
   wishlistItems        WishlistItem[]
   addresses            Address[]
+
+  @@index([email])
 }
 
 model Category {
@@ -52,6 +54,10 @@ model Product {
   cartItems     CartItem[]
   wishlistedBy  WishlistItem[]
   images        ProductImage[]
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([createdAt])
 }
 
 model Order {
@@ -67,6 +73,10 @@ model Order {
   locationCheckResult String?
   user                User        @relation(fields: [userId], references: [id])
   items               OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -80,6 +90,9 @@ model OrderItem {
   updatedAt   DateTime @updatedAt
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model ServiceArea {
@@ -88,6 +101,8 @@ model ServiceArea {
   geoJsonPolygon String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([name])
 }
 
 model PhoneNumber {
@@ -96,6 +111,8 @@ model PhoneNumber {
   status       String   @default("Offline")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([status])
 }
 
 model Review {
@@ -110,6 +127,8 @@ model Review {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+  @@index([productId])
+  @@index([userId])
 }
 
 model CartItem {
@@ -123,6 +142,7 @@ model CartItem {
   user      User     @relation(fields: [userId], references: [id])
   
   @@unique([userId, productId]) // Ensure uniqueness of product per user
+  @@index([userId])
 }
 
 model WishlistItem {
@@ -134,6 +154,7 @@ model WishlistItem {
   createdAt DateTime @default(now())
 
   @@unique([userId, productId]) // User can only wishlist a product once
+  @@index([userId])
 }
 
 model Address {
@@ -160,4 +181,6 @@ model ProductImage {
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([productId])
 }

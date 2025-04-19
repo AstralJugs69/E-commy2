@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
-import { FaShoppingCart, FaUser, FaList, FaSignOutAlt, FaHome, FaRegHeart, FaStore, FaHeart, FaCog } from 'react-icons/fa';
+import { FaShoppingCart } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
+import { FaList } from 'react-icons/fa';
+import { FaSignOutAlt } from 'react-icons/fa';
+import { FaHome } from 'react-icons/fa';
+import { FaRegHeart } from 'react-icons/fa';
+import { FaStore } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaCog } from 'react-icons/fa';
 
 const Layout = () => {
   const { isAuthenticated, logout } = useAuth();

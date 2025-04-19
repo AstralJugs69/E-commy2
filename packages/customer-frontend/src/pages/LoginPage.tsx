@@ -5,8 +5,7 @@ import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaStore } from 'react-icons/fa';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+import api from '../utils/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -39,7 +38,7 @@ const LoginPage = () => {
       console.log('Attempting login with:', { email, passwordLength: password.length });
       
       // Make API call to login endpoint
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const response = await api.post('/auth/login', {
         email,
         password
       });
@@ -78,13 +77,13 @@ const LoginPage = () => {
   };
 
   return (
-    <Container fluid className="py-5">
+    <Container fluid className="py-4">
       {/* Logo Section */}
       <Row className="justify-content-center mb-4">
         <Col xs={12} className="text-center">
-          <div className="store-logo-container">
-            <FaStore size={50} className="text-primary mb-2" />
-            <h1 className="h3 text-primary">HybridStore</h1>
+          <div className="store-logo-container mb-3">
+            <FaStore size={45} className="text-primary mb-2" />
+            <h1 className="h3 fw-semibold text-primary">HybridStore</h1>
           </div>
         </Col>
       </Row>
@@ -93,7 +92,7 @@ const LoginPage = () => {
         <Col xs={12} sm={10} md={8} lg={5} xl={4}>
           <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h2 className="text-center mb-4">Sign In</h2>
+              <h2 className="text-center mb-4 fw-semibold">Sign In</h2>
               
               {validationError && (
                 <Alert variant="danger" className="mb-4">
@@ -104,7 +103,7 @@ const LoginPage = () => {
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email Address</Form.Label>
+                  <Form.Label className="fw-medium">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
@@ -116,8 +115,8 @@ const LoginPage = () => {
                 </Form.Group>
                 
                 {/* Password input */}
-                <Form.Group className="mb-4" controlId="formBasicPassword">
-                  <Form.Label>Password</Form.Label>
+                <Form.Group className="mb-3" controlId="formBasicPassword">
+                  <Form.Label className="fw-medium">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
@@ -130,7 +129,7 @@ const LoginPage = () => {
                 
                 {/* Forgot Password Link */}
                 <div className="text-end mb-4">
-                  <Link to="/request-password-reset" className="text-decoration-none">Forgot Password?</Link>
+                  <Link to="/request-password-reset" className="text-decoration-none small">Forgot Password?</Link>
                 </div>
                 
                 {/* Submit button */}
@@ -138,7 +137,7 @@ const LoginPage = () => {
                   variant="primary"
                   type="submit"
                   disabled={isLoading}
-                  className="w-100 py-2 rounded-pill"
+                  className="w-100 py-2 rounded-pill fw-medium"
                   size="lg"
                 >
                   {isLoading ? (
@@ -152,8 +151,8 @@ const LoginPage = () => {
                 </Button>
               </Form>
               
-              <p className="mt-4 text-center">
-                Don't have an account? <Link to="/register" className="text-decoration-none">Create account</Link>
+              <p className="mt-4 text-center mb-0">
+                Don't have an account? <Link to="/register" className="text-decoration-none fw-medium">Create account</Link>
               </p>
             </Card.Body>
           </Card>

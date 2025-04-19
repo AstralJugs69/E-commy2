@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Alert, Spinner, Form, Badge } from 'react-bootstrap';
-import { FaUsers, FaShoppingCart, FaBox, FaDollarSign, FaCalendarAlt } from 'react-icons/fa';
+import { FaUsers } from 'react-icons/fa';
+import { FaShoppingCart } from 'react-icons/fa';
+import { FaBox } from 'react-icons/fa';
+import { FaDollarSign } from 'react-icons/fa';
+import { FaCalendarAlt } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bar, Line } from 'react-chartjs-2';
+// Import ChartJS dependencies but lazy load the actual chart components
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,6 +22,10 @@ import {
 import { format, parseISO, subDays, subMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatters';
 
+// Lazy load chart components
+const Bar = lazy(() => import('react-chartjs-2').then(module => ({ default: module.Bar })));
+const Line = lazy(() => import('react-chartjs-2').then(module => ({ default: module.Line })));
+
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -28,6 +36,13 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend
+);
+
+// Chart loading fallback component
+const ChartLoadingFallback = () => (
+  <div className="d-flex justify-content-center align-items-center py-4">
+    <Spinner animation="border" variant="primary" />
+  </div>
 );
 
 interface AdminStats {
@@ -632,7 +647,9 @@ const StatisticsPage = () => {
             </Card.Header>
             <Card.Body>
               <div style={{ height: '300px' }}>
-                {stats && <Bar data={chartData} options={chartOptions} />}
+                <Suspense fallback={<ChartLoadingFallback />}>
+                  {stats && <Bar data={chartData} options={chartOptions} />}
+                </Suspense>
               </div>
             </Card.Body>
           </Card>
@@ -670,7 +687,9 @@ const StatisticsPage = () => {
                 <Alert variant="danger">{salesChartError}</Alert>
               ) : salesChartData ? (
                 <div style={{ height: '300px' }}>
-                  <Line data={salesChartData} options={salesChartOptions} />
+                  <Suspense fallback={<ChartLoadingFallback />}>
+                    <Line data={salesChartData} options={salesChartOptions} />
+                  </Suspense>
                 </div>
               ) : (
                 <div className="text-center py-3">No sales data available.</div>
@@ -700,7 +719,9 @@ const StatisticsPage = () => {
                 <Alert variant="danger">{usersChartError}</Alert>
               ) : usersChartData ? (
                 <div style={{ height: '300px' }}>
-                  <Line data={usersChartData} options={usersChartOptions} />
+                  <Suspense fallback={<ChartLoadingFallback />}>
+                    <Line data={usersChartData} options={usersChartOptions} />
+                  </Suspense>
                 </div>
               ) : (
                 <div className="text-center py-3">No user data available.</div>

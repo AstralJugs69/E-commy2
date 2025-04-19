@@ -1,11 +1,19 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
-import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge, Row, Col, Card, Tabs, Tab } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { FaImage, FaPlus, FaBox } from 'react-icons/fa';
+import { FaImage } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaBox } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
+import { FaTrash } from 'react-icons/fa';
+import { FaSearch } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
+import { FaTag } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
+import api from '../utils/api';
 
 interface Category {
   id: number;
@@ -34,7 +42,7 @@ interface Product {
   images?: ProductImage[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -94,20 +102,8 @@ const ProductManagementPage: React.FC = () => {
     setIsCategoriesLoading(true);
     setCategoriesError(null);
     
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setCategoriesError('Authentication required. Please log in again.');
-      setIsCategoriesLoading(false);
-      return;
-    }
-    
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/categories`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
+      const response = await api.get('/admin/categories');
       setCategories(response.data);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
@@ -126,20 +122,9 @@ const ProductManagementPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       // Use admin endpoint to get products with category information
-      const response = await axios.get(`${API_BASE_URL}/api/admin/products`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.get('/admin/products');
       setProducts(response.data);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
@@ -163,18 +148,8 @@ const ProductManagementPage: React.FC = () => {
       return; // Stop execution if user cancels
     }
 
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      return;
-    }
-
     try {
-      await axios.delete(`${API_BASE_URL}/api/admin/products/${productId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.delete(`/api/admin/products/${productId}`);
       
       // Refresh product list
       fetchProducts();
@@ -287,151 +262,112 @@ const ProductManagementPage: React.FC = () => {
     setFormImageUrl(newUrls.length > 0 ? newUrls[0] : '');
   };
 
+  // Utility function for image upload that returns uploaded URLs
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    if (files.length === 0) {
+      return [];
+    }
+    
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+    
+    // Since our api utility doesn't support FormData content type headers,
+    // we'll use axios directly for the file upload, but still leverage the API_URL
+    const uploadResponse = await axios.post(
+      `${API_URL}/admin/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${localStorage.getItem('admin_token')}`
+        }
+      }
+    );
+    
+    return uploadResponse.data.urls || [];
+  };
+
   const handleSaveProduct = async (event: FormEvent) => {
     event.preventDefault();
-    
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setModalError('Authentication required. Please log in again.');
-      return;
-    }
-
-    // Validate form data
-    if (!formName.trim()) {
-      setModalError('Product name is required.');
-      return;
-    }
-
-    const priceValue = parseFloat(formPrice);
-    if (isNaN(priceValue) || priceValue <= 0) {
-      setModalError('Price must be a positive number.');
-      return;
-    }
-
-    // Validate cost price if provided
-    let costValue = null;
-    if (formCostPrice) {
-      costValue = parseFloat(formCostPrice);
-      if (isNaN(costValue) || costValue < 0) {
-        setModalError('Cost Price must be a valid positive number or empty.');
-        return;
-      }
-    }
-
     setIsModalLoading(true);
     setModalError(null);
     setUploadError(null);
-
-    // Initialize array for final image URLs (existing + newly uploaded)
-    let finalImageUrls = [...formImageUrls];
-
-    // Handle image uploads if files are selected
-    if (selectedFiles.length > 0) {
-      setIsUploading(true);
-      
-      try {
-        // Create form data for file upload
-        const formData = new FormData();
-        
-        // Append each file to the formData with the same field name
-        selectedFiles.forEach(file => {
-          formData.append('productImages', file);
-        });
-        
-        // Upload the images
-        const uploadResponse = await axios.post(
-          `${API_BASE_URL}/api/admin/upload`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          }
-        );
-        
-        // Get the imageUrls array from the response
-        const uploadedImageUrls = uploadResponse.data.imageUrls;
-        
-        // Add the new URLs to our finalImageUrls array
-        finalImageUrls = [...finalImageUrls, ...uploadedImageUrls];
-        
-        // Ensure we don't exceed 5 images
-        if (finalImageUrls.length > 5) {
-          finalImageUrls = finalImageUrls.slice(0, 5);
-          toast.warning('Only the first 5 images were saved.');
-        }
-        
-        // Update state
-        setFormImageUrls(finalImageUrls);
-        setSelectedFiles([]);
-      } catch (err) {
-        // Handle upload errors
-        setIsUploading(false);
-        setIsModalLoading(false);
-        
-        let errorMessage = 'Image upload failed';
-        if (axios.isAxiosError(err) && err.response) {
-          errorMessage = err.response.data.message || errorMessage;
-        }
-        
-        setUploadError(errorMessage);
-        toast.error('Image upload failed');
-        return; // Don't proceed with saving the product
-      } finally {
-        setIsUploading(false);
-      }
+    
+    // Basic validation
+    if (!formName.trim() || !formPrice.trim() || !formStock.trim()) {
+      setModalError('Name, price, and stock are required fields.');
+      setIsModalLoading(false);
+      return;
     }
-
-    // Prepare form data for product
-    const productData = {
-      name: formName.trim(),
-      price: priceValue,
-      costPrice: costValue,
-      description: formDescription.trim() || undefined,
-      stock: formStock ? parseInt(formStock, 10) : undefined,
-      imageUrls: finalImageUrls,
-      categoryId: formCategoryId ? parseInt(formCategoryId, 10) : null
-    };
-
+    
     try {
+      // Parse values
+      const parsedPrice = parseFloat(formPrice);
+      const parsedStock = parseInt(formStock);
+      const parsedCostPrice = formCostPrice.trim() ? parseFloat(formCostPrice) : null;
+      
+      let uploadedImageUrls: string[] = [...formImageUrls]; // Start with existing URLs that weren't removed
+      
+      // Handle file uploads if there are new files
+      if (selectedFiles.length > 0) {
+        setIsUploading(true);
+        try {
+          const newUrls = await uploadImages(selectedFiles);
+          uploadedImageUrls = [...uploadedImageUrls, ...newUrls];
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response) {
+            setUploadError(err.response.data.message || 'Failed to upload images.');
+            console.error('Error uploading images:', err.response.data);
+          } else {
+            setUploadError('Network error during image upload.');
+            console.error('Network error during upload:', err);
+          }
+          setIsModalLoading(false);
+          setIsUploading(false);
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+      
+      // Prepare product data
+      const productData = {
+        name: formName,
+        price: parsedPrice,
+        costPrice: parsedCostPrice,
+        description: formDescription.trim() || null,
+        stock: parsedStock,
+        categoryId: formCategoryId.trim() ? parseInt(formCategoryId) : null,
+        imageUrls: uploadedImageUrls // Send array of image URLs
+      };
+      
+      // If editing existing product
       if (editingProduct) {
         // Update existing product
-        await axios.put(
-          `${API_BASE_URL}/api/admin/products/${editingProduct.id}`,
-          productData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
+        await api.put(
+          `/admin/products/${editingProduct.id}`,
+          productData
         );
+        
+        toast.success(`Product "${formName}" updated successfully!`);
       } else {
         // Create new product
-        await axios.post(
-          `${API_BASE_URL}/api/admin/products`,
-          productData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
+        await api.post(
+          `/admin/products`,
+          productData
         );
+        
+        toast.success(`Product "${formName}" created successfully!`);
       }
-
-      // Close modal and refresh product list
+      
+      // Success - close modal and refresh
       handleCloseModal();
       fetchProducts();
-      toast.success(`Product ${editingProduct ? 'updated' : 'created'} successfully!`);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401) {
-          setModalError('Your session has expired. Please log in again.');
-        } else {
-          setModalError(err.response.data.message || 'Failed to save product.');
-        }
+        setModalError(err.response.data.message || 'Failed to save product.');
         console.error('Error saving product:', err.response.data);
       } else {
         setModalError('Network error. Please check your connection.');
@@ -444,63 +380,35 @@ const ProductManagementPage: React.FC = () => {
 
   // Function to handle stock adjustment submission
   const handleAdjustStock = async (productId: number, adjustmentStr: string) => {
-    const adjustmentInt = parseInt(adjustmentStr, 10);
+    const adjustmentInt = parseInt(adjustmentStr);
     
     if (isNaN(adjustmentInt)) {
-      toast.error("Adjustment value must be a valid integer.");
+      toast.error('Please enter a valid number for stock adjustment');
       return;
     }
     
-    if (adjustmentInt === 0) {
-        toast.success("No adjustment needed (value is 0).");
-        setAdjustingProductId(null); // Close the input if adjustment is 0
-        setAdjustmentValue('');
-        return;
-    }
-
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      toast.error('Authentication required. Please log in again.');
-      return;
-    }
-
-    // Optimistic UI update can be added here later if desired
-  
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/admin/products/${productId}/adjust-stock`,
-        { adjustment: adjustmentInt },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+      await api.post(
+        `/admin/products/${productId}/adjust-stock`,
+        { adjustment: adjustmentInt }
       );
-
-      toast.success(`Stock for '${response.data.name}' updated to ${response.data.stock}.`);
       
-      // Refresh product list to show updated stock
-      await fetchProducts(); 
+      toast.success(`Stock updated successfully`);
+      
+      // Refresh products to show updated stock
+      fetchProducts();
       
       // Reset adjustment state
       setAdjustingProductId(null);
       setAdjustmentValue('');
-
     } catch (err) {
-      console.error('Error adjusting stock:', err);
-      let errorMessage = 'Failed to adjust stock.';
       if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401 || err.response.status === 403) {
-          errorMessage = 'Your session has expired or you are unauthorized.';
-        } else {
-          errorMessage = err.response.data.message || errorMessage;
-        }
+        toast.error(err.response.data.message || 'Failed to adjust stock');
+        console.error('Error adjusting stock:', err.response.data);
+      } else {
+        toast.error('Network error. Please check your connection.');
+        console.error('Network error:', err);
       }
-      toast.error(errorMessage);
-      // Optionally reset state even on error, or keep input open for correction
-      // setAdjustingProductId(null);
-      // setAdjustmentValue(''); 
     }
   };
 
@@ -604,7 +512,7 @@ const ProductManagementPage: React.FC = () => {
                         {product.images?.length ? (
                           <img 
                             src={product.images[0].url.startsWith('/') 
-                              ? `${API_BASE_URL}${product.images[0].url}` 
+                              ? `${API_URL}${product.images[0].url}` 
                               : product.images[0].url} 
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
@@ -800,7 +708,7 @@ const ProductManagementPage: React.FC = () => {
                       style={{ width: '80px', height: '80px' }}
                     >
                       <Image 
-                        src={url.startsWith('/') ? `${API_BASE_URL}${url}` : url}
+                        src={url.startsWith('/') ? `${API_URL}${url}` : url}
                         alt={`Image ${index + 1}`}
                         className="rounded"
                         style={{ width: '80px', height: '80px', objectFit: 'cover' }}

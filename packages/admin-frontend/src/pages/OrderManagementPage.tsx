@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
+import { FaShoppingBag } from 'react-icons/fa';
+import { FaFilter } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
+import { FaCalendarAlt } from 'react-icons/fa';
+import { FaPhone } from 'react-icons/fa';
+import { FaMapMarkerAlt } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
 
 interface OrderItem {

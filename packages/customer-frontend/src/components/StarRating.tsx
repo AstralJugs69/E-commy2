@@ -1,5 +1,7 @@
 import React from 'react';
-import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { FaStar } from 'react-icons/fa';
+import { FaStarHalfAlt } from 'react-icons/fa';
+import { FaRegStar } from 'react-icons/fa';
 
 interface StarRatingProps {
   rating: number;

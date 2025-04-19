@@ -1,8 +1,19 @@
-import { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser, FaChevronRight, FaInfoCircle, FaCog } from 'react-icons/fa';
+import { FaUserEdit } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
+import { FaTrash } from 'react-icons/fa';
+import { FaList } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaMapMarkerAlt } from 'react-icons/fa';
+import { FaLock } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
+import { FaChevronRight } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
+import { FaCog } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -360,9 +371,10 @@ const SettingsPage = () => {
     }
     
     try {
+      // Use the standard address update endpoint and include isDefault in the payload
       await axios.put(
-        `${API_BASE_URL}/addresses/${addressId}/default`,
-        {},
+        `${API_BASE_URL}/addresses/${addressId}`,
+        { isDefault: true },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -393,11 +405,11 @@ const SettingsPage = () => {
 
   if (isLoading) {
     return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" role="status">
+      <Container className="py-4 text-center">
+        <Spinner animation="border" role="status" variant="primary">
           <span className="visually-hidden">Loading...</span>
         </Spinner>
-        <p className="mt-2">Loading your profile information...</p>
+        <p className="mt-3">Loading your profile information...</p>
       </Container>
     );
   }
@@ -405,7 +417,7 @@ const SettingsPage = () => {
   if (error) {
     return (
       <Container className="py-4">
-        <Alert variant="danger">
+        <Alert variant="danger" className="shadow-sm">
           {error}
         </Alert>
       </Container>
@@ -414,111 +426,120 @@ const SettingsPage = () => {
 
   return (
     <Container className="py-4">
-      <h2 className="mb-4">Settings</h2>
+      <h2 className="mb-4 fw-semibold">Settings</h2>
       
       <Tab.Container id="settings-tabs" defaultActiveKey="account">
-        <Card className="shadow-sm mb-4">
-          <Card.Header>
+        <Card className="settings-card shadow-sm mb-4 border-0">
+          <Card.Header className="bg-white">
             <Nav variant="tabs" className="nav-fill">
               <Nav.Item>
-                <Nav.Link eventKey="account">
-                  <FaUser className="me-2" /> Account
+                <Nav.Link eventKey="account" className="py-3">
+                  <FaUser className="me-2" size={18} /> Account
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>
-                <Nav.Link eventKey="shipping">
-                  <FaMapMarkerAlt className="me-2" /> Shipping
+                <Nav.Link eventKey="shipping" className="py-3">
+                  <FaMapMarkerAlt className="me-2" size={18} /> Shipping
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>
-                <Nav.Link eventKey="preferences">
-                  <FaCog className="me-2" /> Preferences
+                <Nav.Link eventKey="preferences" className="py-3">
+                  <FaCog className="me-2" size={18} /> Preferences
                 </Nav.Link>
               </Nav.Item>
             </Nav>
           </Card.Header>
-          <Card.Body>
+          <Card.Body className="p-0">
             <Tab.Content>
               {/* Account Tab */}
               <Tab.Pane eventKey="account">
-                <ListGroup variant="flush">
-                  <ListGroup.Item action onClick={handleEditToggle} className="d-flex justify-content-between align-items-center py-3">
+                <ListGroup variant="flush" className="profile-action-list">
+                  <div 
+                    onClick={handleEditToggle} 
+                    className="d-flex justify-content-between align-items-center list-group-item"
+                  >
                     <div className="d-flex align-items-center">
-                      <FaUserEdit className="text-primary me-3" size={20} />
-                      <span>Edit Profile</span>
+                      <FaUserEdit className="text-secondary me-3" size={20} />
+                      <span className="fw-medium">Edit Profile</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </ListGroup.Item>
+                  </div>
                   
-                  <ListGroup.Item action as={Link} to="#" className="d-flex justify-content-between align-items-center py-3">
+                  <Link to="#" 
+                    className="d-flex justify-content-between align-items-center list-group-item"
+                  >
                     <div className="d-flex align-items-center">
-                      <FaLock className="text-primary me-3" size={20} />
-                      <span>Change Password</span>
+                      <FaLock className="text-secondary me-3" size={20} />
+                      <span className="fw-medium">Change Password</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </ListGroup.Item>
+                  </Link>
                   
-                  <ListGroup.Item action as={Link} to="/orders" className="d-flex justify-content-between align-items-center py-3">
+                  <Link to="/orders" 
+                    className="d-flex justify-content-between align-items-center list-group-item"
+                  >
                     <div className="d-flex align-items-center">
-                      <FaList className="text-primary me-3" size={20} />
-                      <span>My Orders</span>
+                      <FaList className="text-secondary me-3" size={20} />
+                      <span className="fw-medium">My Orders</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </ListGroup.Item>
+                  </Link>
                   
-                  <ListGroup.Item action as={Link} to="/wishlist" className="d-flex justify-content-between align-items-center py-3">
+                  <Link to="/wishlist" 
+                    className="d-flex justify-content-between align-items-center list-group-item"
+                  >
                     <div className="d-flex align-items-center">
-                      <FaHeart className="text-primary me-3" size={20} />
-                      <span>My Wishlist</span>
+                      <FaHeart className="text-secondary me-3" size={20} />
+                      <span className="fw-medium">My Wishlist</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </ListGroup.Item>
+                  </Link>
                 </ListGroup>
               </Tab.Pane>
               
               {/* Shipping Tab */}
-              <Tab.Pane eventKey="shipping">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h4 className="mb-0 fs-5">My Shipping Addresses</h4>
+              <Tab.Pane eventKey="shipping" className="p-4">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="mb-0 fs-5 fw-semibold">My Shipping Addresses</h4>
                   <Button 
                     variant="outline-primary" 
                     size="sm"
                     onClick={handleShowAddressModal}
-                    className="d-flex align-items-center"
+                    className="d-flex align-items-center rounded-pill px-3 py-2"
                   >
-                    <FaPlus className="me-1" /> Add New Address
+                    <FaPlus className="me-2" /> Add New Address
                   </Button>
                 </div>
                 
                 {isLoadingAddresses ? (
-                  <div className="text-center py-3">
-                    <Spinner animation="border" size="sm" role="status">
+                  <div className="text-center py-4">
+                    <Spinner animation="border" size="sm" role="status" variant="primary">
                       <span className="visually-hidden">Loading addresses...</span>
                     </Spinner>
-                    <p className="mb-0 mt-2">Loading your addresses...</p>
+                    <p className="mb-0 mt-3">Loading your addresses...</p>
                   </div>
                 ) : addressError ? (
-                  <Alert variant="danger">
+                  <Alert variant="danger" className="shadow-sm">
                     {addressError}
                   </Alert>
                 ) : addresses.length === 0 ? (
-                  <Alert variant="info">
+                  <Alert variant="info" className="shadow-sm">
                     You don't have any saved addresses yet. Add your first address to make checkout faster.
                   </Alert>
                 ) : (
-                  <ListGroup className="address-list">
+                  <ListGroup className="address-list shadow-sm">
                     {addresses.map((address) => (
-                      <ListGroup.Item key={address.id} className="d-flex flex-column">
-                        <div className="d-flex justify-content-between align-items-start mb-2">
+                      <ListGroup.Item key={address.id} className="d-flex flex-column p-3">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
                           <div className="address-info">
-                            <div className="fw-bold">{address.fullName}</div>
+                            <div className="fw-semibold">{address.fullName}</div>
                             <div>{address.phone}</div>
                             <div>{address.address}</div>
                             <div>{address.city}, {address.zipCode}</div>
                             <div>{address.country}</div>
                           </div>
                           {address.isDefault && (
-                            <Badge bg="success" className="default-badge">Default</Badge>
+                            <Badge bg="success" pill className="default-badge">Default</Badge>
                           )}
                         </div>
                         <div className="d-flex justify-content-end mt-2 address-actions">
@@ -527,7 +548,7 @@ const SettingsPage = () => {
                               variant="outline-success" 
                               size="sm"
                               onClick={() => handleSetDefaultAddress(address.id)}
-                              className="me-2 address-action-btn"
+                              className="me-2 address-action-btn rounded-pill px-3"
                             >
                               Set as Default
                             </Button>
@@ -536,17 +557,17 @@ const SettingsPage = () => {
                             variant="outline-primary"
                             size="sm"
                             onClick={() => handleEditAddress(address)}
-                            className="me-2 address-action-btn"
+                            className="me-2 address-action-btn rounded-pill px-3"
                           >
-                            <FaEdit /> Edit
+                            <FaEdit className="me-1" /> Edit
                           </Button>
                           <Button 
                             variant="outline-danger"
                             size="sm"
                             onClick={() => handleDeleteAddress(address.id)}
-                            className="address-action-btn"
+                            className="address-action-btn rounded-pill px-3"
                           >
-                            <FaTrash /> Delete
+                            <FaTrash className="me-1" /> Delete
                           </Button>
                         </div>
                       </ListGroup.Item>
@@ -557,14 +578,16 @@ const SettingsPage = () => {
               
               {/* Preferences Tab */}
               <Tab.Pane eventKey="preferences">
-                <ListGroup variant="flush">
-                  <ListGroup.Item action as={Link} to="/about" className="d-flex justify-content-between align-items-center py-3">
+                <ListGroup variant="flush" className="profile-action-list">
+                  <Link to="/about" 
+                    className="d-flex justify-content-between align-items-center list-group-item"
+                  >
                     <div className="d-flex align-items-center">
-                      <FaInfoCircle className="text-primary me-3" size={20} />
-                      <span>About HybridStore</span>
+                      <FaInfoCircle className="text-secondary me-3" size={20} />
+                      <span className="fw-medium">About HybridStore</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </ListGroup.Item>
+                  </Link>
                   
                   {/* Add more preference options here as needed */}
                 </ListGroup>
@@ -575,37 +598,39 @@ const SettingsPage = () => {
       </Tab.Container>
       
       {/* Edit Profile Modal */}
-      <Modal show={showEditProfileModal} onHide={handleCloseEditModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Edit Profile</Modal.Title>
+      <Modal show={showEditProfileModal} onHide={handleCloseEditModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Edit Profile</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="p-4">
           <Form onSubmit={handleProfileUpdate}>
             {editError && (
-              <Alert variant="danger">
+              <Alert variant="danger" className="mb-4">
                 {editError}
               </Alert>
             )}
             
             <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
+              <Form.Label className="fw-medium">Email</Form.Label>
               <Form.Control 
                 type="email" 
                 value={profile?.email || ''} 
                 disabled 
+                className="bg-light"
               />
               <Form.Text className="text-muted">
                 Email cannot be changed.
               </Form.Text>
             </Form.Group>
             
-            <Form.Group className="mb-3">
-              <Form.Label>Full Name</Form.Label>
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-medium">Full Name</Form.Label>
               <Form.Control 
                 type="text" 
                 value={formName} 
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Enter your name"
+                className="auth-input"
               />
             </Form.Group>
             
@@ -614,6 +639,7 @@ const SettingsPage = () => {
                 variant="primary" 
                 type="submit" 
                 disabled={isSavingEdit}
+                className="rounded-pill py-2 fw-medium"
               >
                 {isSavingEdit ? (
                   <>
@@ -628,16 +654,16 @@ const SettingsPage = () => {
       </Modal>
       
       {/* Address Modal */}
-      <Modal show={showAddressModal} onHide={handleCloseAddressModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>{editingAddress ? 'Edit Address' : 'Add New Address'}</Modal.Title>
+      <Modal show={showAddressModal} onHide={handleCloseAddressModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">{editingAddress ? 'Edit Address' : 'Add New Address'}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="p-4">
           <Form onSubmit={handleSaveAddress}>
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label>Full Name</Form.Label>
+                  <Form.Label className="fw-medium">Full Name</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Full name"
@@ -645,7 +671,7 @@ const SettingsPage = () => {
                     value={addressForm.fullName}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
@@ -654,7 +680,7 @@ const SettingsPage = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label>Phone Number</Form.Label>
+                  <Form.Label className="fw-medium">Phone Number</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Phone number"
@@ -662,7 +688,7 @@ const SettingsPage = () => {
                     value={addressForm.phone}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
@@ -671,7 +697,7 @@ const SettingsPage = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label>Address</Form.Label>
+                  <Form.Label className="fw-medium">Address</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Street address"
@@ -679,7 +705,7 @@ const SettingsPage = () => {
                     value={addressForm.address}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
@@ -688,7 +714,7 @@ const SettingsPage = () => {
             <Row className="mb-3">
               <Col xs={12} sm={6} className="mb-3 mb-sm-0">
                 <Form.Group>
-                  <Form.Label>City</Form.Label>
+                  <Form.Label className="fw-medium">City</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="City"
@@ -696,13 +722,13 @@ const SettingsPage = () => {
                     value={addressForm.city}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
               <Col xs={12} sm={6}>
                 <Form.Group>
-                  <Form.Label>Postal Code</Form.Label>
+                  <Form.Label className="fw-medium">Postal Code</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Postal code"
@@ -710,7 +736,7 @@ const SettingsPage = () => {
                     value={addressForm.zipCode}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
@@ -719,7 +745,7 @@ const SettingsPage = () => {
             <Row className="mb-4">
               <Col>
                 <Form.Group>
-                  <Form.Label>Country</Form.Label>
+                  <Form.Label className="fw-medium">Country</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Country"
@@ -727,7 +753,7 @@ const SettingsPage = () => {
                     value={addressForm.country}
                     onChange={handleAddressFormChange}
                     required
-                    className="address-input"
+                    className="auth-input"
                   />
                 </Form.Group>
               </Col>
@@ -738,6 +764,7 @@ const SettingsPage = () => {
                 variant="primary" 
                 type="submit" 
                 disabled={isSavingAddress}
+                className="rounded-pill py-2 fw-medium"
               >
                 {isSavingAddress ? (
                   <>

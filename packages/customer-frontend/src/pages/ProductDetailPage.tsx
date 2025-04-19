@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -6,11 +6,15 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import toast from 'react-hot-toast';
-import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
-import ProductCard from '../components/ProductCard';
 import StarRating from '../components/StarRating';
 import api from '../utils/api';
 import { formatCurrency } from '../utils/formatters';
+import { FaStar } from 'react-icons/fa';
+import { FaRegStar } from 'react-icons/fa';
+import { FaStarHalfAlt } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaRegHeart } from 'react-icons/fa';
+import ProductCard from '../components/ProductCard';
 
 // Define interface for product data matching backend response
 interface ProductImage {
@@ -110,7 +114,7 @@ const ProductDetailPage = () => {
       setError(null);
       
       try {
-        const response = await axios.get(`${API_BASE_URL}/products/${productId}`);
+        const response = await api.get(`/products/${productId}`);
         setProduct(response.data);
       } catch (err) {
         if (axios.isAxiosError(err)) {
@@ -143,15 +147,13 @@ const ProductDetailPage = () => {
       
       try {
         // Use the alternate route for fetching product reviews
-        const response = await axios.get(`${API_BASE_URL}/reviews/product/${productId}`);
+        const response = await api.get(`/reviews/product/${productId}`);
         setReviews(response.data);
         
         // Check if the user has already reviewed this product
         if (isAuthenticated && token) {
           try {
-            const userReviews = await axios.get(`${API_BASE_URL}/reviews/user`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const userReviews = await api.get('/reviews/user');
             // Check if user has already reviewed this product
             const hasReviewed = userReviews.data.some(
               (review: any) => review.productId === parseInt(productId)
@@ -184,12 +186,12 @@ const ProductDetailPage = () => {
 
       setIsLoadingOther(true);
       try {
-        const response = await axios.get<PaginatedProductsResponse>(`${API_BASE_URL}/products`);
+        const response = await api.get('/products');
         // The data now contains a products array instead of being the array directly
         const products = response.data.products;
         // Filter out current product and take first 4
         const filteredProducts = products
-          .filter(p => p.id !== product.id)
+          .filter((p: Product) => p.id !== product.id)
           .slice(0, 4);
         setOtherProducts(filteredProducts);
       } catch (err) {
@@ -276,8 +278,8 @@ const ProductDetailPage = () => {
     setSubmitReviewError(null);
     
     try {
-      await axios.post(
-        `${API_BASE_URL}/reviews`,
+      await api.post(
+        '/reviews',
         {
           productId: parseInt(productId),
           rating: newRating,
@@ -300,8 +302,8 @@ const ProductDetailPage = () => {
       
       // Refetch product and reviews
       const [productResponse, reviewsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/products/${productId}`),
-        axios.get(`${API_BASE_URL}/reviews/product/${productId}`)
+        api.get(`/products/${productId}`),
+        api.get(`/reviews/product/${productId}`)
       ]);
       
       setProduct(productResponse.data);
@@ -447,7 +449,7 @@ const ProductDetailPage = () => {
                   if (e.currentTarget.src !== '/placeholder-image.svg') {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = '/placeholder-image.svg';
-                    console.warn(`Failed to load image: ${product.images[0].url}`);
+                    console.warn(`Failed to load image: ${product.images?.[0]?.url || 'unknown'}`);
                   }
                 }}
               />
