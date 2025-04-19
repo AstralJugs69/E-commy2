@@ -28,7 +28,11 @@ The project is now supporting multiple product images rather than a single image
 ### Progress:
 - Added Database Indexes to schema and migrated.
 - Standardized API calls and verified Address schema usage.
-- Optimized Backend List Queries: Reviewed and optimized `findMany` calls in product, order, user, cart, and wishlist routes using `select` and nested `select` with `take: 1` for images where appropriate to improve performance and reduce payload size. [Date: 2025-05-05]
+- Optimized Backend List Queries using select/include.
+- Frontend Optimizations:
+    - Optimized `react-icons` imports for smaller bundle size.
+    - Implemented `React.lazy` and `Suspense` for Admin FE page components (excluding ZoneManagement) to improve initial load time.
+    - Applied dynamic key workaround to Leaflet map on ZoneManagement page to resolve container reuse error. [Date: 2025-05-08]
 
 ## 1. Project Summary & Vision
 

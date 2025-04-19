@@ -78,12 +78,12 @@ const WishlistPage: React.FC = () => {
 
   return (
     <Container className="py-4">
-      <h2 className="mb-4">My Wishlist</h2>
+      <h2 className="mb-4 fw-semibold">My Wishlist</h2>
       
       <div className="mb-4">
         <Link to="/" className="text-decoration-none">
-          <Button variant="outline-secondary" size="sm">
-            <FaChevronLeft className="me-1" /> Back to Shopping
+          <Button variant="outline-secondary" size="sm" className="rounded-pill px-3 py-2">
+            <FaChevronLeft className="me-2" /> Back to Shopping
           </Button>
         </Link>
       </div>
@@ -102,16 +102,16 @@ const WishlistPage: React.FC = () => {
           icon={<FaRegHeart />}
           title="Your Wishlist is Empty"
           message="Browse our products and add items you love to your wishlist!"
-          actionButton={<Link to="/" className="btn btn-primary px-4">Browse Products</Link>}
+          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Browse Products</Link>}
         />
       ) : (
         <>
           <p className="text-muted mb-4">{wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} in your wishlist</p>
           
-          <Row className="g-2 my-3">
+          <Row className="g-3 my-3">
             {wishlistItems.map((item) => (
               <Col key={item.id} xs={6} md={4} lg={3} className="d-flex">
-                <Card className="w-100 shadow-sm">
+                <Card className="w-100 shadow-sm h-100">
                   <Link to={`/product/${item.product.id}`} className="text-decoration-none text-reset">
                     <div className="position-relative">
                       {((item.product.images && item.product.images.length > 0) || item.product.imageUrl) ? (
@@ -131,7 +131,7 @@ const WishlistPage: React.FC = () => {
                                   : `${API_BASE_URL}${item.product.imageUrl || ''}`)
                           } 
                           alt={item.product.name}
-                          style={{ height: '130px', objectFit: 'cover' }}
+                          style={{ height: '150px', objectFit: 'contain', padding: '0.75rem' }}
                           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                             if (e.currentTarget.src !== '/placeholder-image.svg') {
                               e.currentTarget.onerror = null;
@@ -145,7 +145,7 @@ const WishlistPage: React.FC = () => {
                           variant="top" 
                           src="/placeholder-image.svg"
                           alt={item.product.name}
-                          style={{ height: '130px', objectFit: 'cover' }}
+                          style={{ height: '150px', objectFit: 'contain', padding: '0.75rem' }}
                         />
                       )}
                       
@@ -153,21 +153,21 @@ const WishlistPage: React.FC = () => {
                       <Button
                         variant="light"
                         size="sm"
-                        className="position-absolute top-0 end-0 m-2 rounded-circle p-1"
-                        style={{ width: '30px', height: '30px' }}
+                        className="position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow-sm"
+                        style={{ width: '32px', height: '32px' }}
                         onClick={(e) => handleRemoveFromWishlist(e, item.product.id, item.product.name)}
                         aria-label="Remove from wishlist"
                       >
                         <FaTrash className="text-danger" style={{ fontSize: '14px' }} />
                       </Button>
                     </div>
-                    <Card.Body className="p-2 p-md-3">
-                      <Card.Title className="h6 text-dark mb-1 text-truncate">{item.product.name}</Card.Title>
-                      <Card.Subtitle className="mb-1 text-muted small">{formatCurrency(item.product.price)}</Card.Subtitle>
+                    <Card.Body className="p-3 text-center">
+                      <Card.Title className="h6 text-dark mb-2 fw-semibold text-truncate">{item.product.name}</Card.Title>
+                      <Card.Subtitle className="mb-2 fw-bold text-primary">{formatCurrency(item.product.price)}</Card.Subtitle>
                       
                       {/* Display Rating if available */}
                       {item.product.averageRating !== undefined && item.product.averageRating !== null && (
-                        <div className="d-flex align-items-center mb-1">
+                        <div className="d-flex align-items-center justify-content-center mb-2">
                           <StarRating rating={item.product.averageRating} />
                           <small className="ms-1 text-muted">
                             ({item.product.reviewCount ?? 0})

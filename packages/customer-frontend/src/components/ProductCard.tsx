@@ -53,7 +53,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card 
-      className="h-100 shadow-sm mb-2 product-card"
+      className="h-100 shadow-sm product-card"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
@@ -71,7 +71,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             style={{ 
               height: '180px', 
               objectFit: 'contain',
-              padding: '10px'
+              padding: '0.75rem'
             }}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -84,7 +84,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             variant="top" 
             src="/placeholder-image.svg"
             alt={product.name}
-            style={{ height: '180px', objectFit: 'cover' }}
+            style={{ height: '180px', objectFit: 'cover', padding: '0.75rem' }}
           />
         )}
         {product.stock > 0 ? (
@@ -104,17 +104,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
       {disableInternalLink ? (
-        <Card.Body className="d-flex flex-column p-3 text-center">
-          <Card.Title className="text-dark mb-2 product-title">{product.name}</Card.Title>
-          <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
-          <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block">{product.description || ''}</Card.Text>
+        <Card.Body className="d-flex flex-column px-3 py-2 text-center">
+          <Card.Title className="text-dark fw-semibold mb-2 product-title">{product.name}</Card.Title>
+          <Card.Subtitle className="mb-3 product-price fw-bold">€{product.price.toFixed(2)}</Card.Subtitle>
+          <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block mb-0">{product.description || ''}</Card.Text>
         </Card.Body>
       ) : (
         <Link to={`/product/${product.id}`} className="text-decoration-none">
-          <Card.Body className="d-flex flex-column p-3 text-center">
-            <Card.Title className="text-dark mb-2 product-title">{product.name}</Card.Title>
-            <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
-            <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block">{product.description || ''}</Card.Text>
+          <Card.Body className="d-flex flex-column px-3 py-2 text-center">
+            <Card.Title className="text-dark fw-semibold mb-2 product-title">{product.name}</Card.Title>
+            <Card.Subtitle className="mb-3 product-price fw-bold">€{product.price.toFixed(2)}</Card.Subtitle>
+            <Card.Text className="text-muted small flex-grow-1 d-none d-sm-block mb-0">{product.description || ''}</Card.Text>
           </Card.Body>
         </Link>
       )}
@@ -122,7 +122,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <Card.Footer className="bg-white border-0 pt-0 p-3 text-center">
           <Button 
             variant="primary" 
-            className="w-100 rounded-pill"
+            size="sm"
+            className="w-100 rounded-pill fw-medium"
             onClick={() => handleAddToCart(product)}
             disabled={product.stock <= 0}
           >

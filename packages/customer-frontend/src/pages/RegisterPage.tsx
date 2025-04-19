@@ -98,13 +98,13 @@ const RegisterPage = () => {
   };
 
   return (
-    <Container fluid className="py-5">
+    <Container fluid className="py-4">
       {/* Logo Section */}
       <Row className="justify-content-center mb-4">
         <Col xs={12} className="text-center">
-          <div className="store-logo-container">
-            <FaStore size={50} className="text-primary mb-2" />
-            <h1 className="h3 text-primary">HybridStore</h1>
+          <div className="store-logo-container mb-3">
+            <FaStore size={45} className="text-primary mb-2" />
+            <h1 className="h3 fw-semibold text-primary">HybridStore</h1>
           </div>
         </Col>
       </Row>
@@ -113,7 +113,7 @@ const RegisterPage = () => {
         <Col xs={12} sm={10} md={8} lg={5} xl={4}>
           <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h2 className="text-center mb-4">Create Account</h2>
+              <h2 className="text-center mb-4 fw-semibold">Create Account</h2>
               
               {validationError && (
                 <Alert variant="danger" className="mb-4">
@@ -124,7 +124,7 @@ const RegisterPage = () => {
               <Form onSubmit={handleRegister}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email Address</Form.Label>
+                  <Form.Label className="fw-medium">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
@@ -137,7 +137,7 @@ const RegisterPage = () => {
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label>Password</Form.Label>
+                  <Form.Label className="fw-medium">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
@@ -146,14 +146,14 @@ const RegisterPage = () => {
                     required
                     className="auth-input"
                   />
-                  <Form.Text className="text-muted">
+                  <Form.Text className="text-muted small">
                     Must be at least 6 characters long
                   </Form.Text>
                 </Form.Group>
                 
                 {/* Confirm Password input */}
                 <Form.Group className="mb-4" controlId="formBasicConfirmPassword">
-                  <Form.Label>Confirm Password</Form.Label>
+                  <Form.Label className="fw-medium">Confirm Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
@@ -169,7 +169,7 @@ const RegisterPage = () => {
                   variant="primary"
                   type="submit"
                   disabled={isLoading}
-                  className="w-100 py-2 rounded-pill"
+                  className="w-100 py-2 rounded-pill fw-medium"
                   size="lg"
                 >
                   {isLoading ? (
@@ -183,8 +183,8 @@ const RegisterPage = () => {
                 </Button>
               </Form>
               
-              <p className="mt-4 text-center">
-                Already have an account? <Link to="/login" className="text-decoration-none">Sign in</Link>
+              <p className="mt-4 text-center mb-0">
+                Already have an account? <Link to="/login" className="text-decoration-none fw-medium">Sign in</Link>
               </p>
             </Card.Body>
           </Card>

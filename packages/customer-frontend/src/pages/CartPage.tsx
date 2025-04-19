@@ -29,12 +29,12 @@ const CartPage = () => {
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
-        <h2 className="mb-4">Your Shopping Cart</h2>
+        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
         <EmptyState
           icon={<FaShoppingCart />}
           title="Please Log In to View Your Cart"
           message="You need to be logged in to view and manage your shopping cart."
-          actionButton={<Link to="/login" className="btn btn-primary px-4">Log In</Link>}
+          actionButton={<Link to="/login" className="btn btn-primary px-4 rounded-pill">Log In</Link>}
         />
       </Container>
     );
@@ -42,14 +42,14 @@ const CartPage = () => {
   
   return (
     <Container className="py-4">
-      <h2 className="mb-4">Your Shopping Cart</h2>
+      <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
       
       {cartIsEmpty ? (
         <EmptyState
           icon={<FaShoppingCart />}
           title="Your cart is empty"
           message="Looks like you haven't added anything yet. Start exploring now!"
-          actionButton={<Link to="/" className="btn btn-primary px-4">Start Shopping</Link>}
+          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Start Shopping</Link>}
         />
       ) : (
         <>
@@ -57,18 +57,18 @@ const CartPage = () => {
           <div className="table-responsive mb-4 d-none d-lg-block">
             <Table hover responsive className="mb-0 shadow-sm">
               <thead>
-                <tr>
-                  <th>Product</th>
-                  <th className="text-center">Price</th>
-                  <th className="text-center">Quantity</th>
-                  <th className="text-center">Total</th>
-                  <th className="text-center">Action</th>
+                <tr className="bg-light">
+                  <th className="py-3">Product</th>
+                  <th className="text-center py-3">Price</th>
+                  <th className="text-center py-3">Quantity</th>
+                  <th className="text-center py-3">Total</th>
+                  <th className="text-center py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {cartItems.map((item) => (
                   <tr key={item.id}>
-                    <td>
+                    <td className="py-3">
                       <div className="d-flex align-items-center">
                         {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
                         {(item.images?.[0]?.url || item.imageUrl) && (
@@ -82,6 +82,7 @@ const CartPage = () => {
                                 : item.imageUrl || '/placeholder-image.svg')} 
                             alt={item.name} 
                             style={{ width: '60px', height: '60px', objectFit: 'contain' }}
+                            className="me-3"
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                               if (e.currentTarget.src !== '/placeholder-image.svg') {
                                 e.currentTarget.onerror = null;
@@ -91,13 +92,13 @@ const CartPage = () => {
                           />
                         )}
                         <div>
-                          <div className="fw-bold text-truncate" style={{ maxWidth: '150px' }}>{item.name}</div>
+                          <div className="fw-semibold text-truncate" style={{ maxWidth: '150px' }}>{item.name}</div>
                           <small className="text-muted d-none d-md-inline">{item.id}</small>
                         </div>
                       </div>
                     </td>
-                    <td className="text-center align-middle">{formatCurrency(item.price)}</td>
-                    <td className="text-center align-middle" style={{ minWidth: '100px' }}>
+                    <td className="text-center align-middle py-3">{formatCurrency(item.price)}</td>
+                    <td className="text-center align-middle py-3" style={{ minWidth: '100px' }}>
                       <Form.Control
                         type="number"
                         size="sm"
@@ -121,14 +122,14 @@ const CartPage = () => {
                         aria-label={`Quantity for ${item.name}`}
                       />
                     </td>
-                    <td className="text-center align-middle fw-bold">
+                    <td className="text-center align-middle py-3 fw-semibold">
                       {formatCurrency(item.price * item.quantity)}
                     </td>
-                    <td className="text-center align-middle">
+                    <td className="text-center align-middle py-3">
                       <Button 
                         variant="outline-danger" 
                         size="sm"
-                        className="p-1 p-sm-2"
+                        className="rounded-pill px-2 py-1"
                         onClick={() => removeFromCart(item.id)}
                         aria-label={`Remove ${item.name} from cart`}
                       >
@@ -139,9 +140,9 @@ const CartPage = () => {
                 ))}
               </tbody>
               <tfoot>
-                <tr>
+                <tr className="bg-light">
                   <td colSpan={3} className="text-end fw-bold py-3">Total:</td>
-                  <td className="text-center tfoot-total py-3">{formatCurrency(getCartTotal())}</td>
+                  <td className="text-center tfoot-total py-3 fw-bold">{formatCurrency(getCartTotal())}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -151,9 +152,9 @@ const CartPage = () => {
           {/* Mobile Cart Items View */}
           <div className="d-block d-lg-none mb-3">
             {cartItems.map((item) => (
-              <Card key={item.id} className="mb-2 shadow-sm">
-                <Card.Body className="p-2">
-                  <Row className="g-2 align-items-center">
+              <Card key={item.id} className="mb-3 shadow-sm">
+                <Card.Body className="p-3">
+                  <Row className="g-3 align-items-center">
                     {/* Image Col */}
                     <Col xs={3} sm={2}>
                       <Image
@@ -204,13 +205,13 @@ const CartPage = () => {
                     </Col>
                     {/* Price/Remove Col */}
                     <Col xs={3} sm={3} className="text-end">
-                      <div className="fw-bold small mb-2">
+                      <div className="fw-semibold small mb-2">
                         {formatCurrency(item.price * item.quantity)}
                       </div>
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        className="py-1 px-2"
+                        className="rounded-pill px-2 py-1"
                         onClick={() => removeFromCart(item.id)}
                       >
                         <FaTrash />
@@ -224,12 +225,12 @@ const CartPage = () => {
 
           {/* Summary and Buttons Section (Visible on all sizes) */}
           <Card className="mb-4 shadow-sm">
-            <Card.Body className="text-end">
-              <h4 className="mb-3">Total: {formatCurrency(getCartTotal())}</h4>
-              <div className="d-grid gap-2 d-sm-flex justify-content-sm-end">
-                <Button variant="outline-secondary" onClick={() => clearCart()}>Clear Cart</Button>
-                <Link to="/" className="btn btn-secondary">Continue Shopping</Link>
-                <Button variant="success" onClick={handleCheckout}>Proceed to Checkout</Button>
+            <Card.Body className="p-4">
+              <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
+              <div className="d-grid gap-2 d-md-flex justify-content-md-end">
+                <Button variant="outline-secondary" className="rounded-pill px-3 py-2 fw-medium" onClick={() => clearCart()}>Clear Cart</Button>
+                <Link to="/" className="btn btn-secondary rounded-pill px-3 py-2 fw-medium">Continue Shopping</Link>
+                <Button variant="success" className="rounded-pill px-4 py-2 fw-medium" onClick={handleCheckout}>Proceed to Checkout</Button>
               </div>
             </Card.Body>
           </Card>

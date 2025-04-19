@@ -15,15 +15,15 @@ interface EmptyStateProps {
 
 const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, message, actionButton }) => {
   return (
-    <Container className="py-5 my-5">
+    <Container className="py-4 my-4">
       <Row className="justify-content-center">
         <Col xs={12} md={8} lg={6} className="text-center">
           <div className="empty-state-icon mb-4">
-            {React.cloneElement(icon as React.ReactElement, { size: 50, className: 'text-muted' } as React.SVGProps<SVGSVGElement>)}
+            {React.cloneElement(icon as React.ReactElement, { size: 60, className: 'text-muted' } as React.SVGProps<SVGSVGElement>)}
           </div>
-          <h4 className="fw-bold mb-2">{title}</h4>
+          <h3 className="fw-semibold mb-3">{title}</h3>
           <p className="text-muted mb-4">{message}</p>
-          {actionButton && <div className="mt-2">{actionButton}</div>}
+          {actionButton && <div className="mt-3">{actionButton}</div>}
         </Col>
       </Row>
     </Container>
