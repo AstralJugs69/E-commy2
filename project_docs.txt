@@ -33,6 +33,8 @@ The project is now supporting multiple product images rather than a single image
     - Optimized `react-icons` imports for smaller bundle size.
     - Implemented `React.lazy` and `Suspense` for Admin FE page components (excluding ZoneManagement) to improve initial load time.
     - Applied dynamic key workaround to Leaflet map on ZoneManagement page to resolve container reuse error. [Date: 2025-05-08]
+- Performed general aesthetics pass (spacing, alignment, button/card/form consistency).
+- Refined Settings page UX (tab clarity, list item affordance, icon colors), fixed UI hydration errors. [Date: 2025-05-12]
 
 ## 1. Project Summary & Vision
 
