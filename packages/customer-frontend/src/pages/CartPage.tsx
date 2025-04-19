@@ -77,9 +77,9 @@ const CartPage = () => {
                               ? (item.images[0].url.startsWith('/uploads/') 
                                 ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
                                 : item.images[0].url)
-                              : (item.imageUrl!.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.imageUrl!.substring(8)}`
-                                : item.imageUrl!)} 
+                              : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
+                                ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
+                                : item.imageUrl || '/placeholder-image.svg')} 
                             alt={item.name} 
                             style={{ width: '60px', height: '60px', objectFit: 'contain' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -161,9 +161,9 @@ const CartPage = () => {
                           ? (item.images[0].url.startsWith('/uploads/') 
                             ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
                             : item.images[0].url)
-                          : (item.imageUrl!.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.imageUrl!.substring(8)}`
-                            : item.imageUrl!)}
+                          : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
+                            ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
+                            : item.imageUrl || '/placeholder-image.svg')}
                         alt={item.name}
                         fluid
                         rounded

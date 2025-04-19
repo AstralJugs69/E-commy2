@@ -1,7 +1,13 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Spinner, Alert } from 'react-bootstrap';
-import { FaHeart, FaTrash, FaChevronLeft, FaRegHeart, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaTrash } from 'react-icons/fa';
+import { FaChevronLeft } from 'react-icons/fa';
+import { FaRegHeart } from 'react-icons/fa';
+import { FaStar } from 'react-icons/fa';
+import { FaStarHalfAlt } from 'react-icons/fa';
+import { FaRegStar } from 'react-icons/fa';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
@@ -108,11 +114,11 @@ const WishlistPage: React.FC = () => {
                 <Card className="w-100 shadow-sm">
                   <Link to={`/product/${item.product.id}`} className="text-decoration-none text-reset">
                     <div className="position-relative">
-                      {(item.product.images?.length > 0 || item.product.imageUrl) ? (
+                      {((item.product.images && item.product.images.length > 0) || item.product.imageUrl) ? (
                         <Card.Img 
                           variant="top" 
                           src={
-                            item.product.images && item.product.images.length > 0 
+                            item.product.images && item.product.images.length > 0
                               ? (item.product.images[0].url.startsWith('/uploads/') 
                                 ? `${UPLOADS_URL}${item.product.images[0].url.substring(8)}`
                                 : item.product.images[0].url.startsWith('http')

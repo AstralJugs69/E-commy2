@@ -23,6 +23,13 @@ The project is now supporting multiple product images rather than a single image
 - Verified consistent Address model field names across backend and frontend components
 [Date: 2025-05-04]
 
+## 1.2 Refactor/Review Phase (`refactor/code-review-performance-ux` branch)
+
+### Progress:
+- Added Database Indexes to schema and migrated.
+- Standardized API calls and verified Address schema usage.
+- Optimized Backend List Queries: Reviewed and optimized `findMany` calls in product, order, user, cart, and wishlist routes using `select` and nested `select` with `take: 1` for images where appropriate to improve performance and reduce payload size. [Date: 2025-05-05]
+
 ## 1. Project Summary & Vision
 
 ### 1.1. Core Concept

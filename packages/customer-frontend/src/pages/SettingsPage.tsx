@@ -1,8 +1,19 @@
-import { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
 import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser, FaChevronRight, FaInfoCircle, FaCog } from 'react-icons/fa';
+import { FaUserEdit } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
+import { FaTrash } from 'react-icons/fa';
+import { FaList } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaMapMarkerAlt } from 'react-icons/fa';
+import { FaLock } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
+import { FaChevronRight } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
+import { FaCog } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 

@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination, InputGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
-import { FaStar, FaRegStar, FaStarHalfAlt, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaStar } from 'react-icons/fa';
+import { FaRegStar } from 'react-icons/fa';
+import { FaStarHalfAlt } from 'react-icons/fa';
+import { FaHeart } from 'react-icons/fa';
+import { FaRegHeart } from 'react-icons/fa';
+import { useCart } from '../context/CartContext';
+import StarRating from '../components/StarRating';
 
 interface ProductImage {
   id: number;
@@ -158,33 +164,6 @@ const HomePage = () => {
       addToWishlist(product.id);
       toast.success(`${product.name} added to wishlist`);
     }
-  };
-
-  // Star Rating Component
-  const StarRating = ({ rating }: { rating: number | null | undefined }) => {
-    if (!rating) return null;
-    
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-    
-    // Add full stars
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<FaStar key={`full-${i}`} className="text-warning" size={12} />);
-    }
-    
-    // Add half star if needed
-    if (hasHalfStar) {
-      stars.push(<FaStarHalfAlt key="half" className="text-warning" size={12} />);
-    }
-    
-    // Add empty stars to reach 5
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<FaRegStar key={`empty-${i}`} className="text-warning" size={12} />);
-    }
-    
-    return <div className="d-inline-flex align-items-center">{stars}</div>;
   };
 
   // Pagination UI component
@@ -373,11 +352,11 @@ const HomePage = () => {
                   <Card className="w-100 shadow-sm product-card">
                     <Link to={`/product/${product.id}`} className="text-decoration-none text-reset">
                       <div className="position-relative">
-                        {(product.images?.length > 0 || product.imageUrl) ? (
+                        {((product.images && product.images.length > 0) || product.imageUrl) ? (
                           <Card.Img 
                             variant="top" 
                             src={
-                              product.images && product.images.length > 0 
+                              product.images && product.images.length > 0
                                 ? (product.images[0].url.startsWith('/uploads/') 
                                   ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
                                   : product.images[0].url.startsWith('http')

@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
-import { FiHome, FiSmartphone, FiShoppingCart, FiBox, FiTag, FiMap, FiUsers, FiLogOut, FiBarChart2 } from 'react-icons/fi';
+import { FiHome } from 'react-icons/fi';
+import { FiSmartphone } from 'react-icons/fi';
+import { FiShoppingCart } from 'react-icons/fi';
+import { FiBox } from 'react-icons/fi';
+import { FiTag } from 'react-icons/fi';
+import { FiMap } from 'react-icons/fi';
+import { FiUsers } from 'react-icons/fi';
+import { FiLogOut } from 'react-icons/fi';
+import { FiBarChart2 } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
 
 const AdminLayout = () => {

@@ -4,11 +4,19 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 
 // Define types
+interface ProductImage {
+  id: number;
+  url: string;
+  productId: number;
+  createdAt: string;
+}
+
 interface Product {
   id: number;
   name: string;
   price: number;
   imageUrl: string | null;
+  images?: ProductImage[];
   stock: number;
   description?: string | null;
   averageRating?: number | null;
