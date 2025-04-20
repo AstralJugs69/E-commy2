@@ -355,6 +355,8 @@ Branch merged into main. [Date: 2025-05-12]
 - Added user-friendly descriptions for order statuses.
 - Implemented basic rate limiting on backend auth routes.
 - Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
+- Refactored Admin Dashboard to show separate sections for Pending Call, Verified, Processing, Shipped orders.
+- Standardized action button styling across Admin Dashboard live order sections. [Date: 2025-05-26]
 
 ## 2. Project Summary & Vision
 
@@ -2477,10 +2479,11 @@ const DashboardPage = () => {
         : `Bearer ${admin_token}`;
       
       // Pass status params correctly for backend array handling
-      const apiUrl = `${API_BASE_URL}/admin/orders?status=Pending+Call&status=Verified&dateFilter=today`; // Focus on today's active orders
+      const statusesToFetch = ['Pending Call', 'Verified', 'Processing', 'Shipped'];
+      const apiUrl = `${API_BASE_URL}/admin/orders?${statusesToFetch.map(s => `status=${encodeURIComponent(s)}`).join('&')}&dateFilter=today`;
       console.log(`Fetching active orders from ${apiUrl}`);
       
-      // Fetch orders with Pending Call or Verified status
+      // Fetch orders with all relevant statuses
       const response = await axios.get(apiUrl, {
         headers: {
           Authorization: formattedToken
@@ -2605,22 +2608,24 @@ const DashboardPage = () => {
         </div>
       </div>
       
-      {/* Live Orders Section */}
+      {/* Pending Verification Calls Section */}
       <Card className="shadow-sm mb-4">
         <Card.Header className="bg-light">
-          <h3 className="h5 mb-0">Live Orders (Pending Call / Verified - Today)</h3>
+          <h3 className="h5 mb-0">Pending Verification Calls</h3>
         </Card.Header>
         <Card.Body>
           {isLoadingActive ? (
             <div className="text-center my-4">
               <Spinner animation="border" size="sm" className="me-2" />
-              <span>Loading live orders...</span>
+              <span>Loading pending verification calls...</span>
             </div>
           ) : activeError ? (
             <Alert variant="danger">{activeError}</Alert>
           ) : activeOrders.length > 0 ? (
             <Row xs={1} md={2} lg={3} className="g-3">
-              {activeOrders.map(order => (
+              {activeOrders
+                .filter(order => order.status === 'Pending Call')
+                .map(order => (
                 <Col key={order.id}>
                   <Card className="h-100 border">
                     <Card.Header className="d-flex justify-content-between align-items-center">
@@ -2645,8 +2650,8 @@ const DashboardPage = () => {
                         <strong>Created:</strong> {formatDate(order.createdAt)}
                       </div>
                     </Card.Body>
-                    <Card.Footer className="d-flex justify-content-between">
-                      {order.status === 'Pending Call' && (
+                    <Card.Footer>
+                      <div className="d-flex justify-content-between gap-2">
                         <Button 
                           variant="success" 
                           size="sm"
@@ -2654,12 +2659,19 @@ const DashboardPage = () => {
                         >
                           Mark Verified
                         </Button>
-                      )}
-                      <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                        <Button variant="outline-secondary" size="sm">
-                          Details
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Cancelled')}
+                        >
+                          Cancel Order
                         </Button>
-                      </Link>
+                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
+                          <Button variant="outline-secondary" size="sm">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
                     </Card.Footer>
                   </Card>
                 </Col>
@@ -2667,7 +2679,268 @@ const DashboardPage = () => {
             </Row>
           ) : (
             <Alert variant="info">
-              No active orders found for today. New orders will appear here automatically.
+              No orders awaiting phone verification calls for today.
+            </Alert>
+          )}
+        </Card.Body>
+        <Card.Footer className="text-muted">
+          <small>Auto-refreshes every {REFRESH_INTERVAL_MS / 1000} seconds</small>
+        </Card.Footer>
+      </Card>
+      
+      {/* Verified Orders Section */}
+      <Card className="shadow-sm mb-4">
+        <Card.Header className="bg-light">
+          <h3 className="h5 mb-0">Verified (Ready to Process)</h3>
+        </Card.Header>
+        <Card.Body>
+          {isLoadingActive ? (
+            <div className="text-center my-4">
+              <Spinner animation="border" size="sm" className="me-2" />
+              <span>Loading verified orders...</span>
+            </div>
+          ) : activeError ? (
+            <Alert variant="danger">{activeError}</Alert>
+          ) : activeOrders.length > 0 ? (
+            <Row xs={1} md={2} lg={3} className="g-3">
+              {activeOrders
+                .filter(order => order.status === 'Verified')
+                .map(order => (
+                <Col key={order.id}>
+                  <Card className="h-100 border">
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                      <span>
+                        <strong>Order #{order.id}</strong>
+                      </span>
+                      <Badge bg={getStatusBadgeVariant(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </Card.Header>
+                    <Card.Body>
+                      <div className="mb-2">
+                        <strong>Customer:</strong> {order.deliveryLocation?.name || order.customerName || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Phone:</strong> {order.deliveryLocation?.phone || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Total:</strong> {formatCurrency(order.totalAmount)}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Created:</strong> {formatDate(order.createdAt)}
+                      </div>
+                    </Card.Body>
+                    <Card.Footer>
+                      <div className="d-flex justify-content-between gap-2">
+                        <Button 
+                          variant="primary" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Processing')}
+                        >
+                          Start Processing
+                        </Button>
+                        <Button 
+                          variant="outline-warning" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Pending Call')}
+                        >
+                          Rollback to Pending
+                        </Button>
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Cancelled')}
+                        >
+                          Cancel Order
+                        </Button>
+                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
+                          <Button variant="outline-secondary" size="sm">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Alert variant="info">
+              No verified orders found for today.
+            </Alert>
+          )}
+        </Card.Body>
+        <Card.Footer className="text-muted">
+          <small>Auto-refreshes every {REFRESH_INTERVAL_MS / 1000} seconds</small>
+        </Card.Footer>
+      </Card>
+      
+      {/* Processing Orders Section */}
+      <Card className="shadow-sm mb-4">
+        <Card.Header className="bg-light">
+          <h3 className="h5 mb-0">Processing Orders</h3>
+        </Card.Header>
+        <Card.Body>
+          {isLoadingActive ? (
+            <div className="text-center my-4">
+              <Spinner animation="border" size="sm" className="me-2" />
+              <span>Loading processing orders...</span>
+            </div>
+          ) : activeError ? (
+            <Alert variant="danger">{activeError}</Alert>
+          ) : activeOrders.length > 0 ? (
+            <Row xs={1} md={2} lg={3} className="g-3">
+              {activeOrders
+                .filter(order => order.status === 'Processing')
+                .map(order => (
+                <Col key={order.id}>
+                  <Card className="h-100 border">
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                      <span>
+                        <strong>Order #{order.id}</strong>
+                      </span>
+                      <Badge bg={getStatusBadgeVariant(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </Card.Header>
+                    <Card.Body>
+                      <div className="mb-2">
+                        <strong>Customer:</strong> {order.deliveryLocation?.name || order.customerName || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Phone:</strong> {order.deliveryLocation?.phone || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Total:</strong> {formatCurrency(order.totalAmount)}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Created:</strong> {formatDate(order.createdAt)}
+                      </div>
+                    </Card.Body>
+                    <Card.Footer>
+                      <div className="d-flex justify-content-between gap-2">
+                        <Button 
+                          variant="primary" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Shipped')}
+                        >
+                          Mark Shipped
+                        </Button>
+                        <Button 
+                          variant="outline-warning" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Verified')}
+                        >
+                          Rollback to Verified
+                        </Button>
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Cancelled')}
+                        >
+                          Cancel Order
+                        </Button>
+                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
+                          <Button variant="outline-secondary" size="sm">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Alert variant="info">
+              No orders in processing state found for today.
+            </Alert>
+          )}
+        </Card.Body>
+        <Card.Footer className="text-muted">
+          <small>Auto-refreshes every {REFRESH_INTERVAL_MS / 1000} seconds</small>
+        </Card.Footer>
+      </Card>
+      
+      {/* Shipped Orders Section */}
+      <Card className="shadow-sm mb-4">
+        <Card.Header className="bg-light">
+          <h3 className="h5 mb-0">Shipped (Awaiting Delivery Confirmation)</h3>
+        </Card.Header>
+        <Card.Body>
+          {isLoadingActive ? (
+            <div className="text-center my-4">
+              <Spinner animation="border" size="sm" className="me-2" />
+              <span>Loading shipped orders...</span>
+            </div>
+          ) : activeError ? (
+            <Alert variant="danger">{activeError}</Alert>
+          ) : activeOrders.length > 0 ? (
+            <Row xs={1} md={2} lg={3} className="g-3">
+              {activeOrders
+                .filter(order => order.status === 'Shipped')
+                .map(order => (
+                <Col key={order.id}>
+                  <Card className="h-100 border">
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                      <span>
+                        <strong>Order #{order.id}</strong>
+                      </span>
+                      <Badge bg={getStatusBadgeVariant(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </Card.Header>
+                    <Card.Body>
+                      <div className="mb-2">
+                        <strong>Customer:</strong> {order.deliveryLocation?.name || order.customerName || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Phone:</strong> {order.deliveryLocation?.phone || 'N/A'}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Total:</strong> {formatCurrency(order.totalAmount)}
+                      </div>
+                      <div className="mb-2">
+                        <strong>Created:</strong> {formatDate(order.createdAt)}
+                      </div>
+                    </Card.Body>
+                    <Card.Footer>
+                      <div className="d-flex justify-content-between gap-2">
+                        <Button 
+                          variant="success" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Delivered')}
+                        >
+                          Mark Delivered
+                        </Button>
+                        <Button 
+                          variant="outline-warning" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Processing')}
+                        >
+                          Rollback to Processing
+                        </Button>
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, 'Cancelled')}
+                        >
+                          Cancel Order
+                        </Button>
+                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
+                          <Button variant="outline-secondary" size="sm">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Alert variant="info">
+              No shipped orders awaiting delivery confirmation found for today.
             </Alert>
           )}
         </Card.Body>
@@ -17407,6 +17680,8 @@ interface Product {
   createdAt: string;
   averageRating?: number | null;
   reviewCount?: number;
+  discountPercentage: number;
+  category: string;
 }
 
 // Define interface for review data
@@ -18879,12 +19154,9 @@ const SettingsPage = () => {
     setShowLocationModal(true);
   };
   
-  const handleLocationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleLocationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setLocationForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setLocationForm(prev => ({ ...prev, [name]: value }));
   };
   
   const handleSaveLocation = async (e: FormEvent) => {

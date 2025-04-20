@@ -302,12 +302,9 @@ const SettingsPage = () => {
     setShowLocationModal(true);
   };
   
-  const handleLocationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleLocationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setLocationForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setLocationForm(prev => ({ ...prev, [name]: value }));
   };
   
   const handleSaveLocation = async (e: FormEvent) => {

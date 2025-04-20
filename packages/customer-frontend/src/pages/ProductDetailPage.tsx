@@ -34,6 +34,8 @@ interface Product {
   createdAt: string;
   averageRating?: number | null;
   reviewCount?: number;
+  discountPercentage: number;
+  category: string;
 }
 
 // Define interface for review data
