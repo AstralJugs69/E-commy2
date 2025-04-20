@@ -88,6 +88,28 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       console.log("Stock check passed for all items.");
       // --- End Stock Check ---
 
+      // --- Assign Available Phone Number ---
+      console.log("Finding available phone number for order...");
+      const availablePhone = await tx.phoneNumber.findFirst({
+        where: {
+          status: 'Available'
+        },
+        select: { id: true, numberString: true }
+      });
+      
+      if (!availablePhone) {
+        console.warn("No available phone numbers found for order creation!");
+        throw new Error('No verification phone lines are currently available. Please try again later.');
+      }
+      
+      // Mark the phone number as busy - this happens atomically within the transaction
+      await tx.phoneNumber.update({
+        where: { id: availablePhone.id },
+        data: { status: 'Busy' }
+      });
+      console.log(`Marked phone number ${availablePhone.numberString} (ID: ${availablePhone.id}) as Busy for new order`);
+      // --- End Phone Number Assignment ---
+
       // --- Create Order ---
       console.log("Creating order record...");
       const newOrder = await tx.order.create({
@@ -98,22 +120,27 @@ router.post('/', isUser, async (req: Request, res: Response) => {
           deliveryLocationId: deliveryLocationId, // Link to the chosen delivery location
           latitude: location?.lat || null, // Store latitude if available
           longitude: location?.lng || null, // Store longitude if available
+          assignedPhoneNumberId: availablePhone.id, // Link the assigned phone number to the order
         },
       });
       console.log(`Order created with ID: ${newOrder.id}`);
 
       // --- Create OrderItems and Decrement Stock ---
       for (const item of items) {
-        // Fetch product again inside transaction to ensure consistency? Or trust validation?
-        // Let's trust validation and use name/price from request for simplicity now.
-        // const product = await tx.product.findUniqueOrThrow({ where: { id: item.productId }, select: { name: true, price: true } });
-
-        console.log(`Creating order item for product ID: ${item.productId}, quantity: ${item.quantity}`);
+        // Explicitly fetch the current product name to ensure it's stored correctly
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { name: true }
+        });
+        
+        const productName = product?.name || item.name || `Product ${item.productId}`;
+        
+        console.log(`Creating order item for product ID: ${item.productId}, name: "${productName}", quantity: ${item.quantity}`);
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
             productId: item.productId,
-            productName: item.name || `Product ${item.productId}`, // Use name from cart or default
+            productName: productName, // Use the explicitly fetched name
             quantity: item.quantity,
             price: item.price, // Price at time of order (from validated cart item)
           },
@@ -167,6 +194,8 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(`Fetching order ${orderId} for user ${userId}...`);
+
     // Fetch the order with its items, ensure it belongs to the user
     const order = await prisma.order.findUnique({
       where: {
@@ -188,6 +217,11 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
             phone: true,
             isDefault: true // Added isDefault field to be returned to the frontend
           }
+        },
+        assignedPhoneNumber: { // Include the assigned phone number
+          select: {
+            numberString: true
+          }
         }
         // Optionally include user details if needed, but usually not required here
       }
@@ -199,6 +233,11 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(`Order ${orderId} found, processing details...`);
+    console.log(`Order has ${order.items?.length || 0} items`);
+    console.log(`Delivery location:`, order.deliveryLocation || 'Not available');
+    console.log(`Assigned phone:`, order.assignedPhoneNumber || 'Not available');
+
     // Map items to include necessary details
     const processedItems = order.items.map((item: any) => ({
         id: item.id,
@@ -209,13 +248,15 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
         imageUrl: item.product?.images?.[0]?.url // Get first image URL from relation
     }));
 
-    // Include the order data with processed items and delivery location
+    // Include the order data with processed items, delivery location, and phone number
     const responseOrder = {
         ...order,
         items: processedItems,
+        verificationPhoneNumber: order.assignedPhoneNumber?.numberString || null,
         // Keep deliveryLocation as is from the query
     };
 
+    console.log(`Returning order details with verification number: ${responseOrder.verificationPhoneNumber || 'None'}`);
     res.status(200).json(responseOrder);
   } catch (error) {
     console.error("Error fetching order:", error);
@@ -256,82 +297,6 @@ router.get('/', isUser, async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ message: "An internal server error occurred" });
-  }
-});
-
-// GET /api/orders/assign-number/:orderId - Assign a phone number to an order
-router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response) => {
-  // 1. Extract and validate orderId from route parameters
-  const { orderId } = req.params;
-  const orderIdInt = parseInt(orderId, 10);
-  if (isNaN(orderIdInt)) {
-    res.status(400).json({ message: 'Invalid Order ID format.' });
-    return;
-  }
-
-  // 2. Extract userId from JWT payload (attached by isUser middleware)
-  const userId = req.user?.userId;
-  if (!userId) {
-    res.status(401).json({ message: "User ID not found in token" });
-    return;
-  }
-
-  try {
-    // 3. Verify the order exists, belongs to the user, and is 'Pending Call'
-    const order = await prisma.order.findUnique({
-      where: {
-        id: orderIdInt,
-        // Ensure the order belongs to the authenticated user
-        userId: userId,
-      },
-      select: { status: true, userId: true } // Select status for verification
-    });
-
-    if (!order) {
-      // Use 404 to indicate not found or not belonging to user
-      res.status(404).json({ message: 'Order not found or does not belong to user.' });
-      return;
-    }
-    // Allow fetching number even if status moved past Pending Call,
-    // but log if status is unexpected. Assignment should only happen once ideally.
-    if (order.status !== 'Pending Call') {
-       console.warn(`Assign number called for order ${orderIdInt} with status ${order.status}.`);
-       // Allow proceeding for now, maybe number was already assigned.
-       // return res.status(409).json({ message: `Order status is '${order.status}', not 'Pending Call'. Cannot assign number.` }); // 409 Conflict
-    }
-
-    // 4. Find the first available phone number
-    // Simple strategy: Find the first one marked 'Available'.
-    const availablePhone = await prisma.phoneNumber.findFirst({
-      where: {
-        status: 'Available'
-      },
-      select: { id: true, numberString: true }
-    });
-
-    // 5. Handle case where no phone number is available
-    if (!availablePhone) {
-      console.warn("No available phone numbers found for order ID:", orderIdInt);
-      // Return 503 Service Unavailable
-      res.status(503).json({ message: 'No verification phone lines are currently available. Please try again later.' });
-      return;
-    }
-
-    // 6. Mark the phone number as busy (Consider if this should only happen once)
-    // To prevent re-assigning/marking busy repeatedly, check if a number was already assigned
-    // For now, we proceed with marking busy - needs refinement if called multiple times.
-    await prisma.phoneNumber.update({
-      where: { id: availablePhone.id },
-      data: { status: 'Busy' }
-    });
-    console.log(`Marked phone number ${availablePhone.numberString} as Busy for order ${orderIdInt}`);
-
-    // 7. Return the assigned phone number string
-    res.status(200).json({ verificationPhoneNumber: availablePhone.numberString });
-
-  } catch (error) {
-    console.error(`Error assigning phone number for order ID ${orderIdInt}:`, error);
-    res.status(500).json({ message: 'Error assigning verification phone number' });
   }
 });
 

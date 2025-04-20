@@ -3,26 +3,37 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck } from 'react-icons/fa';
+import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck, FaPhone } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 
 // Interfaces based on expected API response for GET /api/orders/:id
+interface ProductImage {
+  id: number;
+  url: string;
+}
+
 interface OrderItem {
   id: number;
   quantity: number;
   price: number; // Price per item at time of order
   productId: number;
-  product: { // Assuming backend includes product name via relation
+  productName?: string; // Fallback for product name
+  product?: { // Assuming backend includes product name via relation
     name: string;
+    images?: ProductImage[];
   };
 }
 
-interface ShippingDetails { 
-  fullName: string;
-  address: string; // Assuming address is a single string from textarea
+interface DeliveryLocation { 
+  name: string;
   phone: string;
-  // Add other fields like city, zip, country if they are stored separately
+  district: string;
+  isDefault: boolean;
+}
+
+interface AssignedPhoneNumber {
+  numberString: string;
 }
 
 interface CustomerOrder {
@@ -30,8 +41,11 @@ interface CustomerOrder {
   status: string;
   totalAmount: number;
   createdAt: string; // ISO String
-  shippingDetails: ShippingDetails | null; 
+  shippingDetails?: any | null; // Legacy field
+  deliveryLocation?: DeliveryLocation | null;
   items: OrderItem[];
+  assignedPhoneNumber?: AssignedPhoneNumber | null; // Add assignedPhoneNumber field
+  verificationPhoneNumber?: string; // Field populated from assignedPhoneNumber.numberString
   // Other fields like userId, latitude, longitude might be present but not displayed
 }
 
@@ -74,6 +88,7 @@ const CustomerOrderDetailPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
+        console.log("Order details received:", response.data);
         setOrder(response.data);
       } catch (err) {
         console.error('Error fetching order details:', err);
@@ -133,24 +148,40 @@ const CustomerOrderDetailPage = () => {
               <Col xs={12} md={6} className="mb-3 mb-md-0">
                 <h5 className="border-bottom pb-2">Order Summary</h5>
                 <p className="mb-2"><strong>Date Placed:</strong> {formatDateTime(order.createdAt)}</p>
-                <p><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
-                {order.status === 'Pending Call' && (
-                  <p className="text-danger small mt-2">
-                    Remember to call the verification number provided after checkout to complete your order.
+                <p className="mb-2"><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
+                
+                {/* Display verification phone number if available */}
+                {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) && (
+                  <p className="mb-2">
+                    <strong><FaPhone className="me-1" /> Verification Phone:</strong>{' '}
+                    <a 
+                      href={`tel:${order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString}`} 
+                      className="text-primary fw-bold"
+                    >
+                      {order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString}
+                    </a>
                   </p>
+                )}
+                
+                {order.status === 'Pending Call' && (
+                  <Alert variant="warning" className="mt-2 p-2 small">
+                    <strong>Action Required:</strong> Please call the verification number {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) ? 'above' : 'provided after checkout'} to complete your order.
+                  </Alert>
                 )}
               </Col>
               <Col xs={12} md={6}>
-                <h5 className="border-bottom pb-2">Shipping Details</h5>
-                {order.shippingDetails ? (
+                <h5 className="border-bottom pb-2">Delivery Details</h5>
+                {order.deliveryLocation ? (
                     <>
-                        <p className="mb-2"><strong>Name:</strong> {order.shippingDetails.fullName}</p>
-                        <p className="mb-2"><strong>Phone:</strong> {order.shippingDetails.phone}</p>
-                        <p className="mb-0"><strong>Address:</strong> {order.shippingDetails.address || 'N/A'}</p>
-                        {/* Add City, Zip, Country if available */}
+                        <p className="mb-2"><strong>Name:</strong> {order.deliveryLocation.name}</p>
+                        <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
+                        <p className="mb-0"><strong>District:</strong> {order.deliveryLocation.district || 'N/A'}</p>
+                        {order.deliveryLocation.isDefault && (
+                          <Badge bg="info" className="mt-2">Default Location</Badge>
+                        )}
                     </>
                 ) : (
-                    <p className="mb-0">Not Available</p>
+                    <p className="mb-0">Delivery information not available</p>
                 )}
               </Col>
             </Row>
@@ -170,7 +201,9 @@ const CustomerOrderDetailPage = () => {
                   <tbody>
                     {order.items.map((item) => (
                       <tr key={item.id}>
-                        <td className="text-break">{item.product?.name || 'Product not found'}</td>
+                        <td className="text-break">
+                          {item.product?.name || item.productName || `Product #${item.productId}`}
+                        </td>
                         <td className="text-center">{item.quantity}</td>
                         <td className="text-center">{formatCurrency(item.price)}</td>
                         <td className="text-end">{formatCurrency(item.quantity * item.price)}</td>
