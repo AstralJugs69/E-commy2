@@ -117,7 +117,7 @@ const ResetPasswordPage = () => {
               {token && (
                 <Form onSubmit={handleResetPassword}>
                   <Form.Group className="mb-3" controlId="formNewPassword">
-                    <Form.Label className="fw-medium">New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="••••••••"
@@ -126,6 +126,7 @@ const ResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading || isSuccess}
+                      className="py-2"
                     />
                     <Form.Text className="text-muted">
                       Must be at least 6 characters long.
@@ -133,7 +134,7 @@ const ResetPasswordPage = () => {
                   </Form.Group>
 
                   <Form.Group className="mb-4" controlId="formConfirmPassword">
-                    <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="••••••••"
@@ -142,6 +143,7 @@ const ResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading || isSuccess}
+                      className="py-2"
                     />
                   </Form.Group>
 

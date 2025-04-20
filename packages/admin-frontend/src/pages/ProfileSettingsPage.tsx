@@ -143,24 +143,26 @@ const ProfileSettingsPage = () => {
                 
                 <Form onSubmit={handlePasswordChange}>
                   <Form.Group className="mb-3" controlId="formCurrentPassword">
-                    <Form.Label>Current Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">Current Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Enter your current password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       required
+                      className="py-2"
                     />
                   </Form.Group>
                   
                   <Form.Group className="mb-3" controlId="formNewPassword">
-                    <Form.Label>New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Enter new password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
+                      className="py-2"
                     />
                     <Form.Text className="text-muted">
                       Password must be at least 6 characters long.
@@ -168,13 +170,14 @@ const ProfileSettingsPage = () => {
                   </Form.Group>
                   
                   <Form.Group className="mb-4" controlId="formConfirmPassword">
-                    <Form.Label>Confirm New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Confirm new password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
+                      className="py-2"
                     />
                   </Form.Group>
                   
@@ -182,6 +185,7 @@ const ProfileSettingsPage = () => {
                     variant="primary"
                     type="submit"
                     disabled={isChangingPassword}
+                    className="py-2"
                   >
                     {isChangingPassword ? (
                       <>

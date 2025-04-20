@@ -130,25 +130,27 @@ const RegisterPage = () => {
               <Form onSubmit={handleRegister}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="py-2"
                   />
                   <Form.Text className="text-muted small">
                     Must be at least 6 characters long
@@ -157,13 +159,14 @@ const RegisterPage = () => {
                 
                 {/* Confirm Password input */}
                 <Form.Group className="mb-4" controlId="formBasicConfirmPassword">
-                  <Form.Label className="fw-medium">Confirm Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Confirm Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 

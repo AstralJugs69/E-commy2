@@ -349,20 +349,21 @@ const CategoryManagementPage: React.FC = () => {
         <Form onSubmit={handleSaveCategory}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Category Name</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Category Name</Form.Label>
               <Form.Control
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 isInvalid={!!formErrors.name}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.name}
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Description</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
@@ -370,19 +371,21 @@ const CategoryManagementPage: React.FC = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 isInvalid={!!formErrors.description}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.description}
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Image URL</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Image URL</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="https://example.com/image.png"
                 value={formImageUrl}
                 onChange={(e) => setFormImageUrl(e.target.value)}
                 isInvalid={!!formErrors.imageUrl}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.imageUrl}
@@ -400,6 +403,7 @@ const CategoryManagementPage: React.FC = () => {
               variant="primary" 
               type="submit" 
               disabled={isSaving}
+              className="py-2"
             >
               {isSaving ? (
                 <>
@@ -409,7 +413,7 @@ const CategoryManagementPage: React.FC = () => {
                     size="sm"
                     role="status"
                     aria-hidden="true"
-                    className="me-1"
+                    className="me-2"
                   />
                   Saving...
                 </>

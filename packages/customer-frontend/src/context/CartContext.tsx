@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -27,7 +27,7 @@ interface CartItem extends Product {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
+  addToCart: (productId: number, quantity: number) => Promise<void>;
   updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -35,6 +35,7 @@ interface CartContextType {
   getItemCount: () => number;
   totalPrice: number;
   fetchCart: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -45,6 +46,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Lock mechanism to prevent concurrent updates
+  const updateLocks = useRef<Record<number, boolean>>({});
   
   // Get token from localStorage
   const getToken = (): string | null => {
@@ -107,14 +111,104 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Add or update cart item quantity
-  const addOrUpdateItemQuantity = async (productId: number, quantity: number): Promise<void> => {
+  // Add new item to cart
+  const addToCart = async (productId: number, quantity: number): Promise<void> => {
     const token = getToken();
     
-    console.log('Adding/updating cart item:', { productId, quantity, isLoggedIn: !!token });
+    if (!token || !isAuthenticated()) {
+      toast.error("Please log in to add items to your cart.");
+      throw new Error("User not authenticated");
+    }
+    
+    if (quantity < 1) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('Adding new item to cart:', { productId, quantity });
+      
+      // Check if item already exists in cart
+      const existingItem = cartItems.find(item => item.id === productId);
+      
+      if (existingItem) {
+        // If item exists, check stock limits first
+        const newQuantity = existingItem.quantity + quantity;
+        
+        if (newQuantity > existingItem.stock) {
+          toast.error(`Cannot add more than available stock (${existingItem.stock})`);
+          setIsLoading(false);
+          updateLocks.current[productId] = false;
+          return;
+        }
+        
+        // If within stock limits, add to existing quantity
+        await updateCartItemQuantity(productId, newQuantity);
+        return;
+      }
+      
+      // For new items, we'll let the server validate stock
+      const response = await axios.post(
+        `${API_BASE_URL}/cart/item`,
+        { productId, quantity },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Add to cart response:', response.data);
+
+      // Refresh cart data from server
+      await fetchCart();
+      
+      // Show success message
+      toast.success(`${quantity} item(s) added to cart`);
+    } catch (err) {
+      console.error("Error adding item to cart:", err);
+      let errorMsg = "Failed to add item to cart.";
+      
+      if (axios.isAxiosError(err) && err.response) {
+        console.error('Error response data:', err.response.data);
+        
+        // Use specific error message from the server if available
+        if (err.response.data && err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data && typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        }
+        
+        // Common validation cases
+        if (err.response.status === 400) {
+          if (errorMsg.includes('stock') || errorMsg.includes('available')) {
+            errorMsg = `Cannot add more than available stock.`;
+          }
+        }
+      }
+      
+      toast.error(errorMsg);
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
+    }
+  };
+
+  // Update item quantity in cart
+  const updateCartItemQuantity = async (productId: number, quantity: number): Promise<void> => {
+    const token = getToken();
     
     if (!token || !isAuthenticated()) {
-      console.log('User not authenticated, token:', token);
       toast.error("Please log in to update your cart.");
       throw new Error("User not authenticated");
     }
@@ -123,40 +217,71 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await removeFromCart(productId);
       return;
     }
-
+    
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('Sending API request to add/update cart:', {
-        url: `${API_BASE_URL}/cart/item`,
-        data: { productId, quantity },
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log('Updating cart item quantity:', { productId, quantity });
       
-      // Use the POST /cart/item endpoint to add or update an item
-      await axios.post(
-        `${API_BASE_URL}/cart/item`,
-        { productId, quantity },
+      // Check current item in cart for local validation
+      const currentItem = cartItems.find(item => item.id === productId);
+      if (currentItem && quantity > currentItem.stock) {
+        toast.error(`Cannot add more than available stock (${currentItem.stock})`);
+        setIsLoading(false);
+        updateLocks.current[productId] = false;
+        return;
+      }
+      
+      // Use the update endpoint to set the quantity directly instead of incrementing
+      const response = await axios.post(
+        `${API_BASE_URL}/cart/update/${productId}`,
+        { quantity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('Cart update response:', response.data);
 
-      // Re-fetch the entire cart to ensure state consistency
+      // Update the cart item directly for immediate UI feedback
+      setCartItems(prevItems => 
+        prevItems.map(item => 
+          item.id === productId ? { ...item, quantity } : item
+        )
+      );
+      
+      // Then refresh cart data from server
       await fetchCart();
       
-      toast.success(`${quantity} item(s) added to cart.`);
+      // Show success message
+      toast.success(`Cart quantity updated to ${quantity}`);
     } catch (err) {
-      console.error("Error adding/updating cart:", err);
-      let errorMsg = "Failed to update cart item.";
+      console.error("Error updating cart item quantity:", err);
+      let errorMsg = "Failed to update quantity.";
       
       if (axios.isAxiosError(err) && err.response) {
-        console.log('API Error details:', {
-          status: err.response?.status,
-          data: err.response?.data,
-          message: err.message
-        });
+        console.error('Error response data:', err.response.data);
         
-        errorMsg = err.response.data.message || errorMsg;
+        // Use specific error message from the server if available
+        if (err.response.data && err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data && typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        }
+        
+        // Common validation cases
+        if (err.response.status === 400) {
+          if (errorMsg.includes('stock') || errorMsg.includes('available')) {
+            errorMsg = `Cannot add more than available stock.`;
+          }
+        }
       }
       
       toast.error(errorMsg);
@@ -164,6 +289,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw err;
     } finally {
       setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
     }
   };
 
@@ -176,6 +303,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error("User not authenticated");
     }
     
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
     setIsLoading(true);
     setError(null);
     
@@ -187,7 +322,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Re-fetch cart or update local state
+      // Update local state immediately for responsiveness
+      setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+      
+      // Re-fetch cart to ensure consistency
       await fetchCart();
       
       toast.success("Item removed from cart.");
@@ -204,6 +342,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw err;
     } finally {
       setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
     }
   };
 
@@ -228,7 +368,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       // Update local state
-    setCartItems([]);
+      setCartItems([]);
       
       toast.success("Cart cleared successfully.");
     } catch (err) {
@@ -268,14 +408,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addOrUpdateItemQuantity,
-      updateCartItemQuantity: addOrUpdateItemQuantity,
+      addToCart,
+      updateCartItemQuantity,
       removeFromCart, 
       clearCart, 
       getCartTotal, 
       getItemCount,
       totalPrice,
-      fetchCart
+      fetchCart,
+      isLoading
     }}>
       {children}
     </CartContext.Provider>

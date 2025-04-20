@@ -77,7 +77,7 @@ const RequestPasswordResetPage = () => {
 
               <Form onSubmit={handleRequestReset}>
                 <Form.Group className="mb-4" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
@@ -85,6 +85,7 @@ const RequestPasswordResetPage = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="py-2"
                   />
                 </Form.Group>
 

@@ -103,25 +103,27 @@ const LoginPage = () => {
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 

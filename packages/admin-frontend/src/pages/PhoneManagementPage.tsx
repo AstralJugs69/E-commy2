@@ -365,8 +365,8 @@ const PhoneManagementPage = () => {
                 {addError}
               </Alert>
             )}
-            <Form.Group controlId="newPhoneNumber">
-              <Form.Label>Phone Number</Form.Label>
+            <Form.Group className="mb-3" controlId="newPhoneNumber">
+              <Form.Label className="fw-medium text-neutral-700">Phone Number</Form.Label>
               <InputGroup>
                 <Form.Control
                   type="tel"
@@ -374,6 +374,7 @@ const PhoneManagementPage = () => {
                   value={newPhoneNumber}
                   onChange={(e) => setNewPhoneNumber(e.target.value)}
                   required
+                  className="py-2"
                 />
               </InputGroup>
               <Form.Text className="text-muted">
@@ -385,7 +386,7 @@ const PhoneManagementPage = () => {
             <Button variant="secondary" onClick={handleCloseAddModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={isAdding}>
+            <Button variant="primary" type="submit" disabled={isAdding} className="py-2">
               {isAdding ? (
                 <>
                   <Spinner
@@ -394,7 +395,7 @@ const PhoneManagementPage = () => {
                     size="sm"
                     role="status"
                     aria-hidden="true"
-                    className="me-1"
+                    className="me-2"
                   />
                   Adding...
                 </>

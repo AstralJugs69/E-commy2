@@ -33,7 +33,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Full Name</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">Full Name</Form.Label>
                 <Form.Control
                   type="text"
                   name="name"
@@ -46,7 +46,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Phone Number</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">Phone Number</Form.Label>
                 <Form.Control
                   type="tel"
                   name="phone"
@@ -62,7 +62,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>City/District</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">City/District</Form.Label>
                 <Form.Control
                   type="text"
                   name="district"
@@ -75,7 +75,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Area</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">Area</Form.Label>
                 <Form.Control
                   type="text"
                   name="area"
@@ -89,7 +89,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
           </Row>
 
           <Form.Group className="mb-4">
-            <Form.Label>Detailed Address</Form.Label>
+            <Form.Label className="fw-medium text-neutral-700">Detailed Address</Form.Label>
             <Form.Control
               as="textarea"
               name="details"

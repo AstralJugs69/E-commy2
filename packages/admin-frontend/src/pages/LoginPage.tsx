@@ -76,38 +76,40 @@ function LoginPage() {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Admin Login</h3>
               
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label>Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Forgot Password Link */}
                 <div className="text-end mb-3">
-                  <Link to="/request-password-reset">Forgot Password?</Link>
+                  <Link to="/request-password-reset" className="text-decoration-none">Forgot Password?</Link>
                 </div>
                 
                 {/* Error message */}
