@@ -11,6 +11,7 @@ import { FaHeart } from 'react-icons/fa';
 import { FaRegHeart } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface ProductImage {
   id: number;
@@ -262,9 +263,7 @@ const HomePage = () => {
                   onClick={() => setSelectedCategoryId(category.id.toString())}
                 >
                   <img 
-                    src={category.imageUrl 
-                      ? `${API_BASE_URL}${category.imageUrl}` 
-                      : '/placeholder-image.svg'}
+                    src={getImageUrl(category.imageUrl)} 
                     alt={category.name} 
                     className="category-image"
                     onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
@@ -355,19 +354,11 @@ const HomePage = () => {
                         {((product.images && product.images.length > 0) || product.imageUrl) ? (
                           <Card.Img 
                             variant="top" 
-                            src={
+                            src={getImageUrl(
                               product.images && product.images.length > 0
-                                ? (product.images[0].url.startsWith('/uploads/') 
-                                  ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
-                                  : product.images[0].url.startsWith('http')
-                                    ? product.images[0].url
-                                    : `${API_BASE_URL}${product.images[0].url}`)
-                                : (product.imageUrl?.startsWith('/uploads/')
-                                  ? `${UPLOADS_URL}${product.imageUrl.substring(8)}`
-                                  : product.imageUrl?.startsWith('http')
-                                    ? product.imageUrl
-                                    : `${API_BASE_URL}${product.imageUrl || ''}`)
-                            } 
+                                ? product.images[0].url
+                                : product.imageUrl
+                            )} 
                             alt={product.name}
                             style={{ height: '160px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {

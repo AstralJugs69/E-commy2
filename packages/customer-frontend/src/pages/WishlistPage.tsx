@@ -12,6 +12,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Define Product interface with support for both image formats
 interface ProductImage {
@@ -32,9 +33,6 @@ interface Product {
   averageRating?: number;
   reviewCount?: number;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const WishlistPage: React.FC = () => {
   const { wishlistItems, isLoading, error, fetchWishlist, removeFromWishlist } = useWishlist();
@@ -117,19 +115,11 @@ const WishlistPage: React.FC = () => {
                       {((item.product.images && item.product.images.length > 0) || item.product.imageUrl) ? (
                         <Card.Img 
                           variant="top" 
-                          src={
+                          src={getImageUrl(
                             item.product.images && item.product.images.length > 0
-                              ? (item.product.images[0].url.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.product.images[0].url.substring(8)}`
-                                : item.product.images[0].url.startsWith('http')
-                                  ? item.product.images[0].url
-                                  : `${API_BASE_URL}${item.product.images[0].url}`)
-                              : (item.product.imageUrl?.startsWith('/uploads/')
-                                ? `${UPLOADS_URL}${item.product.imageUrl.substring(8)}`
-                                : item.product.imageUrl?.startsWith('http')
-                                  ? item.product.imageUrl
-                                  : `${API_BASE_URL}${item.product.imageUrl || ''}`)
-                          } 
+                              ? item.product.images[0].url
+                              : item.product.imageUrl
+                          )}
                           alt={item.product.name}
                           style={{ height: '150px', objectFit: 'contain', padding: '0.75rem' }}
                           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {

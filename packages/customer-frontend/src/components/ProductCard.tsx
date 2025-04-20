@@ -4,9 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-hot-toast';
 import { FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = (import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads').replace(/\/+$/, '');
+import { getImageUrl } from '../utils/imageUrl';
 
 interface ProductImage {
   id: number;
@@ -69,7 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <div className="product-image-wrapper position-relative">
         <Card.Img
           variant="top"
-          src={imageUrl ? (imageUrl.startsWith('/uploads/') ? `${UPLOADS_URL}${imageUrl.substring(8)}` : imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`) : '/placeholder-product.jpg'}
+          src={getImageUrl(imageUrl)}
           alt={product.name}
           className="product-image"
           onClick={() => navigate(`/products/${product.id}`)}

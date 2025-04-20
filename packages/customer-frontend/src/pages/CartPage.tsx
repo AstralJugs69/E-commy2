@@ -4,9 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { FaTrash, FaShoppingCart } from 'react-icons/fa';
 import EmptyState from '../components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
+import { getImageUrl } from '../utils/imageUrl';
 
 const CartPage = () => {
   // Get all required functions from cart context in one place
@@ -73,13 +71,7 @@ const CartPage = () => {
                         {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
                         {(item.images?.[0]?.url || item.imageUrl) && (
                           <img 
-                            src={item.images?.[0]?.url 
-                              ? (item.images[0].url.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                                : item.images[0].url)
-                              : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                                : item.imageUrl || '/placeholder-image.svg')} 
+                            src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
                             alt={item.name} 
                             style={{ width: '70px', height: '70px', objectFit: 'contain' }}
                             className="me-3 border rounded p-1"
@@ -177,13 +169,7 @@ const CartPage = () => {
                     {/* Image Col */}
                     <Col xs={3} sm={2}>
                       <Image
-                        src={(item.images?.[0]?.url) 
-                          ? (item.images[0].url.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                            : item.images[0].url)
-                          : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                            : item.imageUrl || '/placeholder-image.svg')}
+                        src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
                         alt={item.name}
                         fluid
                         className="rounded border p-1"
