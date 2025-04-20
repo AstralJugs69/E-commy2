@@ -72,7 +72,16 @@ const OrderLocationMap: React.FC<{
   // Additional safety check to ensure latitude and longitude are valid numbers
   if (typeof latitude !== 'number' || typeof longitude !== 'number' || 
       isNaN(latitude) || isNaN(longitude)) {
+    console.error("Invalid coordinates provided to map:", { latitude, longitude });
     return <Alert variant="warning">Invalid location coordinates</Alert>;
+  }
+
+  console.log("Rendering map with coordinates:", { latitude, longitude });
+
+  // Check for valid coordinate ranges
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    console.error("Coordinates outside valid range:", { latitude, longitude });
+    return <Alert variant="warning">Location coordinates outside valid range</Alert>;
   }
 
   return (
@@ -162,6 +171,12 @@ const OrderDetailPage: React.FC = () => {
           headers: {
             Authorization: `Bearer ${token}`
           }
+        });
+
+        console.log("Order details received:", response.data);
+        console.log("Location data received:", {
+          latitude: response.data.latitude,
+          longitude: response.data.longitude
         });
 
         setOrder(response.data);
@@ -263,10 +278,15 @@ const OrderDetailPage: React.FC = () => {
                 </div>
                 <p><strong>Date Placed:</strong> {formatDateTime(order.createdAt)}</p>
                 <p><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
-                <p><strong>Location:</strong> {order.latitude && order.longitude ? 
-                  `Lat: ${order.latitude}, Lon: ${order.longitude}` : 
-                  'No location data available'}
-                </p>
+                
+                {/* Show precise coordinates if available */}
+                {order.latitude !== null && order.longitude !== null && (
+                  <div className="mt-2 p-2 bg-light rounded">
+                    <p className="mb-1"><strong>GPS Coordinates:</strong></p>
+                    <p className="mb-0 small">Latitude: {order.latitude.toFixed(6)}</p>
+                    <p className="mb-0 small">Longitude: {order.longitude.toFixed(6)}</p>
+                  </div>
+                )}
               </Card.Body>
             </Card>
             
@@ -288,7 +308,14 @@ const OrderDetailPage: React.FC = () => {
             {/* Location Map */}
             <Card className="mb-3">
               <Card.Body>
-                <Card.Title>Delivery Location</Card.Title>
+                <Card.Title className="d-flex align-items-center mb-3">
+                  Delivery Location
+                  {order.latitude != null && order.longitude != null ? (
+                    <Badge bg="success" className="ms-2">GPS Available</Badge>
+                  ) : (
+                    <Badge bg="warning" className="ms-2">No GPS Data</Badge>
+                  )}
+                </Card.Title>
                 {order.latitude != null && order.longitude != null && 
                  typeof order.latitude === 'number' && typeof order.longitude === 'number' ? (
                   <OrderLocationMap 

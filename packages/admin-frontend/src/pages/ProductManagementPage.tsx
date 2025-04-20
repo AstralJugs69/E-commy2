@@ -270,13 +270,13 @@ const ProductManagementPage: React.FC = () => {
     
     const formData = new FormData();
     files.forEach(file => {
-      formData.append('images', file);
+      formData.append('productImages', file);
     });
     
     // Since our api utility doesn't support FormData content type headers,
     // we'll use axios directly for the file upload, but still leverage the API_URL
     const uploadResponse = await axios.post(
-      `${API_URL}/admin/upload`,
+      `${API_URL}/api/admin/upload`,
       formData,
       {
         headers: {
@@ -286,7 +286,7 @@ const ProductManagementPage: React.FC = () => {
       }
     );
     
-    return uploadResponse.data.urls || [];
+    return uploadResponse.data.imageUrls || [];
   };
 
   const handleSaveProduct = async (event: FormEvent) => {

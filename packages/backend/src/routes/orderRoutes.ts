@@ -19,10 +19,17 @@ const cartItemSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
+// Location schema for geolocation data
+const locationSchema = z.object({
+  lat: z.number(),
+  lng: z.number()
+}).optional();
+
 const createOrderSchema = z.object({
   items: z.array(cartItemSchema).min(1, { message: "At least one product is required" }),
   deliveryLocationId: z.number().int().positive({ message: "Valid Delivery Location ID is required" }),
-  totalAmount: z.number().positive({ message: "Total amount must be positive" })
+  totalAmount: z.number().positive({ message: "Total amount must be positive" }),
+  location: locationSchema // Add location field to schema
 });
 
 // POST /api/orders - Create a new order
@@ -39,7 +46,7 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
-    const { items, deliveryLocationId, totalAmount } = validationResult.data;
+    const { items, deliveryLocationId, totalAmount, location } = validationResult.data;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -89,6 +96,8 @@ router.post('/', isUser, async (req: Request, res: Response) => {
           status: 'Pending Call', // Initial status
           totalAmount: totalAmount,
           deliveryLocationId: deliveryLocationId, // Link to the chosen delivery location
+          latitude: location?.lat || null, // Store latitude if available
+          longitude: location?.lng || null, // Store longitude if available
         },
       });
       console.log(`Order created with ID: ${newOrder.id}`);

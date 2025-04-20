@@ -363,8 +363,14 @@ router.get('/orders/:orderId', isAdmin, async (req: Request, res: Response) => {
     // 2. Use Prisma to find the order with the specified ID
     const orderDetails = await prisma.order.findUnique({
       where: { id: orderIdInt },
-      include: {
-        // Include user email for reference
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        updatedAt: true,
+        latitude: true,
+        longitude: true,
         user: {
           select: { email: true }
         },

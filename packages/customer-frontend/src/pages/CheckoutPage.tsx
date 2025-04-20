@@ -45,10 +45,12 @@ const CheckoutPage: React.FC = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          const locationData = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          console.log("Successfully captured geolocation:", locationData);
+          setLocation(locationData);
           setLocationError(null);
         },
         (error) => {
@@ -149,9 +151,11 @@ const CheckoutPage: React.FC = () => {
           price: item.price
         })),
         deliveryLocationId: parseInt(selectedLocationId, 10),
-        location: location || undefined,
+        location: location, // Ensure location is included (will be undefined if not available)
         totalAmount: totalPrice
       };
+
+      console.log("Sending order data with location:", orderData);
 
       // Use the API_URL constant defined at the top of the file
       const response = await axios.post(
