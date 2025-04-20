@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner } from 'react-bootstrap';
+import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
+import api from '../utils/api';
 
 // Make sure the API URL is defined
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface DeliveryLocation {
   id: number;
@@ -28,6 +31,22 @@ const CheckoutPage: React.FC = () => {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationErrorState, setLocationErrorState] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Add Location Modal state
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [addLocationError, setAddLocationError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [newLocationData, setNewLocationData] = useState({
+    name: '',
+    phone: '',
+    district: ''
+  });
+
+  // Districts state
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [districtError, setDistrictError] = useState<string | null>(null);
 
   // New retry mechanism state variables
   const [retryCount, setRetryCount] = useState(0);
@@ -91,42 +110,137 @@ const CheckoutPage: React.FC = () => {
   // Fetch saved delivery locations
   useEffect(() => {
     if (!token) return;
-
-    const fetchLocations = async () => {
-      setIsLoadingLocations(true);
-      setLocationErrorState(null);
-
-      try {
-        const response = await axios.get(`${API_URL}/api/addresses`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        const locations = response.data;
-        setSavedLocations(locations);
-        
-        // If there's a default location, select it automatically
-        const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
-        if (defaultLocation) {
-          setSelectedLocationId(defaultLocation.id.toString());
-        } else if (locations.length > 0) {
-          // If no default but locations exist, select the first one
-          setSelectedLocationId(locations[0].id.toString());
-        } else {
-          // If no locations, leave as empty string
-          setSelectedLocationId('');
-        }
-      } catch (err) {
-        console.error('Error fetching delivery locations:', err);
-        setLocationErrorState('Failed to load your saved delivery locations.');
-      } finally {
-        setIsLoadingLocations(false);
-      }
-    };
-
+    
     fetchLocations();
   }, [token]);
+
+  // Fetch districts
+  useEffect(() => {
+    fetchDistricts();
+  }, []);
+
+  // Function to fetch saved delivery locations
+  const fetchLocations = async () => {
+    setIsLoadingLocations(true);
+    setLocationErrorState(null);
+
+    try {
+      const response = await api.get('/addresses');
+      
+      const locations = response.data;
+      setSavedLocations(locations);
+      
+      // If there's a default location, select it automatically
+      const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
+      if (defaultLocation) {
+        setSelectedLocationId(defaultLocation.id.toString());
+      } else if (locations.length > 0) {
+        // If no default but locations exist, select the first one
+        setSelectedLocationId(locations[0].id.toString());
+      } else {
+        // If no locations, leave as empty string
+        setSelectedLocationId('');
+      }
+    } catch (err) {
+      console.error('Error fetching delivery locations:', err);
+      setLocationErrorState('Failed to load your saved delivery locations.');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  // Function to fetch districts
+  const fetchDistricts = async () => {
+    setIsLoadingDistricts(true);
+    setDistrictError(null);
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/districts`);
+      setDistricts(response.data);
+      
+      // Initialize the new location form with the first district
+      if (response.data.length > 0) {
+        setNewLocationData(prev => ({
+          ...prev,
+          district: response.data[0]
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching districts:', err);
+      setDistrictError('Failed to load districts.');
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
+
+  // New Location Modal handlers
+  const handleShowAddModal = () => {
+    setShowAddLocationModal(true);
+    setAddLocationError(null);
+    setFormErrors({});
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddLocationModal(false);
+    setAddLocationError(null);
+    setFormErrors({});
+  };
+
+  const handleNewLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewLocationData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveNewLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    const errors: {[key: string]: string} = {};
+    if (!newLocationData.name.trim()) errors.name = "Location name is required";
+    if (!newLocationData.phone.trim()) errors.phone = "Phone number is required";
+    if (!newLocationData.district.trim()) errors.district = "District is required";
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setIsAddingLocation(true);
+    setAddLocationError(null);
+    
+    try {
+      // Create new location
+      const response = await api.post('/addresses', newLocationData);
+      
+      toast.success("New delivery location added!");
+      
+      // Refresh locations and select the newly added one
+      const locationsResponse = await api.get('/addresses');
+      setSavedLocations(locationsResponse.data);
+      
+      // Select the newly added location
+      if (response.data && response.data.id) {
+        setSelectedLocationId(response.data.id.toString());
+      }
+      
+      // Close the modal
+      setShowAddLocationModal(false);
+    } catch (err) {
+      console.error('Error adding new location:', err);
+      if (axios.isAxiosError(err) && err.response) {
+        // Check if the error response contains field-specific validation errors
+        if (err.response.data.errors && typeof err.response.data.errors === 'object') {
+          setFormErrors(err.response.data.errors);
+        } else {
+          setAddLocationError(err.response.data.message || 'Failed to add delivery location.');
+        }
+      } else {
+        setAddLocationError('Network error. Please check your connection.');
+      }
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
 
   // New function to attempt order placement that can be reused for retries
   const attemptOrderPlacement = async (orderData: any) => {
@@ -317,18 +431,31 @@ const CheckoutPage: React.FC = () => {
                 )}
                 
                 {/* Delivery Location Selection */}
-                {isLoadingLocations ? (
-                  <div className="text-center mb-3">
-                    <Spinner animation="border" size="sm" />
-                    <span className="ms-2">Loading delivery locations...</span>
+                <Form.Group className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <Form.Label className="fw-bold mb-0">Select Delivery Location</Form.Label>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={handleShowAddModal}
+                      className="d-flex align-items-center rounded-pill px-3 py-2"
+                      disabled={isLoadingLocations || isLoadingDistricts}
+                    >
+                      <FaPlus className="me-2" /> Add New Location
+                    </Button>
                   </div>
-                ) : savedLocations.length > 0 ? (
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-bold">Choose a Delivery Location</Form.Label>
+                  
+                  {isLoadingLocations ? (
+                    <div className="text-center my-4 py-3">
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      <span>Loading delivery locations...</span>
+                    </div>
+                  ) : savedLocations.length > 0 ? (
                     <Form.Select 
                       value={selectedLocationId}
                       onChange={(e) => setSelectedLocationId(e.target.value)}
                       required
+                      className="mb-3"
                     >
                       <option value="" disabled>-- Select Delivery Location --</option>
                       {savedLocations.map(location => (
@@ -338,13 +465,17 @@ const CheckoutPage: React.FC = () => {
                         </option>
                       ))}
                     </Form.Select>
-                  </Form.Group>
-                ) : (
-                  <Alert variant="warning">
-                    Please <Link to="/settings" state={{ initialTab: 'shipping' }}>add a Delivery Location</Link> in your Settings first.
-                  </Alert>
-                )}
-
+                  ) : (
+                    <Alert variant="info" className="mb-3">
+                      <div className="d-flex align-items-center mb-2">
+                        <FaMapMarkerAlt className="me-2 text-primary" size={18} />
+                        <span className="fw-medium">You don't have any saved delivery locations.</span>
+                      </div>
+                      <p className="mb-0">Please add a delivery location to continue with checkout.</p>
+                    </Alert>
+                  )}
+                </Form.Group>
+                
                 {locationError && (
                   <Alert variant="warning" className="mb-3">
                     {locationError}
@@ -356,7 +487,7 @@ const CheckoutPage: React.FC = () => {
                   variant={isRetrying ? "warning" : "primary"}
                   size="lg"
                   className="w-100 mt-3"
-                  disabled={loading || isRetrying}
+                  disabled={loading || isRetrying || !selectedLocationId}
                 >
                   {loading || isRetrying ? (
                     <>
@@ -378,45 +509,150 @@ const CheckoutPage: React.FC = () => {
               <h5 className="mb-0">Order Summary</h5>
             </Card.Header>
             <Card.Body>
-              <div className="table-responsive">
-                <Table responsive className="table-sm">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-end">Price</th>
+              <Table responsive className="mb-3">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th className="text-center">Qty</th>
+                    <th className="text-end">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cartItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td className="text-center">{item.quantity}</td>
+                      <td className="text-end">${(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {cartItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="text-truncate" style={{ maxWidth: '140px' }}>{item.name}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th colSpan={2}>Total:</th>
-                      <th className="text-end">€{totalPrice.toFixed(2)}</th>
-                    </tr>
-                  </tfoot>
-                </Table>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th colSpan={2}>Total</th>
+                    <th className="text-end">${totalPrice.toFixed(2)}</th>
+                  </tr>
+                </tfoot>
+              </Table>
+              <div className="d-grid gap-2">
+                <Link to="/cart" className="btn btn-outline-secondary">
+                  Edit Cart
+                </Link>
               </div>
-
-              {location && (
-                <Alert variant="success" className="mb-0 mt-3">
-                  <small>
-                    <strong>Delivery Location Detected</strong><br />
-                    Your order will be delivered based on your current location.
-                  </small>
-                </Alert>
-              )}
             </Card.Body>
           </Card>
         </Col>
       </Row>
+      
+      {/* Add New Location Modal */}
+      <Modal show={showAddLocationModal} onHide={handleCloseAddModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Add New Delivery Location</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {addLocationError && (
+            <Alert variant="danger" className="mb-3">
+              {addLocationError}
+            </Alert>
+          )}
+          
+          {districtError && (
+            <Alert variant="warning" className="mb-3">
+              {districtError}
+            </Alert>
+          )}
+          
+          <Form onSubmit={handleSaveNewLocation} noValidate>
+            <Row className="mb-3">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">Location Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Home, Work, etc."
+                    name="name"
+                    value={newLocationData.name}
+                    onChange={handleNewLocationChange}
+                    required
+                    className="auth-input"
+                    isInvalid={!!formErrors.name}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.name}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row className="mb-3">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">Phone Number</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Phone number"
+                    name="phone"
+                    value={newLocationData.phone}
+                    onChange={handleNewLocationChange}
+                    required
+                    className="auth-input"
+                    isInvalid={!!formErrors.phone}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.phone}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row className="mb-4">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">District</Form.Label>
+                  <Form.Select
+                    name="district"
+                    value={newLocationData.district}
+                    onChange={handleNewLocationChange}
+                    required
+                    className="auth-input"
+                    isInvalid={!!formErrors.district}
+                    disabled={isLoadingDistricts}
+                  >
+                    {isLoadingDistricts ? (
+                      <option value="">Loading districts...</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>-- Select District --</option>
+                        {districts.map((district) => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </>
+                    )}
+                  </Form.Select>
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.district}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <div className="d-grid">
+              <Button 
+                variant="primary" 
+                type="submit" 
+                disabled={isAddingLocation || isLoadingDistricts}
+                className="rounded-pill py-2 fw-medium"
+              >
+                {isAddingLocation ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                    Saving...
+                  </>
+                ) : 'Add Location'}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };
