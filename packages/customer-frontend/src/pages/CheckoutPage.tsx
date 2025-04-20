@@ -29,6 +29,12 @@ const CheckoutPage: React.FC = () => {
   const [locationErrorState, setLocationErrorState] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
 
+  // New retry mechanism state variables
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const maxRetries = 3; // Maximum number of retry attempts
+  const retryDelay = 5000; // 5 seconds delay between retries
+
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -122,39 +128,9 @@ const CheckoutPage: React.FC = () => {
     fetchLocations();
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!token) {
-      toast.error('You must be logged in to place an order');
-      navigate('/login');
-      return;
-    }
-
-    // Validate based on selected option
-    setValidationError(null); // Clear previous validation errors
-    setError(null); // Clear previous errors
-    
-    // Check if a delivery location is selected
-    if (!selectedLocationId) {
-      setValidationError('Please select a delivery location.');
-      return;
-    }
-
+  // New function to attempt order placement that can be reused for retries
+  const attemptOrderPlacement = async (orderData: any) => {
     try {
-      setLoading(true);
-
-      const orderData = {
-        items: cartItems.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        deliveryLocationId: parseInt(selectedLocationId, 10),
-        location: location, // Ensure location is included (will be undefined if not available)
-        totalAmount: totalPrice
-      };
-
       console.log("Sending order data with location:", orderData);
 
       // Use the API_URL constant defined at the top of the file
@@ -185,6 +161,7 @@ const CheckoutPage: React.FC = () => {
         console.error("ERROR PATH: Order ID *missing* in successful response!", response.data);
         toast.error('Failed to create order (Invalid confirmation from server)');
         setError("Order placed, but couldn't get confirmation ID.");
+        setLoading(false);
       }
     } catch (error) {
       console.error("ERROR PATH: API call caught an error object:", error);
@@ -194,15 +171,100 @@ const CheckoutPage: React.FC = () => {
           status: error.response.status,
           data: error.response.data
         });
-        toast.error(`Order failed: ${errorMessage}`);
-        setError(errorMessage);
+        
+        // Modify the isPhoneUnavailableError condition to include the "internal server error" message
+        const isPhoneUnavailableError = 
+          (error.response.status === 503 || error.response.status === 500) || 
+          (errorMessage.toLowerCase().includes('no available phone numbers') || 
+           errorMessage.toLowerCase().includes('verification line') ||
+           errorMessage.toLowerCase().includes('internal server error') ||
+           errorMessage.toLowerCase().includes('server error'));
+        
+        if (isPhoneUnavailableError && retryCount < maxRetries) {
+          // Increment retry count
+          const newRetryCount = retryCount + 1;
+          setRetryCount(newRetryCount);
+          setIsRetrying(true);
+          
+          // Show retry message to user with more visible toast
+          const retryMessage = `No verification line available currently. Retrying... (Attempt ${newRetryCount}/${maxRetries + 1})`;
+          // Dismiss any existing error toasts first
+          toast.dismiss();
+          // Use a persistent toast that doesn't auto-dismiss
+          toast.loading(retryMessage, { 
+            id: 'retry-toast',
+            duration: Infinity // Make the toast stay until explicitly dismissed
+          });
+          setError(retryMessage);
+          
+          // Retry after delay
+          setTimeout(() => {
+            // Dismiss the loading toast before retrying
+            toast.dismiss('retry-toast');
+            attemptOrderPlacement(orderData);
+          }, retryDelay);
+        } else if (isPhoneUnavailableError && retryCount >= maxRetries) {
+          // Max retries reached
+          setIsRetrying(false);
+          const maxRetriesMessage = "We couldn't find an available verification line after several attempts. Please try placing your order again later or contact support.";
+          toast.error(maxRetriesMessage);
+          setError(maxRetriesMessage);
+          setLoading(false);
+        } else {
+          // Other error, not related to phone verification
+          toast.error(`Order failed: ${errorMessage}`);
+          setError(errorMessage);
+          setIsRetrying(false);
+          setLoading(false);
+        }
       } else {
+        // Network or other non-axios error
         toast.error('Failed to place order. Please check your connection and try again.');
         setError('Network error. Please check your connection and try again.');
+        setIsRetrying(false);
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!token) {
+      toast.error('You must be logged in to place an order');
+      navigate('/login');
+      return;
+    }
+
+    // Reset retry state at the beginning of a new checkout attempt
+    setRetryCount(0);
+    setIsRetrying(false);
+
+    // Validate based on selected option
+    setValidationError(null); // Clear previous validation errors
+    setError(null); // Clear previous errors
+    
+    // Check if a delivery location is selected
+    if (!selectedLocationId) {
+      setValidationError('Please select a delivery location.');
+      return;
+    }
+
+    setLoading(true);
+
+    const orderData = {
+      items: cartItems.map(item => ({
+        productId: item.id,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      deliveryLocationId: parseInt(selectedLocationId, 10),
+      location: location, // Ensure location is included (will be undefined if not available)
+      totalAmount: totalPrice
+    };
+
+    // Attempt order placement with the prepared data
+    await attemptOrderPlacement(orderData);
   };
 
   if (cartItems.length === 0) {
@@ -237,7 +299,13 @@ const CheckoutPage: React.FC = () => {
                 )}
                 
                 {error && (
-                  <Alert variant="danger" className="mb-3">
+                  <Alert variant={isRetrying ? "warning" : "danger"} className="mb-3">
+                    {isRetrying && (
+                      <div className="d-flex align-items-center mb-2">
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        <strong>Retry in progress</strong>
+                      </div>
+                    )}
                     {error}
                   </Alert>
                 )}
@@ -283,16 +351,17 @@ const CheckoutPage: React.FC = () => {
                   </Alert>
                 )}
 
-                <Button
-                  variant="primary"
+                <Button 
                   type="submit"
-                  className="w-100 mt-2"
-                  disabled={loading || savedLocations.length === 0}
+                  variant={isRetrying ? "warning" : "primary"}
+                  size="lg"
+                  className="w-100 mt-3"
+                  disabled={loading || isRetrying}
                 >
-                  {loading ? (
+                  {loading || isRetrying ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Processing...
+                      <Spinner as="span" animation="border" size="sm" className="me-2" />
+                      {isRetrying ? `Automatic retry in progress (${retryCount}/${maxRetries + 1})` : 'Processing...'}
                     </>
                   ) : (
                     'Place Order'
