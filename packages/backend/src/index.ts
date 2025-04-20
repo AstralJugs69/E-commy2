@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { rateLimit } from 'express-rate-limit';
+import compression from 'compression';
 import productRoutes from './routes/productRoutes';
 import adminRoutes from './routes/adminRoutes';
 import productAdminRoutes from './routes/productAdminRoutes';
@@ -46,6 +47,7 @@ const writeLimiter = rateLimit({
 // Middleware
 app.use(cors()); // Allow requests from frontend (configure origin later for security)
 app.use(express.json()); // Parse JSON request bodies
+app.use(compression()); // Apply compression middleware to all routes
 
 // Apply general rate limiter to all requests
 app.use(generalLimiter);

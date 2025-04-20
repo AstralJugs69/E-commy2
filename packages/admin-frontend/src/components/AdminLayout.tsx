@@ -24,6 +24,10 @@ const AdminLayout = () => {
     navigate('/login', { replace: true });
   };
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+  };
+
   return (
     <div className="admin-layout d-flex flex-column min-vh-100">
       <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
@@ -64,8 +68,7 @@ const AdminLayout = () => {
               <Button
                 variant="outline-light"
                 size="sm"
-                as={Link}
-                to="profile"
+                onClick={() => handleNavigate('profile')}
                 className="px-3 d-flex align-items-center gap-2"
               >
                 <FiUser size={16} /> Profile

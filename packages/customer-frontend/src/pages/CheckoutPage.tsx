@@ -186,7 +186,7 @@ const CheckoutPage: React.FC = () => {
     setFormErrors({});
   };
 
-  const handleNewLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleNewLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewLocationData(prev => ({ ...prev, [name]: value }));
   };
