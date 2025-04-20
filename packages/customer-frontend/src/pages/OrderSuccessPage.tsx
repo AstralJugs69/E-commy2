@@ -22,6 +22,10 @@ interface DeliveryLocation {
   userId: number;
 }
 
+interface AssignedPhoneNumber {
+  numberString: string;
+}
+
 interface Order {
   id: string;
   userId: string;
@@ -32,6 +36,7 @@ interface Order {
   items: OrderItem[];
   deliveryLocation?: DeliveryLocation;
   verificationPhoneNumber?: string;
+  assignedPhoneNumber?: AssignedPhoneNumber | null;
 }
 
 const OrderSuccessPage = () => {
@@ -45,7 +50,7 @@ const OrderSuccessPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [numberError, setNumberError] = useState<string | null>(null);
 
-  const verificationNumber = order?.verificationPhoneNumber || '';
+  const verificationNumber = order?.assignedPhoneNumber?.numberString || order?.verificationPhoneNumber || '';
 
   const fetchOrderDetails = async () => {
     if (!orderId || !token) {
@@ -70,12 +75,13 @@ const OrderSuccessPage = () => {
 
         setOrder(response.data);
         
-        // Verification phone number debugging
-        if (!response.data.verificationPhoneNumber) {
+        // Verification phone number debugging - check both possible sources
+        const phoneNumber = response.data.assignedPhoneNumber?.numberString || response.data.verificationPhoneNumber;
+        if (!phoneNumber) {
           console.warn("⚠️ NO VERIFICATION PHONE NUMBER FOUND");
           setNumberError("No verification phone number was assigned to this order. Please contact support.");
         } else {
-          console.log(`✅ Verification phone number: ${response.data.verificationPhoneNumber}`);
+          console.log(`✅ Verification phone number: ${phoneNumber}`);
         }
 
         // Delivery location debugging
@@ -174,13 +180,13 @@ const OrderSuccessPage = () => {
         </Badge>
       </div>
 
-      {verificationNumber && (
+      {verificationNumber ? (
         <Card className="mb-4 shadow border-danger">
           <Card.Header as="h5" className="bg-danger text-white">Important: Phone Verification Required</Card.Header>
           <Card.Body className="p-4 text-center">
             <div className="py-2">
               <Card.Title className="mb-3 fs-5">
-                Please call this number immediately to verify your order:
+                To complete your order, please call this verification number:
               </Card.Title>
               <div className="bg-light py-3 px-2 rounded mb-3 border">
                 <h2 className="fw-bold mb-0">
@@ -189,15 +195,18 @@ const OrderSuccessPage = () => {
                   </a>
                 </h2>
               </div>
-              <Card.Text className="text-danger fw-bold">
-                Failure to call may result in order cancellation
+              <Card.Text>
+                <span className="text-danger fw-bold">
+                  Failure to call may result in order cancellation
+                </span>
+                <p className="mt-2 small text-muted">
+                  Call this number to confirm your order. Tap the number above to dial automatically.
+                </p>
               </Card.Text>
             </div>
           </Card.Body>
         </Card>
-      )}
-
-      {!verificationNumber && !loading && (
+      ) : (
         <Alert variant="danger" className="mb-4">
           <Alert.Heading>Verification Phone Number Missing</Alert.Heading>
           <p>
