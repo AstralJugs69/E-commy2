@@ -64,13 +64,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card className="h-100 product-card shadow-sm border-0 transition-hover">
-      <div className="product-image-wrapper position-relative">
+      <div className="product-image-wrapper position-relative" style={{ aspectRatio: '1/1' }}>
         <Card.Img
           variant="top"
           src={getImageUrl(imageUrl)}
           alt={product.name}
           className="product-image"
           onClick={() => navigate(`/products/${product.id}`)}
+          loading="lazy"
+          width="100%"
+          height="100%"
         />
         {product.discountPercentage > 0 && (
           <Badge 
