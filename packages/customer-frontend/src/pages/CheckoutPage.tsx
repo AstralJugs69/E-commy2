@@ -387,7 +387,7 @@ const CheckoutPage: React.FC = () => {
         <Alert variant="warning">
           Your cart is empty. Add some products before checkout.
         </Alert>
-        <Button variant="primary" onClick={() => navigate('/')}>
+        <Button variant="secondary" onClick={() => navigate('/')} className="rounded-pill px-4 py-2">
           Continue Shopping
         </Button>
       </Container>
@@ -485,8 +485,7 @@ const CheckoutPage: React.FC = () => {
                 <Button 
                   type="submit"
                   variant={isRetrying ? "warning" : "primary"}
-                  size="lg"
-                  className="w-100 mt-3"
+                  className="w-100 mt-3 rounded-pill py-2"
                   disabled={loading || isRetrying || !selectedLocationId}
                 >
                   {loading || isRetrying ? (

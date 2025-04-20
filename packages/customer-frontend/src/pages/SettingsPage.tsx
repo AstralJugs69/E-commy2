@@ -740,7 +740,7 @@ const SettingsPage = () => {
                             <FaEdit className="me-1" /> Edit
                           </Button>
                           <Button 
-                            variant="outline-danger"
+                            variant="danger"
                             size="sm"
                             onClick={() => handleDeleteLocation(location.id)}
                             disabled={isDeletingLocation !== null || isSettingDefault !== null}
@@ -830,7 +830,7 @@ const SettingsPage = () => {
                         variant="primary"
                         type="submit"
                         disabled={isUpdatingPassword}
-                        className="rounded-pill px-4 py-2"
+                        className="fw-medium py-2 rounded-pill"
                       >
                         {isUpdatingPassword ? (
                           <>
@@ -1099,7 +1099,7 @@ const SettingsPage = () => {
                 variant="primary" 
                 type="submit"
                 disabled={isUpdatingPassword}
-                className="fw-medium py-2"
+                className="fw-medium py-2 rounded-pill"
               >
                 {isUpdatingPassword ? (
                   <>

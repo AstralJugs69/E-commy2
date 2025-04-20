@@ -138,7 +138,6 @@ const LoginPage = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-100 py-2 rounded-pill fw-medium"
-                  size="lg"
                 >
                   {isLoading ? (
                     <>

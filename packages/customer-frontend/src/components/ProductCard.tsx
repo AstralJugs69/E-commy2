@@ -106,36 +106,38 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <span className="fw-bold fs-5">₹{product.price.toFixed(2)}</span>
           )}
         </div>
-        <div className="mt-auto">
-          <div className="d-flex gap-3 align-items-center">
-            <div className="quantity-control d-flex align-items-center border rounded">
+        {!hideAddToCart && (
+          <div className="mt-auto">
+            <div className="d-flex gap-3 align-items-center">
+              <div className="quantity-control d-flex align-items-center border rounded">
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaMinus />
+                </Button>
+                <span className="px-3">{quantity}</span>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaPlus />
+                </Button>
+              </div>
               <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="border-0 py-1 px-2"
+                variant="primary"
+                className="flex-grow-1 rounded-pill py-2 px-4"
+                onClick={() => handleAddToCart(product)}
               >
-                <FaMinus />
-              </Button>
-              <span className="px-3">{quantity}</span>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(quantity + 1)}
-                className="border-0 py-1 px-2"
-              >
-                <FaPlus />
+                <FaShoppingCart className="me-2" /> Add
               </Button>
             </div>
-            <Button
-              variant="primary"
-              className="flex-grow-1 rounded-pill py-2 px-4"
-              onClick={() => handleAddToCart(product)}
-            >
-              <FaShoppingCart className="me-2" /> Add
-            </Button>
           </div>
-        </div>
+        )}
       </Card.Body>
     </Card>
   );
