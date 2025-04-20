@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { isAdmin } from '../middleware/authMiddleware'; // Protect upload
 
 const router = Router();
@@ -48,12 +49,12 @@ const upload = multer({
 
 /**
  * @route POST /api/admin/upload
- * @description Upload multiple product images (admin only, up to 5 files)
+ * @description Upload multiple product images (admin only, up to 5 files), resize them, and convert to WebP
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
     // Handle multiple file uploads with manually typed callback
-    upload.array('productImages', 5)(req as any, res as any, (err: any) => {
+    upload.array('productImages', 5)(req as any, res as any, async (err: any) => {
         if (err) {
             let errorMessage = 'File upload failed.';
             
@@ -79,14 +80,47 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
             return;
         }
         
-        // Files upload successful
+        // Files upload successful - now process with sharp
         const files = req.files as Express.Multer.File[];
-        const imageUrls = files.map(file => `/uploads/${file.filename}`); // Paths relative to the 'public' dir
+        const processedImageUrls: string[] = [];
         
-        res.status(201).json({ 
-            message: 'Files uploaded successfully',
-            imageUrls: imageUrls
-        });
+        try {
+            // Process each file sequentially using Promise.all
+            await Promise.all(files.map(async (file) => {
+                try {
+                    // Define WebP output path
+                    const fileNameWithoutExt = file.filename.replace(/\.[^/.]+$/, "");
+                    const outputFileName = `${fileNameWithoutExt}.webp`;
+                    const outputFilePath = path.join(uploadsDir, outputFileName);
+                    
+                    // Process image with sharp - resize and convert to WebP
+                    await sharp(file.path)
+                        .resize({ width: 800, withoutEnlargement: true })
+                        .webp({ quality: 80 })
+                        .toFile(outputFilePath);
+                    
+                    // Add to processed images list
+                    processedImageUrls.push(`/uploads/${outputFileName}`);
+                    
+                    // Delete original file
+                    fs.unlinkSync(file.path);
+                } catch (sharpError) {
+                    console.error(`Error processing image ${file.filename}:`, sharpError);
+                    // Skip problematic file, don't add to processedImageUrls
+                }
+            }));
+            
+            res.status(201).json({ 
+                message: 'Files uploaded and processed successfully',
+                imageUrls: processedImageUrls
+            });
+        } catch (processingError) {
+            console.error('Error during image processing:', processingError);
+            res.status(500).json({ 
+                message: 'Error during image processing',
+                error: processingError instanceof Error ? processingError.message : 'Unknown error'
+            });
+        }
     });
 });
 
