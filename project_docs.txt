@@ -60,6 +60,8 @@ Branch merged into main. [Date: 2025-05-12]
 - Added user-friendly descriptions for order statuses.
 - Implemented basic rate limiting on backend auth routes.
 - Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
+- Refactored Admin Dashboard to show separate sections for Pending Call, Verified, Processing, Shipped orders.
+- Standardized action button styling across Admin Dashboard live order sections. [Date: 2025-05-26]
 
 ## 2. Project Summary & Vision
 
