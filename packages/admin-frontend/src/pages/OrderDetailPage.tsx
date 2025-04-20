@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { FaImage } from 'react-icons/fa';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
@@ -356,13 +357,11 @@ const OrderDetailPage: React.FC = () => {
                         <td className="text-center">
                           {item.product?.images && item.product.images.length > 0 ? (
                             <img 
-                              src={item.product.images[0].url.startsWith('/') 
-                                ? `${API_BASE_URL}${item.product.images[0].url}` 
-                                : item.product.images[0].url}
+                              src={getImageUrl(item.product.images[0].url)}
                               alt={item.product.name}
                               style={{ width: '40px', height: '40px', objectFit: 'cover' }}
                               onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                                (e.target as HTMLImageElement).src = `${API_BASE_URL}/placeholder.png`;
+                                (e.target as HTMLImageElement).src = getImageUrl('/placeholder.png');
                               }}
                             />
                           ) : (

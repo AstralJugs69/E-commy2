@@ -14,6 +14,7 @@ import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 import api from '../utils/api';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface Category {
   id: number;
@@ -511,14 +512,12 @@ const ProductManagementPage: React.FC = () => {
                       <td className="text-center">
                         {product.images && product.images.length > 0 ? (
                           <img 
-                            src={product.images[0].url.startsWith('/') 
-                              ? `${API_URL}${product.images[0].url}` 
-                              : product.images[0].url} 
+                            src={getImageUrl(product.images[0].url)} 
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
                             style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              (e.target as HTMLImageElement).src = `${API_URL}/placeholder.png`;
+                              (e.target as HTMLImageElement).src = getImageUrl("/placeholder.png");
                             }}
                           />
                         ) : (
@@ -711,7 +710,7 @@ const ProductManagementPage: React.FC = () => {
                       style={{ width: '80px', height: '80px' }}
                     >
                       <Image 
-                        src={url.startsWith('/') ? `${API_URL}${url}` : url}
+                        src={getImageUrl(url)}
                         alt={`Image ${index + 1}`}
                         className="rounded"
                         style={{ width: '80px', height: '80px', objectFit: 'cover' }}

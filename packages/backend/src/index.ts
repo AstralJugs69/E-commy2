@@ -25,20 +25,20 @@ const app = express();
 const port = process.env.PORT || 3001; // Use port from .env or default to 3001
 
 // Rate limiting middleware
-// General API rate limiter - 100 requests per 15 minutes
+// General API rate limiter - 50 requests per 40 seconds
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes',
+  windowMs: 40 * 1000, // 40 seconds
+  max: 50, // Limit each IP to 50 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 40 seconds',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-// Write operations rate limiter - 50 requests per 15 minutes
+// Write operations rate limiter - 20 requests per 40 seconds
 const writeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 requests per windowMs
-  message: 'Too many write operations from this IP, please try again after 15 minutes',
+  windowMs: 40 * 1000, // 40 seconds
+  max: 20, // Limit each IP to 20 requests per windowMs
+  message: 'Too many write operations from this IP, please try again after 40 seconds',
   standardHeaders: true,
   legacyHeaders: false,
 });

@@ -5,6 +5,7 @@ import { FaPlus } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
 import { FaTrashAlt } from 'react-icons/fa';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface Category {
   id: number;
@@ -311,10 +312,12 @@ const CategoryManagementPage: React.FC = () => {
                 <td>{category.name}</td>
                 <td>{category.description || '-'}</td>
                 <td>{category.imageUrl ? (
-                  <a href={category.imageUrl} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
+                  <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
                     {category.imageUrl}
                   </a>
-                ) : '-'}</td>
+                ) : (
+                  <span className="text-muted">No image</span>
+                )}</td>
                 <td>
                   <Button 
                     variant="outline-primary" 

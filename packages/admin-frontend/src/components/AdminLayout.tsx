@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
 import { FiHome } from 'react-icons/fi';
 import { FiSmartphone } from 'react-icons/fi';
 import { FiShoppingCart } from 'react-icons/fi';
@@ -10,6 +10,8 @@ import { FiMap } from 'react-icons/fi';
 import { FiUsers } from 'react-icons/fi';
 import { FiLogOut } from 'react-icons/fi';
 import { FiBarChart2 } from 'react-icons/fi';
+import { FiUser } from 'react-icons/fi';
+import { FiSettings } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
 
 const AdminLayout = () => {
@@ -58,14 +60,25 @@ const AdminLayout = () => {
                 <FiUsers size={16} /> Users
               </Nav.Link>
             </Nav>
-            <Button 
-              variant="outline-primary" 
-              size="sm" 
-              onClick={handleLogout} 
-              className="px-3 d-flex align-items-center gap-2"
-            >
-              <FiLogOut size={16} /> Logout
-            </Button>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-light"
+                size="sm"
+                as={Link}
+                to="profile"
+                className="px-3 d-flex align-items-center gap-2"
+              >
+                <FiUser size={16} /> Profile
+              </Button>
+              <Button 
+                variant="outline-primary" 
+                size="sm" 
+                onClick={handleLogout} 
+                className="px-3 d-flex align-items-center gap-2"
+              >
+                <FiLogOut size={16} /> Logout
+              </Button>
+            </div>
           </Navbar.Collapse>
         </Container>
       </Navbar>

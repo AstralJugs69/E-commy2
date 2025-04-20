@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -418,7 +418,7 @@ const ProductDetailPage = () => {
   
   // Render product details
   return (
-    <Container className="py-3">
+    <Container className="py-3 product-detail-container">
       <Row className="mb-2">
         <Col>
           <Button variant="secondary" onClick={handleBackClick} className="mb-2">
@@ -431,30 +431,85 @@ const ProductDetailPage = () => {
         {/* Product Image Column */}
         <Col xs={12} md={6} className="mb-3 mb-md-0">
           <div className="position-relative">
-            <Card.Img 
-              variant="top" 
-              src={product.images && product.images.length > 0 
-                ? getImageUrl(product.images[0].url)
-                : getImageUrl(null)
-              } 
-              alt={product.name}
-              style={{ 
-                height: '400px', 
-                objectFit: 'contain',
-                backgroundColor: '#f8f9fa' 
-              }}
-              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                if (e.currentTarget.src !== '/placeholder-image.svg') {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/placeholder-image.svg';
-                  console.warn(`Failed to load image: ${product.images?.[0]?.url || 'unknown'}`);
-                }
-              }}
-            />
+            {product.images && product.images.length > 1 ? (
+              <Carousel 
+                interval={null} 
+                className="product-carousel" 
+                indicators={true} 
+                controls={true}
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '0.5rem',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  height: '350px'
+                }}
+              >
+                {product.images.map((image, index) => (
+                  <Carousel.Item 
+                    key={image.id}
+                    style={{
+                      height: '350px',
+                      textAlign: 'center',
+                      padding: '10px'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <img
+                        className="d-block"
+                        src={getImageUrl(image.url)}
+                        alt={`${product.name} - Image ${index + 1}`}
+                        style={{ 
+                          objectFit: 'contain',
+                          maxHeight: '330px',
+                          width: 'auto',
+                          maxWidth: '95%'
+                        }}
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          if (e.currentTarget.src !== '/placeholder-image.svg') {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder-image.svg';
+                            console.warn(`Failed to load image: ${image.url || 'unknown'}`);
+                          }
+                        }}
+                      />
+                    </div>
+                  </Carousel.Item>
+                ))}
+              </Carousel>
+            ) : (
+              <Card.Img 
+                variant="top" 
+                src={product.images && product.images.length > 0 
+                  ? getImageUrl(product.images[0].url)
+                  : getImageUrl(null)
+                } 
+                alt={product.name}
+                style={{ 
+                  height: '400px', 
+                  objectFit: 'contain',
+                  backgroundColor: '#f8f9fa' 
+                }}
+                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                  if (e.currentTarget.src !== '/placeholder-image.svg') {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/placeholder-image.svg';
+                    console.warn(`Failed to load image: ${product.images?.[0]?.url || 'unknown'}`);
+                  }
+                }}
+              />
+            )}
             {isNewProduct() && (
               <Badge 
                 bg="info" 
-                className="position-absolute top-0 start-0 m-2"
+                className="position-absolute top-0 start-0 m-2 z-1"
               >
                 New!
               </Badge>
@@ -463,8 +518,8 @@ const ProductDetailPage = () => {
         </Col>
         
         {/* Product Details Column */}
-        <Col xs={12} md={6}>
-          <div className="d-flex justify-content-between align-items-start mb-2">
+        <Col xs={12} md={6} className="product-detail-section">
+          <div className="d-flex justify-content-between align-items-start mb-1">
             <h1 className="mb-0 fs-2">{product.name}</h1>
             <Button 
               variant="outline-danger" 
@@ -483,11 +538,11 @@ const ProductDetailPage = () => {
             </Button>
           </div>
           
-          <h2 className="text-primary mb-2 fs-3">€{product.price.toFixed(2)}</h2>
+          <h2 className="text-primary mb-1 fs-3">€{product.price.toFixed(2)}</h2>
           
           {/* Display Rating */}
           {product.averageRating !== undefined && product.averageRating !== null && (
-            <div className="mb-2 d-flex align-items-center">
+            <div className="mb-1 d-flex align-items-center">
               <StarRating rating={product.averageRating} />
               <span className="ms-2 text-muted">
                 ({product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'})
@@ -495,7 +550,7 @@ const ProductDetailPage = () => {
             </div>
           )}
           
-          <div className="mb-2">
+          <div className="mb-1">
             {product.stock > 0 ? (
               <Badge 
                 bg={product.stock > 10 ? "success" : "warning"} 
@@ -513,17 +568,17 @@ const ProductDetailPage = () => {
             )}
           </div>
           
-          <div className="mb-2">
-            <p className="text-muted small">Added on {formatDate(product.createdAt)}</p>
+          <div className="mb-1">
+            <p className="text-muted small mb-0">Added on {formatDate(product.createdAt)}</p>
           </div>
           
-          <div className="mb-3">
-            <h5>Description</h5>
-            <p className="text-break mb-2">{product.description || 'No description available.'}</p>
+          <div className="mb-2">
+            <h5 className="mb-1">Description</h5>
+            <p className="text-break mb-1">{product.description || 'No description available.'}</p>
           </div>
           
           {/* Add to Cart Button */}
-          <Row className="align-items-center mb-3 g-2">
+          <Row className="align-items-center mb-2 g-2">
             <Col>
               <Button
                 variant={isInCart ? "success" : "primary"}

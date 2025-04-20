@@ -13,6 +13,7 @@ import UserDetailPage from './pages/UserDetailPage';
 import StatisticsPage from './pages/StatisticsPage';
 import AdminRequestPasswordResetPage from './pages/AdminRequestPasswordResetPage';
 import AdminResetPasswordPage from './pages/AdminResetPasswordPage';
+import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout'; // Import the basic layout
 import { Toaster } from 'react-hot-toast';
@@ -52,6 +53,7 @@ function App() {
             <Route path="zones" element={<ZoneManagementPage />} />
             <Route path="users" element={<UserManagementPage />} />
             <Route path="users/:userId" element={<UserDetailPage />} />
+            <Route path="profile" element={<ProfileSettingsPage />} />
           </Route>
         </Route>
 
