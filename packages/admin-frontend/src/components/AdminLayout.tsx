@@ -13,6 +13,7 @@ import { FiBarChart2 } from 'react-icons/fi';
 import { FiUser } from 'react-icons/fi';
 import { FiSettings } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
+import LinkButton from './LinkButton';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -32,49 +33,65 @@ const AdminLayout = () => {
     <div className="admin-layout d-flex flex-column min-vh-100">
       <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
         <Container>
-          <Navbar.Brand as={Link} to="dashboard" className="fw-bolder text-decoration-none">
+          <Navbar.Brand className="fw-bolder text-decoration-none" onClick={() => navigate('dashboard')} style={{ cursor: 'pointer' }}>
             <FaStore className="me-2 text-primary" size={22} />
             <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Hybrid</span>Store Admin
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
-              <Nav.Link as={Link} to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiHome size={16} /> Dashboard
+              <Nav.Link as="div" className="p-0">
+                <Link to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiHome size={16} /> Dashboard
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="statistics" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiBarChart2 size={16} /> Statistics
+              <Nav.Link as="div" className="p-0">
+                <Link to="statistics" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiBarChart2 size={16} /> Statistics
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="phones" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiSmartphone size={16} /> Phones
+              <Nav.Link as="div" className="p-0">
+                <Link to="phones" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiSmartphone size={16} /> Phones
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="orders" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiShoppingCart size={16} /> Orders
+              <Nav.Link as="div" className="p-0">
+                <Link to="orders" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiShoppingCart size={16} /> Orders
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="products" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiBox size={16} /> Products
+              <Nav.Link as="div" className="p-0">
+                <Link to="products" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiBox size={16} /> Products
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="categories" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiTag size={16} /> Categories
+              <Nav.Link as="div" className="p-0">
+                <Link to="categories" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiTag size={16} /> Categories
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="zones" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiMap size={16} /> Zones
+              <Nav.Link as="div" className="p-0">
+                <Link to="zones" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiMap size={16} /> Zones
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="users" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiUsers size={16} /> Users
+              <Nav.Link as="div" className="p-0">
+                <Link to="users" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiUsers size={16} /> Users
+                </Link>
               </Nav.Link>
             </Nav>
             <div className="d-flex gap-2">
-              <Button
-                variant="outline-light"
+              <LinkButton
+                variant="secondary"
                 size="sm"
-                onClick={() => handleNavigate('profile')}
+                to="profile"
                 className="px-3 d-flex align-items-center gap-2"
               >
                 <FiUser size={16} /> Profile
-              </Button>
+              </LinkButton>
               <Button 
-                variant="outline-primary" 
+                variant="danger" 
                 size="sm" 
                 onClick={handleLogout} 
                 className="px-3 d-flex align-items-center gap-2"

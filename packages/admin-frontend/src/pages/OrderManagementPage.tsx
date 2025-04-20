@@ -223,7 +223,7 @@ const OrderManagementPage = () => {
             
             {statusFilters.length > 0 && (
               <Button 
-                variant="outline-danger" 
+                variant="danger" 
                 size="sm"
                 onClick={clearStatusFilters}
                 className="ms-2"

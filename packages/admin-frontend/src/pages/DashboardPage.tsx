@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
+import LinkButton from '../components/LinkButton';
 
 interface AdminStats {
   recentOrders: {
@@ -247,10 +248,12 @@ const DashboardPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Dashboard</h2>
         <div>
-          <Link to="/admin/statistics" className="me-2">
-            <Button variant="primary">View Statistics</Button>
-          </Link>
-          <Button variant="outline-primary" onClick={() => window.location.reload()}>Refresh Data</Button>
+          <LinkButton to="/admin/statistics" variant="primary" className="me-2">
+            View Statistics
+          </LinkButton>
+          <Button variant="outline-primary" onClick={() => window.location.reload()}>
+            Refresh Data
+          </Button>
         </div>
       </div>
       
@@ -306,17 +309,20 @@ const DashboardPage = () => {
                           Mark Verified
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -393,17 +399,20 @@ const DashboardPage = () => {
                           Rollback to Pending
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -480,17 +489,20 @@ const DashboardPage = () => {
                           Rollback to Verified
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -567,17 +579,20 @@ const DashboardPage = () => {
                           Rollback to Processing
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -633,9 +648,13 @@ const DashboardPage = () => {
                         </td>
                         <td>{formatDate(order.createdAt)}</td>
                         <td>
-                          <Link to={`/admin/orders/${order.id}`}>
-                            <Button variant="outline-primary" size="sm">View</Button>
-                          </Link>
+                          <LinkButton 
+                            to={`/admin/orders/${order.id}`}
+                            variant="outline-secondary" 
+                            size="sm"
+                          >
+                            View
+                          </LinkButton>
                         </td>
                       </tr>
                     ))}

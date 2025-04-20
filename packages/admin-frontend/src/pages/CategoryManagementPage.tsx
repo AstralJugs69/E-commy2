@@ -328,7 +328,7 @@ const CategoryManagementPage: React.FC = () => {
                     <FaEdit /> Edit
                   </Button>
                   <Button 
-                    variant="outline-danger" 
+                    variant="danger" 
                     size="sm" 
                     onClick={() => handleShowDeleteModal(category)}
                   >

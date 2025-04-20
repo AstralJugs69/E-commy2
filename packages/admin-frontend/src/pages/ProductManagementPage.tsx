@@ -563,7 +563,7 @@ const ProductManagementPage: React.FC = () => {
                             Edit
                           </Button>
                           <Button 
-                            variant="outline-danger" 
+                            variant="danger" 
                             size="sm"
                             onClick={() => handleShowDeleteModal(product)}
                           >
