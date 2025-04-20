@@ -613,10 +613,10 @@ const ProductDetailPage = () => {
                   {/* Write Review Form */}
                   {isAuthenticated && !hasUserReviewed && (
                     <div className="mb-4">
-                      <h4 className="fs-5 mb-3">Write a Review</h4>
+                      <h4 className="fs-5 mb-3 fw-semibold">Write a Review</h4>
                       <Form onSubmit={handleSubmitReview}>
                         <Form.Group className="mb-3">
-                          <Form.Label>Rating</Form.Label>
+                          <Form.Label className="fw-medium">Rating</Form.Label>
                           <Form.Select 
                             value={newRating} 
                             onChange={(e) => setNewRating(parseInt(e.target.value))}
@@ -631,8 +631,8 @@ const ProductDetailPage = () => {
                           </Form.Select>
                         </Form.Group>
                         
-                        <Form.Group className="mb-3">
-                          <Form.Label>Comment (optional)</Form.Label>
+                        <Form.Group className="mb-4">
+                          <Form.Label className="fw-medium">Comment (optional)</Form.Label>
                           <Form.Control 
                             as="textarea" 
                             rows={3} 
@@ -650,8 +650,9 @@ const ProductDetailPage = () => {
                         
                         <Button 
                           type="submit" 
-                          variant="outline-primary"
+                          variant="primary"
                           disabled={isSubmittingReview}
+                          className="px-4 py-2 rounded-pill fw-medium"
                         >
                           {isSubmittingReview ? (
                             <>
@@ -661,7 +662,7 @@ const ProductDetailPage = () => {
                                 size="sm"
                                 role="status"
                                 aria-hidden="true"
-                                className="me-1"
+                                className="me-2"
                               />
                               Submitting...
                             </>

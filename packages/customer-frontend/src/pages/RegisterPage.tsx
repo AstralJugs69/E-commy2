@@ -137,7 +137,6 @@ const RegisterPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="auth-input"
                   />
                 </Form.Group>
                 
@@ -150,7 +149,6 @@ const RegisterPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="auth-input"
                   />
                   <Form.Text className="text-muted small">
                     Must be at least 6 characters long
@@ -166,7 +164,6 @@ const RegisterPage = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="auth-input"
                   />
                 </Form.Group>
                 

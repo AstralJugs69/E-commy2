@@ -572,7 +572,6 @@ const CheckoutPage: React.FC = () => {
                     value={newLocationData.name}
                     onChange={handleNewLocationChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.name}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -593,7 +592,6 @@ const CheckoutPage: React.FC = () => {
                     value={newLocationData.phone}
                     onChange={handleNewLocationChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.phone}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -612,7 +610,6 @@ const CheckoutPage: React.FC = () => {
                     value={newLocationData.district}
                     onChange={handleNewLocationChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.district}
                     disabled={isLoadingDistricts}
                   >

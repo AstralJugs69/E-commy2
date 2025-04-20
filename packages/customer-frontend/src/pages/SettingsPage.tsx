@@ -830,7 +830,7 @@ const SettingsPage = () => {
                         variant="primary"
                         type="submit"
                         disabled={isUpdatingPassword}
-                        className="fw-medium py-2 rounded-pill"
+                        className="fw-medium py-2 rounded-pill px-4"
                       >
                         {isUpdatingPassword ? (
                           <>
@@ -919,7 +919,6 @@ const SettingsPage = () => {
                 value={formName} 
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Enter your name"
-                className="auth-input"
               />
             </Form.Group>
             
@@ -966,7 +965,6 @@ const SettingsPage = () => {
                     value={locationForm.name}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.name}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -987,7 +985,6 @@ const SettingsPage = () => {
                     value={locationForm.phone}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.phone}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -1006,7 +1003,6 @@ const SettingsPage = () => {
                     value={locationForm.district}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.district}
                   >
                     <option value="" disabled>-- Select District --</option>

@@ -110,7 +110,6 @@ const LoginPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="auth-input"
                   />
                 </Form.Group>
                 
@@ -123,7 +122,6 @@ const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="auth-input"
                   />
                 </Form.Group>
                 
