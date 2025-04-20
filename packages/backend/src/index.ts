@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { rateLimit } from 'express-rate-limit';
 import productRoutes from './routes/productRoutes';
 import adminRoutes from './routes/adminRoutes';
 import productAdminRoutes from './routes/productAdminRoutes';
@@ -23,9 +24,31 @@ dotenv.config(); // Load .env file variables
 const app = express();
 const port = process.env.PORT || 3001; // Use port from .env or default to 3001
 
+// Rate limiting middleware
+// General API rate limiter - 100 requests per 15 minutes
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Write operations rate limiter - 50 requests per 15 minutes
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 50 requests per windowMs
+  message: 'Too many write operations from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
 app.use(cors()); // Allow requests from frontend (configure origin later for security)
 app.use(express.json()); // Parse JSON request bodies
+
+// Apply general rate limiter to all requests
+app.use(generalLimiter);
 
 // Serve Static Files
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -46,11 +69,11 @@ app.use('/api/admin/products', productAdminRoutes);
 app.use('/api/admin/categories', categoryAdminRoutes);
 app.use('/api/admin/upload', uploadRoutes);
 app.use('/api/admin/reports', reportsAdminRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/addresses', addressRoutes);
+app.use('/api/orders', writeLimiter, orderRoutes);
+app.use('/api/reviews', writeLimiter, reviewRoutes);
+app.use('/api/cart', writeLimiter, cartRoutes);
+app.use('/api/wishlist', writeLimiter, wishlistRoutes);
+app.use('/api/addresses', writeLimiter, addressRoutes);
 app.use('/api/districts', districtRoutes);
 
 // Start Server
