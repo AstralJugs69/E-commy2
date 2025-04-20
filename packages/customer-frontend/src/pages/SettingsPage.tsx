@@ -89,6 +89,9 @@ const SettingsPage = () => {
   const [isSettingDefault, setIsSettingDefault] = useState<number | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState<number | null>(null);
   
+  // Add these state variables if they don't exist already (they seem to be defined around line 50)
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
   useEffect(() => {
@@ -467,6 +470,84 @@ const SettingsPage = () => {
     }
   };
 
+  // Add this function near the other handler functions (around line 205)
+  const handleShowPasswordModal = () => {
+    // Reset form state
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    setShowPasswordModal(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+  };
+
+  // Add this function to handle password change submission
+  const handlePasswordChange = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingPassword(true);
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    
+    // Basic validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setUpdateError('All fields are required');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setUpdateError('New passwords do not match');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setUpdateError('New password must be at least 6 characters long');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/change-password`,
+        {
+          currentPassword,
+          newPassword,
+          confirmPassword
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      setUpdateSuccess('Password updated successfully');
+      // Close modal after a delay
+      setTimeout(() => {
+        setShowPasswordModal(false);
+      }, 2000);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        if (err.response.status === 401 && err.response.data.message === 'Incorrect current password.') {
+          setUpdateError('Current password is incorrect');
+        } else {
+          setUpdateError(err.response.data.message || 'Failed to update password');
+        }
+        console.error('Error changing password:', err.response.data);
+      } else {
+        setUpdateError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container className="py-4 text-center">
@@ -529,15 +610,17 @@ const SettingsPage = () => {
                     <FaChevronRight className="text-muted" />
                   </div>
                   
-                  <Link to="#" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
+                  <div 
+                    className="d-flex justify-content-between align-items-center list-group-item pointer"
+                    onClick={handleShowPasswordModal}
+                    style={{ cursor: 'pointer' }}
                   >
                     <div className="d-flex align-items-center">
                       <FaLock className="text-secondary me-3" size={20} />
                       <span className="fw-medium">Change Password</span>
                     </div>
                     <FaChevronRight className="text-muted" />
-                  </Link>
+                  </div>
                   
                   <Link to="/orders" 
                     className="d-flex justify-content-between align-items-center list-group-item"
@@ -867,6 +950,88 @@ const SettingsPage = () => {
                     Saving...
                   </>
                 ) : (editingLocation ? 'Update Location' : 'Add Location')}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+      
+      {/* Password Change Modal */}
+      <Modal show={showPasswordModal} onHide={handleClosePasswordModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Change Password</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <Form onSubmit={handlePasswordChange}>
+            {updateError && (
+              <Alert variant="danger" className="mb-3">
+                {updateError}
+              </Alert>
+            )}
+            {updateSuccess && (
+              <Alert variant="success" className="mb-3">
+                {updateSuccess}
+              </Alert>
+            )}
+            
+            <Form.Group className="mb-3" controlId="formCurrentPassword">
+              <Form.Label className="fw-medium">Current Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <Form.Group className="mb-3" controlId="formNewPassword">
+              <Form.Label className="fw-medium">New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <Form.Text className="text-muted">
+                Password must be at least 6 characters long.
+              </Form.Text>
+            </Form.Group>
+            
+            <Form.Group className="mb-4" controlId="formConfirmPassword">
+              <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <div className="d-grid">
+              <Button 
+                variant="primary" 
+                type="submit"
+                disabled={isUpdatingPassword}
+                className="fw-medium py-2"
+              >
+                {isUpdatingPassword ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
               </Button>
             </div>
           </Form>
