@@ -14,8 +14,19 @@ import { FaRegHeart } from 'react-icons/fa';
 import { FaStore } from 'react-icons/fa';
 import { FaHeart } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
 
-const Layout = () => {
+// Define BeforeInstallPromptEvent type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface LayoutProps {
+  installPrompt: BeforeInstallPromptEvent | null;
+}
+
+const Layout = ({ installPrompt }: LayoutProps) => {
   const { isAuthenticated, logout } = useAuth();
   const { getItemCount } = useCart();
   const { wishlistItems } = useWishlist();
@@ -35,6 +46,32 @@ const Layout = () => {
     toast.success('Logged out successfully');
   };
 
+  // Direct installation handler that preserves user gesture context
+  const handleInstallClick = (e: React.MouseEvent) => {
+    if (!installPrompt) {
+      toast.error('App cannot be installed right now');
+      return;
+    }
+
+    // This preserves the user gesture context since it's synchronous with the click
+    installPrompt.prompt().catch(error => {
+      console.error('Installation prompt error:', error);
+      toast.error('Failed to show installation prompt');
+    });
+
+    // Handle the user choice
+    installPrompt.userChoice.then(result => {
+      console.log(`User response to install prompt: ${result.outcome}`);
+      if (result.outcome === 'accepted') {
+        toast.success('App installation started!');
+      } else {
+        toast('Installation cancelled');
+      }
+    }).catch(error => {
+      console.error('Installation choice error:', error);
+    });
+  };
+
   return (
     <div className="app-wrapper d-flex flex-column min-vh-100">
       <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-3 border-bottom">
@@ -45,6 +82,20 @@ const Layout = () => {
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
+            {/* Install App button */}
+            {installPrompt && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={handleInstallClick}
+                className="d-flex align-items-center gap-1 me-3 rounded-pill px-3 py-1"
+                title="Install App"
+              >
+                <FaDownload />
+                <span className="d-none d-md-inline">Install App</span>
+              </Button>
+            )}
+            
             {isAuthenticated && (
               <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none d-none d-lg-flex">
                 <div className="nav-icon-container p-2 rounded-circle">
@@ -97,6 +148,20 @@ const Layout = () => {
                   <FaShoppingCart className="me-2 text-primary" /> Cart 
                   {itemCount > 0 && <Badge pill bg="danger" className="ms-2">{itemCount}</Badge>}
                 </Nav.Link>
+                
+                {/* Add Install App button to offcanvas menu if available */}
+                {installPrompt && (
+                  <Button
+                    variant="link"
+                    onClick={(e) => {
+                      handleInstallClick(e);
+                      handleCloseOffcanvas();
+                    }}
+                    className="py-3 border-bottom d-flex align-items-center w-100 text-decoration-none px-3"
+                  >
+                    <FaDownload className="me-2 text-primary" /> Install App
+                  </Button>
+                )}
                 
                 {isAuthenticated ? (
                   <>

@@ -35,7 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   hideAddToCart = false,
   disableInternalLink = false 
 }) => {
-  const { addOrUpdateItemQuantity } = useCart();
+  const { addToCart } = useCart();
   const [hover, setHover] = React.useState(false);
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
@@ -49,11 +49,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleAddToCart = (product: Product) => {
-    addOrUpdateItemQuantity(product.id, quantity)
+    addToCart(product.id, quantity)
       .then(() => {
         toast.success('Added to cart');
       })
-      .catch(error => {
+      .catch((error: Error) => {
         console.error('Error adding to cart:', error);
         toast.error('Failed to add to cart');
       });

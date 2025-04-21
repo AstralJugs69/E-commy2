@@ -88,8 +88,16 @@ const CustomerOrderDetailPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        console.log("Order details received:", response.data);
-        setOrder(response.data);
+        
+        // Validate response
+        if (response.data && typeof response.data === 'object') {
+          console.log("Order details received:", response.data);
+          setOrder(response.data);
+        } else {
+          console.error("Invalid order data received:", response.data);
+          setError("Received invalid order data format");
+          setOrder(null);
+        }
       } catch (err) {
         console.error('Error fetching order details:', err);
         if (axios.isAxiosError(err)) {
@@ -103,6 +111,7 @@ const CustomerOrderDetailPage = () => {
         } else {
             setError('An unexpected error occurred.');
         }
+        setOrder(null);
       } finally {
         setIsLoading(false);
       }

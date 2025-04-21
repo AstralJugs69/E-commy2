@@ -1,8 +1,15 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Spinner, Container } from 'react-bootstrap';
 import Layout from './components/Layout'; // Import the layout
 import { useAuth } from './context/AuthContext';
+import PWAPrompt from './components/PWAPrompt'; // Import PWAPrompt component
+
+// Define the BeforeInstallPromptEvent type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 // Lazy load all page components
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -28,14 +35,21 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <PWAPrompt onInstallPromptAvailable={setInstallPrompt} /> {/* Pass the setter function */}
+      <AppRoutes installPrompt={installPrompt} />
     </BrowserRouter>
   );
 }
 
-function AppRoutes() {
+interface AppRoutesProps {
+  installPrompt: BeforeInstallPromptEvent | null;
+}
+
+function AppRoutes({ installPrompt }: AppRoutesProps) {
   const { isAuthenticated } = useAuth();
 
   return (
@@ -48,7 +62,7 @@ function AppRoutes() {
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
         {/* Routes with layout */}
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<Layout installPrompt={installPrompt} />}>
           {/* Index route for the homepage */}
           <Route index element={<HomePage />} />
           <Route path="cart" element={<CartPage />} />

@@ -99,13 +99,23 @@ const HomePage = () => {
       console.log(`Fetching products from ${apiUrl}`);
       const response = await axios.get<PaginatedProductsResponse>(apiUrl);
       
-      // Update state with paginated response data
-      setProducts(response.data.products);
-      setCurrentPage(response.data.currentPage);
-      setTotalPages(response.data.totalPages);
-      setTotalProducts(response.data.totalProducts);
-      
-      console.log(`Loaded page ${response.data.currentPage} of ${response.data.totalPages}`);
+      // Ensure we have valid data before updating state
+      if (response.data && response.data.products) {
+        // Update state with paginated response data
+        setProducts(response.data.products || []);
+        setCurrentPage(response.data.currentPage || 1);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalProducts(response.data.totalProducts || 0);
+        
+        console.log(`Loaded page ${response.data.currentPage || 1} of ${response.data.totalPages || 1}`);
+      } else {
+        console.error('Invalid product data received:', response.data);
+        setProducts([]);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalProducts(0);
+        setError('Invalid data received from server');
+      }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         const errorMessage = err.response.data.message || 'Failed to fetch products';
@@ -115,6 +125,11 @@ const HomePage = () => {
         setError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      // Set empty defaults in case of error
+      setProducts([]);
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalProducts(0);
     } finally {
       setIsLoading(false);
     }
@@ -140,11 +155,19 @@ const HomePage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       setIsLoadingCategories(true);
+            
       try {
         const response = await axios.get(`${API_BASE_URL}/categories`);
-        setCategories(response.data);
+        // Ensure response.data is an array
+        if (Array.isArray(response.data)) {
+          setCategories(response.data);
+        } else {
+          console.error('Expected array for categories data, got:', response.data);
+          setCategories([]);
+        }
       } catch (err) {
         console.error('Error fetching categories:', err);
+        setCategories([]);
         // Optionally set an error state for categories
       } finally {
         setIsLoadingCategories(false);
@@ -186,7 +209,8 @@ const HomePage = () => {
           {/* Show limited number of page buttons */}
           {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
             // For simplicity, show pages around current page
-            let pageNum;
+            let pageNum = 1; // Default to page 1 if calculations fail
+            
             if (totalPages <= 5) {
               // If 5 or fewer pages, show all
               pageNum = idx + 1;

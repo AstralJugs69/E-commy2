@@ -40,6 +40,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Use environment variable for API URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -80,25 +81,32 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Cart data received:', response.data);
       
-      // Update local cart state with server data
-      setCartItems(response.data.map((item: any) => {
-        // Extract the first image URL if available
-        const firstImageUrl = item.product.images && item.product.images.length > 0 
-          ? item.product.images[0].url 
-          : null;
-          
-        return {
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          description: item.product.description,
-          images: item.product.images,
-          // For backward compatibility
-          imageUrl: firstImageUrl,
-          stock: item.product.stock,
-          quantity: item.quantity
-        };
-      }));
+      // Check if response.data is an array before using map
+      if (Array.isArray(response.data)) {
+        // Update local cart state with server data
+        setCartItems(response.data.map((item: any) => {
+          // Extract the first image URL if available
+          const firstImageUrl = item.product.images && item.product.images.length > 0 
+            ? item.product.images[0].url 
+            : null;
+            
+          return {
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            description: item.product.description,
+            images: item.product.images,
+            // For backward compatibility
+            imageUrl: firstImageUrl,
+            stock: item.product.stock,
+            quantity: item.quantity
+          };
+        }));
+      } else {
+        // If it's not an array (might be an empty object or different structure)
+        console.log('Cart data is not an array:', response.data);
+        setCartItems([]); // Set empty cart
+      }
     } catch (err) {
       console.error("Error fetching cart:", err);
       setError("Failed to load cart items.");

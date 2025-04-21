@@ -46,6 +46,25 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000, // Define a specific port
       open: true, // Open browser on start
+      proxy: {
+        // Proxy API requests to backend server during development
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false
+        }
+      }
+    },
+    preview: {
+      port: 4173, // Default preview port
+      proxy: {
+        // Proxy API requests to backend server during preview
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     },
     define: {
       // Make env variables available in the client

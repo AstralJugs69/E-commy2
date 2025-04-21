@@ -1,1 +1,0 @@
-This is a placeholder file. The actual icon files (icon-192x192.png, icon-512x512.png, favicon.ico, apple-touch-icon.png) need to be provided by the user. 

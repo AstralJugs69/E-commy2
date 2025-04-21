@@ -51,7 +51,15 @@ const OrderHistoryPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setOrders(response.data);
+        
+        // Ensure we have an array
+        if (Array.isArray(response.data)) {
+          setOrders(response.data);
+        } else {
+          console.error('Expected array of orders but received:', response.data);
+          setOrders([]);
+          setError('Received invalid data format from server');
+        }
       } catch (err) {
         console.error('Error fetching orders:', err);
         if (axios.isAxiosError(err)) {
@@ -64,6 +72,8 @@ const OrderHistoryPage = () => {
         } else {
           setError('An unexpected error occurred.');
         }
+        // Set empty orders in case of error
+        setOrders([]);
       } finally {
         setIsLoading(false); // Finish loading order list
       }
