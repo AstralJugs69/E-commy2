@@ -262,18 +262,19 @@ const ZoneManagementPage = () => {
               <h3>Add New Service Zone</h3>
               
               <Form onSubmit={handleAddZone}>
-                <Form.Group controlId="newZoneName">
-                  <Form.Label>Zone Name</Form.Label>
+                <Form.Group className="mb-3" controlId="newZoneName">
+                  <Form.Label className="fw-medium text-neutral-700">Zone Name</Form.Label>
                   <Form.Control 
                     type="text"
                     required
                     value={newZoneName}
                     onChange={(e) => setNewZoneName(e.target.value)} 
+                    className="py-2"
                   />
                 </Form.Group>
 
                 <div className="mt-3">
-                  <p className="mb-1">Zone Area</p>
+                  <p className="mb-1 fw-medium text-neutral-700">Zone Area</p>
                   <Alert variant="info">
                     Use the drawing tools on the map to create a polygon zone.
                   </Alert>
@@ -289,12 +290,12 @@ const ZoneManagementPage = () => {
                   variant="success" 
                   type="submit" 
                   disabled={isCreating} 
-                  className="mt-3"
+                  className="mt-3 py-2"
                 >
                   {isCreating ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                      <span className="ms-2">Creating...</span>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Creating...
                     </>
                   ) : 'Add Zone'}
                 </Button>

@@ -1,23 +1,53 @@
-import { Container, Row, Col, Table, Button, Alert, Card, Form, Image } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Form, Row, Col, Button, Card, Spinner, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaTrash } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { FaTrash, FaShoppingCart } from 'react-icons/fa';
-import EmptyState from '../components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
+import { toast } from 'react-hot-toast';
+import { getImageUrl } from '../utils/imageUrl';
+import axios from 'axios';
 
 const CartPage = () => {
-  // Get all required functions from cart context in one place
-  const { cartItems, removeFromCart, clearCart, getCartTotal, updateCartItemQuantity } = useCart();
+  const { cartItems, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal, fetchCart, isLoading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [inputValues, setInputValues] = useState<Record<number, string>>({});
+  const [pendingUpdate, setPendingUpdate] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Initialize input values from cart items
+  useEffect(() => {
+    const initialValues: Record<number, string> = {};
+    cartItems.forEach(item => {
+      initialValues[item.id] = item.quantity.toString();
+    });
+    setInputValues(initialValues);
+  }, [cartItems]);
+  
+  // Force refresh cart after updates
+  useEffect(() => {
+    if (pendingUpdate) {
+      const refreshTimer = setTimeout(() => {
+        fetchCart().then(() => {
+          setPendingUpdate(false);
+        });
+      }, 300);
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [pendingUpdate, fetchCart]);
   
   const cartIsEmpty = cartItems.length === 0;
   
   const handleCheckout = () => {
-    navigate('/checkout');
+    if (!isAuthenticated) {
+      toast.error('Please log in to checkout');
+      navigate('/login');
+    } else {
+      navigate('/checkout');
+    }
   };
   
   // Helper function to format currency
@@ -25,17 +55,159 @@ const CartPage = () => {
     return `€${value.toFixed(2)}`;
   };
   
-  // If not authenticated, show a message and login button
+  // Handle input change (update local state only)
+  const handleInputChange = (itemId: number, value: string) => {
+    setErrorMessage(null); // Clear any previous errors
+    setInputValues(prev => ({
+      ...prev,
+      [itemId]: value
+    }));
+  };
+  
+  // Extract error message from Axios error
+  const getErrorMessage = (error: any): string => {
+    let message = 'Failed to update quantity.';
+    
+    if (axios.isAxiosError(error) && error.response) {
+      if (error.response.data && error.response.data.message) {
+        message = error.response.data.message;
+      } else if (error.response.data && typeof error.response.data === 'string') {
+        message = error.response.data;
+      }
+    }
+    
+    return message;
+  };
+  
+  // Handle quantity update (send to server)
+  const handleQuantityUpdate = async (itemId: number, value: string, stockLimit: number) => {
+    const newQuantity = value === '' ? 1 : parseInt(value, 10);
+    
+    if (isNaN(newQuantity)) {
+      // Reset to current value in cart
+      const currentItem = cartItems.find(item => item.id === itemId);
+      if (currentItem) {
+        setInputValues(prev => ({
+          ...prev,
+          [itemId]: currentItem.quantity.toString()
+        }));
+      }
+      return;
+    }
+    
+    // Clear previous errors
+    setErrorMessage(null);
+    
+    // Client-side validation
+    if (newQuantity < 1) {
+      const errorMsg = 'Quantity cannot be less than 1';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to 1
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: '1'
+      }));
+      return;
+    }
+    
+    // Simple stock check
+    if (newQuantity > stockLimit) {
+      const errorMsg = `Cannot add more than available stock (${stockLimit})`;
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to stock limit
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: stockLimit.toString()
+      }));
+      return;
+    }
+    
+    // Get the current item
+    const currentItem = cartItems.find(item => item.id === itemId);
+    
+    // Skip update if quantity hasn't changed
+    if (currentItem && currentItem.quantity === newQuantity) return;
+    
+    setUpdatingItemId(itemId);
+    
+    try {
+      await updateCartItemQuantity(itemId, newQuantity);
+      setPendingUpdate(true);
+      
+      // Immediately update the local input value to the new quantity
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: newQuantity.toString()
+      }));
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      
+      // Get and display the error message
+      const errorMsg = getErrorMessage(error);
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to the server's current value
+      await fetchCart(); // Force refresh from server
+      
+      // Then update the input value
+      const refreshedItem = cartItems.find(item => item.id === itemId);
+      if (refreshedItem) {
+        setInputValues(prev => ({
+          ...prev,
+          [itemId]: refreshedItem.quantity.toString()
+        }));
+      }
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+  
+  // Handle key press to submit on Enter
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLElement>, itemId: number, stockLimit: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      handleQuantityUpdate(itemId, target.value, stockLimit);
+      target.blur();
+    }
+  };
+  
+  // If not authenticated, show a message to login
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
         <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
-        <EmptyState
-          icon={<FaShoppingCart />}
-          title="Please Log In to View Your Cart"
-          message="You need to be logged in to view and manage your shopping cart."
-          actionButton={<Link to="/login" className="btn btn-primary px-4 rounded-pill">Log In</Link>}
-        />
+        <Card className="shadow-sm border-0 mb-4">
+          <Card.Body className="p-5 text-center">
+            <div className="empty-state">
+              <div className="empty-state-icon mb-4">
+                <FaTrash size={40} />
+              </div>
+              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
+              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
+                Start Shopping
+              </Link>
+            </div>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+  
+  // Show loading state while fetching cart
+  if (isLoading && cartItems.length === 0) {
+    return (
+      <Container className="py-4 text-center">
+        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <Spinner animation="border" role="status" className="my-5">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
       </Container>
     );
   }
@@ -44,204 +216,92 @@ const CartPage = () => {
     <Container className="py-4">
       <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
       
+      {errorMessage && (
+        <Alert variant="danger" className="mb-3" onClose={() => setErrorMessage(null)} dismissible>
+          {errorMessage}
+        </Alert>
+      )}
+      
       {cartIsEmpty ? (
-        <EmptyState
-          icon={<FaShoppingCart />}
-          title="Your cart is empty"
-          message="Looks like you haven't added anything yet. Start exploring now!"
-          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Start Shopping</Link>}
-        />
+        <Card className="shadow-sm border-0 mb-4">
+          <Card.Body className="p-5 text-center">
+            <div className="empty-state">
+              <div className="empty-state-icon mb-4">
+                <FaTrash size={40} />
+              </div>
+              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
+              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
+                Start Shopping
+              </Link>
+            </div>
+          </Card.Body>
+        </Card>
       ) : (
         <>
-          {/* Desktop/Tablet Cart Table - Hidden on small screens */}
-          <div className="table-responsive mb-4 d-none d-lg-block">
-            <Table hover responsive className="mb-0 shadow-sm rounded">
-              <thead>
-                <tr className="bg-light">
-                  <th className="py-3 px-4">Product</th>
-                  <th className="text-center py-3">Price</th>
-                  <th className="text-center py-3">Quantity</th>
-                  <th className="text-center py-3">Total</th>
-                  <th className="text-center py-3 px-4">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cartItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="py-3 px-4">
-                      <div className="d-flex align-items-center">
-                        {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
-                        {(item.images?.[0]?.url || item.imageUrl) && (
-                          <img 
-                            src={item.images?.[0]?.url 
-                              ? (item.images[0].url.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                                : item.images[0].url)
-                              : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                                : item.imageUrl || '/placeholder-image.svg')} 
-                            alt={item.name} 
-                            style={{ width: '70px', height: '70px', objectFit: 'contain' }}
-                            className="me-3 border rounded p-1"
-                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              if (e.currentTarget.src !== '/placeholder-image.svg') {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = '/placeholder-image.svg';
-                              }
-                            }}
-                          />
-                        )}
-                        <div>
-                          <div className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>{item.name}</div>
-                          <small className="text-muted d-none d-md-inline">{item.id}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="text-center align-middle py-3 fw-medium">{formatCurrency(item.price)}</td>
-                    <td className="text-center align-middle py-3" style={{ minWidth: '120px' }}>
-                      <div className="d-flex align-items-center justify-content-center">
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-start px-2"
-                          onClick={() => {
-                            const newQuantity = Math.max(1, item.quantity - 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          -
-                        </Button>
-                        <Form.Control
-                          type="number"
-                          size="sm"
-                          min={1}
-                          max={item.stock}
-                          value={item.quantity}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const newQuantityStr = e.target.value;
-                            const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
-                            if (!isNaN(newQuantity)) {
-                              updateCartItemQuantity(item.id, newQuantity);
-                            }
-                          }}
-                          style={{ width: '50px', textAlign: 'center', borderRadius: 0 }}
-                          className="border-start-0 border-end-0"
-                          aria-label={`Quantity for ${item.name}`}
-                        />
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-end px-2"
-                          onClick={() => {
-                            const newQuantity = Math.min(item.stock, item.quantity + 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </td>
-                    <td className="text-center align-middle py-3 fw-bold">
-                      {formatCurrency(item.price * item.quantity)}
-                    </td>
-                    <td className="text-center align-middle py-3 px-4">
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm"
-                        className="rounded-pill px-3 py-1"
-                        onClick={() => removeFromCart(item.id)}
-                        aria-label={`Remove ${item.name} from cart`}
-                      >
-                        <FaTrash className="me-1" /> Remove
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-light">
-                  <td colSpan={3} className="text-end fw-bold py-3 px-4">Total:</td>
-                  <td className="text-center tfoot-total py-3 fw-bold">{formatCurrency(getCartTotal())}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </Table>
-          </div>
-          
-          {/* Mobile Cart Items View */}
-          <div className="d-block d-lg-none mb-3">
-            {cartItems.map((item) => (
+          {/* Cart Items */}
+          <div className="mb-4">
+            {cartItems.map(item => (
               <Card key={item.id} className="mb-3 shadow-sm border-0">
                 <Card.Body className="p-3">
-                  <Row className="g-3 align-items-center">
+                  <Row className="align-items-center">
                     {/* Image Col */}
                     <Col xs={3} sm={2}>
-                      <Image
-                        src={(item.images?.[0]?.url) 
-                          ? (item.images[0].url.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                            : item.images[0].url)
-                          : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                            : item.imageUrl || '/placeholder-image.svg')}
+                      <img 
+                        src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
                         alt={item.name}
-                        fluid
-                        className="rounded border p-1"
-                        style={{ objectFit: 'cover', height: '70px', width: '70px' }}
-                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                          if (e.currentTarget.src !== '/placeholder-image.svg') {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = '/placeholder-image.svg';
-                          }
-                        }}
+                        className="img-fluid rounded"
+                        style={{ maxHeight: '70px', objectFit: 'cover', width: '100%' }}
                       />
                     </Col>
-                    {/* Details Col */}
+                    
+                    {/* Name Col */}
                     <Col xs={6} sm={7}>
-                      <div className="fw-bold small text-truncate mb-1">{item.name}</div>
-                      <div className="text-muted small mb-2">{formatCurrency(item.price)}</div>
+                      <h6 className="mb-1">{item.name}</h6>
+                      <div className="text-muted small mb-2">{formatCurrency(item.price)} each</div>
+                      
+                      {/* Quantity Input - Mobile Only */}
+                      <div className="d-sm-none">
+                        <div className="d-flex align-items-center">
+                          <Form.Control
+                            type="number"
+                            size="sm"
+                            min={1}
+                            max={item.stock}
+                            value={inputValues[item.id] || item.quantity.toString()}
+                            onChange={(e) => handleInputChange(item.id, e.target.value)}
+                            onBlur={(e) => handleQuantityUpdate(item.id, e.target.value, item.stock)}
+                            onKeyPress={(e) => handleKeyPress(e, item.id, item.stock)}
+                            style={{ width: '80px', textAlign: 'center' }}
+                            className="border rounded"
+                            disabled={updatingItemId === item.id || isLoading}
+                          />
+                          <small className="ms-2 text-muted">
+                            of {item.stock} available
+                          </small>
+                        </div>
+                      </div>
+                    </Col>
+                    
+                    {/* Quantity Col - Desktop Only */}
+                    <Col xs={3} className="d-none d-sm-block">
                       <div className="d-flex align-items-center">
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-start p-0"
-                          style={{ width: '24px', height: '24px' }}
-                          onClick={() => {
-                            const newQuantity = Math.max(1, item.quantity - 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          -
-                        </Button>
                         <Form.Control
                           type="number"
                           size="sm"
                           min={1}
                           max={item.stock}
-                          value={item.quantity}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const newQuantityStr = e.target.value;
-                            const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
-                            
-                            if (!isNaN(newQuantity)) {
-                              updateCartItemQuantity(item.id, newQuantity);
-                            }
-                          }}
-                          style={{ width: '35px', textAlign: 'center', borderRadius: 0, height: '24px', padding: '0' }}
-                          className="border-start-0 border-end-0"
+                          value={inputValues[item.id] || item.quantity.toString()}
+                          onChange={(e) => handleInputChange(item.id, e.target.value)}
+                          onBlur={(e) => handleQuantityUpdate(item.id, e.target.value, item.stock)}
+                          onKeyPress={(e) => handleKeyPress(e, item.id, item.stock)}
+                          style={{ width: '80px', textAlign: 'center' }}
+                          className="border rounded"
+                          disabled={updatingItemId === item.id || isLoading}
                         />
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-end p-0"
-                          style={{ width: '24px', height: '24px' }}
-                          onClick={() => {
-                            const newQuantity = Math.min(item.stock, item.quantity + 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          +
-                        </Button>
+                        <small className="ms-2 text-muted">
+                          of {item.stock} available
+                        </small>
                       </div>
                     </Col>
                     {/* Price/Remove Col */}
@@ -250,10 +310,11 @@ const CartPage = () => {
                         {formatCurrency(item.price * item.quantity)}
                       </div>
                       <Button
-                        variant="outline-danger"
+                        variant="danger"
                         size="sm"
                         className="rounded-pill px-2 py-1"
                         onClick={() => removeFromCart(item.id)}
+                        disabled={isLoading}
                       >
                         <FaTrash />
                       </Button>
@@ -270,9 +331,10 @@ const CartPage = () => {
               <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
               <div className="d-grid gap-3 d-md-flex justify-content-md-end">
                 <Button 
-                  variant="outline-secondary" 
+                  variant="outline-danger" 
                   className="rounded-pill px-4 py-2 fw-medium" 
                   onClick={() => clearCart()}
+                  disabled={isLoading}
                 >
                   Clear Cart
                 </Button>
@@ -286,6 +348,7 @@ const CartPage = () => {
                   variant="primary" 
                   className="rounded-pill px-4 py-2 fw-medium" 
                   onClick={handleCheckout}
+                  disabled={isLoading}
                 >
                   Proceed to Checkout
                 </Button>

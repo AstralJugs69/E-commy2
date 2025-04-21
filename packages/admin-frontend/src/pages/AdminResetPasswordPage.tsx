@@ -100,7 +100,7 @@ const AdminResetPasswordPage = () => {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Reset Admin Password</h3>
 
@@ -119,7 +119,7 @@ const AdminResetPasswordPage = () => {
               {token && !isSuccess && (
                 <Form onSubmit={handleResetPassword}>
                   <Form.Group className="mb-3" controlId="formNewPassword">
-                    <Form.Label>New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Enter new password"
@@ -128,6 +128,7 @@ const AdminResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading}
+                      className="py-2"
                     />
                     <Form.Text className="text-muted">
                       Must be at least 6 characters long.
@@ -135,7 +136,7 @@ const AdminResetPasswordPage = () => {
                   </Form.Group>
 
                   <Form.Group className="mb-4" controlId="formConfirmPassword">
-                    <Form.Label>Confirm New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Confirm new password"
@@ -144,6 +145,7 @@ const AdminResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading}
+                      className="py-2"
                     />
                   </Form.Group>
 
@@ -173,7 +175,7 @@ const AdminResetPasswordPage = () => {
               )}
 
               <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+                <Link to="/login" className="text-decoration-none">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>

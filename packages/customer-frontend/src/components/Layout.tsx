@@ -1,9 +1,10 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button } from 'react-bootstrap';
+import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { FaShoppingCart } from 'react-icons/fa';
 import { FaUser } from 'react-icons/fa';
@@ -14,17 +15,48 @@ import { FaRegHeart } from 'react-icons/fa';
 import { FaStore } from 'react-icons/fa';
 import { FaHeart } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
+import { FaGlobe } from 'react-icons/fa';
 
-const Layout = () => {
+// Define BeforeInstallPromptEvent type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface LayoutProps {
+  installPrompt: BeforeInstallPromptEvent | null;
+}
+
+const Layout = ({ installPrompt }: LayoutProps) => {
   const { isAuthenticated, logout } = useAuth();
   const { getItemCount } = useCart();
   const { wishlistItems } = useWishlist();
+  const { t, i18n } = useTranslation();
   const itemCount = getItemCount();
   const wishlistCount = wishlistItems.length;
   const [showOffcanvas, setShowOffcanvas] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Language names mapping
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'am': 'አማርኛ',
+    'om': 'Afaan Oromoo'
+  };
+
+  // Get current language display name
+  const getCurrentLanguageName = () => {
+    return languageNames[i18n.language] || languageNames['en'];
+  };
+
+  // Handle language change
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    handleCloseOffcanvas();
+  };
+
   const handleCloseOffcanvas = () => setShowOffcanvas(false);
   const handleShowOffcanvas = () => setShowOffcanvas(true);
 
@@ -32,7 +64,33 @@ const Layout = () => {
     logout();
     setShowOffcanvas(false);
     navigate('/');
-    toast.success('Logged out successfully');
+    toast.success(t('notifications.loggedOut'));
+  };
+
+  // Direct installation handler that preserves user gesture context
+  const handleInstallClick = (e: React.MouseEvent) => {
+    if (!installPrompt) {
+      toast.error(t('notifications.installationError'));
+      return;
+    }
+
+    // This preserves the user gesture context since it's synchronous with the click
+    installPrompt.prompt().catch(error => {
+      console.error('Installation prompt error:', error);
+      toast.error(t('notifications.installationPromptError'));
+    });
+
+    // Handle the user choice
+    installPrompt.userChoice.then(result => {
+      console.log(`User response to install prompt: ${result.outcome}`);
+      if (result.outcome === 'accepted') {
+        toast.success(t('notifications.installationStarted'));
+      } else {
+        toast(t('notifications.installationCancelled'));
+      }
+    }).catch(error => {
+      console.error('Installation choice error:', error);
+    });
   };
 
   return (
@@ -41,10 +99,51 @@ const Layout = () => {
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover">
             <FaStore className="me-2 text-primary" size={24} />
-            <span style={{ color: 'var(--primary)' }}>Hybrid</span>Store
+            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>{t('app.name').includes('Store') ? 'Store' : ''}
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
+            {/* Language Switcher Dropdown */}
+            <NavDropdown 
+              title={<><FaGlobe className="me-1" /> <span className="d-none d-md-inline">{getCurrentLanguageName()}</span></>}
+              id="language-dropdown"
+              align="end"
+              className="me-3"
+            >
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('en')} 
+                active={i18n.language === 'en'}
+              >
+                English
+              </NavDropdown.Item>
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('am')} 
+                active={i18n.language === 'am'}
+              >
+                አማርኛ
+              </NavDropdown.Item>
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('om')} 
+                active={i18n.language === 'om'}
+              >
+                Afaan Oromoo
+              </NavDropdown.Item>
+            </NavDropdown>
+            
+            {/* Install App button */}
+            {installPrompt && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={handleInstallClick}
+                className="d-flex align-items-center gap-1 me-3 rounded-pill px-3 py-1"
+                title={t('common.installApp')}
+              >
+                <FaDownload />
+                <span className="d-none d-md-inline">{t('common.installApp')}</span>
+              </Button>
+            )}
+            
             {isAuthenticated && (
               <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none d-none d-lg-flex">
                 <div className="nav-icon-container p-2 rounded-circle">
@@ -85,44 +184,91 @@ const Layout = () => {
             <Offcanvas.Header closeButton className="border-bottom py-3">
               <Offcanvas.Title id="offcanvasNavbarLabel-expand-false" className="fw-bold d-flex align-items-center">
                 <FaStore className="me-2 text-primary" size={22} />
-                Menu
+                {t('navigation.menu')}
               </Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body className="p-0">
               <Nav className="justify-content-end flex-grow-1">
                 <Nav.Link as={Link} to="/" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                  <FaHome className="me-2 text-primary" /> Home
+                  <FaHome className="me-2 text-primary" /> {t('navigation.home')}
                 </Nav.Link>
                 <Nav.Link as={Link} to="/cart" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative px-3">
-                  <FaShoppingCart className="me-2 text-primary" /> Cart 
+                  <FaShoppingCart className="me-2 text-primary" /> {t('navigation.cart')}
                   {itemCount > 0 && <Badge pill bg="danger" className="ms-2">{itemCount}</Badge>}
                 </Nav.Link>
+                
+                {/* Language Switcher in Offcanvas Menu */}
+                <div className="py-3 border-bottom px-3">
+                  <div className="d-flex align-items-center mb-2">
+                    <FaGlobe className="me-2 text-primary" /> {t('common.language', 'Language')}
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    <Button 
+                      variant={i18n.language === 'en' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('en')}
+                      className="flex-grow-1"
+                    >
+                      English
+                    </Button>
+                    <Button 
+                      variant={i18n.language === 'am' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('am')}
+                      className="flex-grow-1"
+                    >
+                      አማርኛ
+                    </Button>
+                    <Button 
+                      variant={i18n.language === 'om' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('om')}
+                      className="flex-grow-1"
+                    >
+                      Afaan Oromoo
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Add Install App button to offcanvas menu if available */}
+                {installPrompt && (
+                  <Button
+                    variant="link"
+                    onClick={(e) => {
+                      handleInstallClick(e);
+                      handleCloseOffcanvas();
+                    }}
+                    className="py-3 border-bottom d-flex align-items-center w-100 text-decoration-none px-3"
+                  >
+                    <FaDownload className="me-2 text-primary" /> {t('common.installApp')}
+                  </Button>
+                )}
                 
                 {isAuthenticated ? (
                   <>
                     <Nav.Link as={Link} to="/wishlist" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative px-3">
-                      <FaHeart className="me-2 text-primary" /> My Wishlist
+                      <FaHeart className="me-2 text-primary" /> {t('navigation.myWishlist')}
                       {wishlistCount > 0 && <Badge pill bg="primary" className="ms-2">{wishlistCount}</Badge>}
                     </Nav.Link>
                     <Nav.Link as={Link} to="/settings" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaCog className="me-2 text-primary" /> Settings
+                      <FaCog className="me-2 text-primary" /> {t('navigation.settings')}
                     </Nav.Link>
                     <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaList className="me-2 text-primary" /> My Orders
+                      <FaList className="me-2 text-primary" /> {t('navigation.myOrders')}
                     </Nav.Link>
                     <Button variant="link" onClick={handleLogout} className="py-3 border-bottom d-flex align-items-center w-100 text-danger text-decoration-none px-3">
-                      <FaSignOutAlt className="me-2" /> Logout
+                      <FaSignOutAlt className="me-2" /> {t('navigation.logout')}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Nav.Link as={Link} to="/login" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaUser className="me-2 text-primary" /> Login / Register
+                      <FaUser className="me-2 text-primary" /> {t('navigation.loginRegister')}
                     </Nav.Link>
                   </>
                 )}
                 <Nav.Link as={Link} to="/about" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                  <FaStore className="me-2 text-primary" /> About Us
+                  <FaStore className="me-2 text-primary" /> {t('navigation.about')}
                 </Nav.Link>
               </Nav>
             </Offcanvas.Body>
@@ -150,7 +296,7 @@ const Layout = () => {
                   className="mb-1"
                   style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Home</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.home')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -171,7 +317,7 @@ const Layout = () => {
                     </Badge>
                   )}
                 </div>
-                <small style={{ fontSize: '0.7rem' }}>Cart</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.cart')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -185,7 +331,7 @@ const Layout = () => {
                   className="mb-1"
                   style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Orders</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.orders')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -199,7 +345,7 @@ const Layout = () => {
                   className="mb-1" 
                   style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Settings</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.settings')}</small>
               </Nav.Link>
             </Nav>
           </Container>

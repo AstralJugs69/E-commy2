@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { Container, Card, Alert, Spinner, Accordion } from 'react-bootstrap';
-import { useParams, Link } from 'react-router-dom';
+import { Container, Card, Alert, Spinner, Accordion, Badge } from 'react-bootstrap';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -10,6 +10,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   productName: string;
+  imageUrl?: string;
 }
 
 interface DeliveryLocation {
@@ -21,6 +22,10 @@ interface DeliveryLocation {
   userId: number;
 }
 
+interface AssignedPhoneNumber {
+  numberString: string;
+}
+
 interface Order {
   id: string;
   userId: string;
@@ -30,169 +35,98 @@ interface Order {
   updatedAt: string;
   items: OrderItem[];
   deliveryLocation?: DeliveryLocation;
+  verificationPhoneNumber?: string;
+  assignedPhoneNumber?: AssignedPhoneNumber | null;
 }
-
-const MAX_RETRIES = 5; // Max number of retry attempts
-const RETRY_DELAY_MS = 10000; // 10 seconds
 
 const OrderSuccessPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { token } = useAuth();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+  const navigate = useNavigate();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [verificationNumber, setVerificationNumber] = useState<string | null>(null);
-  const [numberLoading, setNumberLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [numberError, setNumberError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
-  
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+  const verificationNumber = order?.assignedPhoneNumber?.numberString || order?.verificationPhoneNumber || '';
 
   const fetchOrderDetails = async () => {
     if (!orderId || !token) {
-      setError('Order ID or authentication token is missing');
+      setError("Missing order ID or authentication token");
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError('');
-
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/orders/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      console.log(`Fetching order details for order ${orderId}...`);
+      const response = await axios.get(`${API_BASE_URL}/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
 
-      setOrder(response.data);
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      setError('Failed to load order details. Please try again later.');
+      if (response.data) {
+        // Deep debug logging
+        console.log("============ ORDER DETAILS FROM API ============");
+        console.log(JSON.stringify(response.data, null, 2));
+        console.log("==============================================");
+
+        setOrder(response.data);
+        
+        // Verification phone number debugging - check both possible sources
+        const phoneNumber = response.data.assignedPhoneNumber?.numberString || response.data.verificationPhoneNumber;
+        if (!phoneNumber) {
+          console.warn("⚠️ NO VERIFICATION PHONE NUMBER FOUND");
+          setNumberError("No verification phone number was assigned to this order. Please contact support.");
+        } else {
+          console.log(`✅ Verification phone number: ${phoneNumber}`);
+        }
+
+        // Delivery location debugging
+        if (response.data.deliveryLocation) {
+          console.log(`✅ Delivery location found: ${JSON.stringify(response.data.deliveryLocation)}`);
+        } else {
+          console.warn("⚠️ NO DELIVERY LOCATION FOUND");
+        }
+
+        // Order items debugging
+        if (response.data.items && response.data.items.length > 0) {
+          console.log(`✅ Order items found: ${response.data.items.length} items`);
+          response.data.items.forEach((item: any, index: number) => {
+            console.log(`Item ${index + 1}: ${JSON.stringify(item)}`);
+          });
+        } else {
+          console.warn("⚠️ NO ORDER ITEMS FOUND");
+        }
+      } else {
+        console.error("❌ Invalid or empty response data");
+        setError("Invalid order data received");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching order:", err);
+      if (axios.isAxiosError(err) && err.response) {
+        console.error("Response error data:", err.response.data);
+        console.error("Response status:", err.response.status);
+        
+        if (err.response.status === 401) {
+          setError("You must be logged in to view this order");
+        } else if (err.response.status === 404) {
+          setError("Order not found");
+        } else {
+          setError(err.response.data?.message || "Failed to fetch order details");
+        }
+      } else {
+        setError("Network error while fetching order details");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchVerificationNumber = async (currentRetry = 0) => { // Pass currentRetry
-    if (!orderId || !token) {
-      setNumberError('Order ID is missing');
-      setNumberLoading(false);
-      return;
-    }
-    
-    // Clear previous specific number error *if* retrying
-    if (currentRetry > 0) {
-      setNumberError(null);
-    } else {
-      // Only set loading true on the first attempt
-      setNumberLoading(true);
-      setNumberError(null);
-      setRetryCount(0); // Reset retry count on initial call
-    }
-    
-    // Clear previous timeout if any
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    console.log(`Attempt ${currentRetry + 1} to fetch verification number for order ${orderId}...`);
-    
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/orders/assign-number/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      if (response.data && response.data.verificationPhoneNumber) {
-        setVerificationNumber(response.data.verificationPhoneNumber);
-        setNumberError(null); // Clear any previous retry messages
-        setNumberLoading(false); // Success, stop loading
-        console.log("Verification number retrieved successfully.");
-      } else {
-        // Should not happen if backend sends correct data on 200
-        setNumberError("Could not retrieve verification number (invalid response).");
-        setNumberLoading(false);
-      }
-    } catch (err) {
-      console.error(`Attempt ${currentRetry + 1} failed:`, err);
-      let errorMsg = "Failed to get verification number.";
-      let canRetry = false;
-      
-      if (axios.isAxiosError(err) && err.response) {
-        // --- Check for specific "No lines available" error ---
-        // Option A: Check status code (if backend returns 503 specifically for this)
-        if (err.response.status === 503) {
-          canRetry = true;
-          errorMsg = `No verification lines currently available. Retrying in ${RETRY_DELAY_MS / 1000}s... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
-        }
-        // Option B: Check specific message (if backend returns consistent message)
-        // else if (err.response.data?.message?.includes("No verification phone lines")) {
-        //     canRetry = true;
-        //     errorMsg = `No lines available, retrying... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
-        // }
-        else {
-          // Handle other errors (401, 404, 500 etc.) - Do not retry these
-          errorMsg = err.response.data?.message || `Error: ${err.response.status}`;
-          if (err.response.status === 401) errorMsg = "Authentication error.";
-          if (err.response.status === 404) errorMsg = "Order details not found for number assignment.";
-        }
-      } else {
-        // Network error - Maybe allow retry? Or maybe not? Let's not retry network errors for now.
-        errorMsg = "Network error while fetching number.";
-      }
-      
-      // --- Handle Retry Logic ---
-      if (canRetry && currentRetry < MAX_RETRIES) {
-        setRetryCount(currentRetry + 1);
-        setNumberError(errorMsg); // Show temporary retry message
-        // Set timeout for next retry
-        timeoutRef.current = setTimeout(() => {
-          fetchVerificationNumber(currentRetry + 1);
-        }, RETRY_DELAY_MS);
-        // Keep numberLoading as true while retrying
-        setNumberLoading(true);
-      } else {
-        // Max retries reached or non-retryable error
-        if (canRetry) { // If it failed after max retries
-          setNumberError(`Still no lines available after ${MAX_RETRIES + 1} attempts. Please contact support.`);
-        } else { // Other error
-          setNumberError(errorMsg);
-        }
-        setNumberLoading(false); // Stop loading on final failure
-      }
-    }
-    // Removed finally block - loading state is handled within try/catch now
-  };
-
   useEffect(() => {
     fetchOrderDetails();
-    
-    // Clear previous timeouts when component unmounts or dependencies change
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [orderId, token, API_BASE_URL]);
-
-  useEffect(() => {
-    if (orderId && token) {
-      fetchVerificationNumber(0); // Start initial fetch (attempt 0)
-    } else if (!token) {
-      setNumberError("Authentication error. Cannot fetch details.");
-      setNumberLoading(false);
-    }
-    // Dependency array remains [orderId, token] - fetch runs when these change
   }, [orderId, token, API_BASE_URL]);
 
   if (loading) {
@@ -241,52 +175,46 @@ const OrderSuccessPage = () => {
       <div className="text-center mb-3">
         <h2 className="text-success fw-bold">Order Placed Successfully!</h2>
         <p>Your Order ID: <strong className="text-primary fs-5">#{orderId}</strong></p>
+        <Badge bg={order.status === 'Pending Call' ? 'warning' : 'success'} className="px-3 py-2 fs-6 mb-3">
+          {order.status}
+        </Badge>
       </div>
 
-      {/* --- Verification Number Section --- MOVED TO TOP */}
-      <Card className="mb-3 shadow-sm border-danger">
-        <Card.Header as="h5" className="bg-light text-danger">Phone Verification Required</Card.Header>
-        <Card.Body className="p-3 text-center">
-          {numberLoading && (
+      {verificationNumber ? (
+        <Card className="mb-4 shadow border-danger">
+          <Card.Header as="h5" className="bg-danger text-white">Important: Phone Verification Required</Card.Header>
+          <Card.Body className="p-4 text-center">
             <div className="py-2">
-              <Spinner animation="border" size="sm" className="me-2" />
-              <span>Checking verification line availability...</span>
-              {/* Display retry message if applicable */}
-              {retryCount > 0 && <p className="text-muted small mt-2">{numberError}</p>}
-            </div>
-          )}
-
-          {!numberLoading && numberError && (
-            <Alert variant={retryCount >= MAX_RETRIES ? "danger" : "warning"}>
-              {numberError}
-            </Alert>
-          )}
-
-          {!numberLoading && !numberError && verificationNumber && (
-            <div className="py-2">
-              <Card.Text className="mb-2">
-                To complete your order, please call this number immediately:
-              </Card.Text>
-              <div className="bg-light py-3 px-2 rounded mb-2">
-                <h3 className="fw-bold mb-0">
+              <Card.Title className="mb-3 fs-5">
+                To complete your order, please call this verification number:
+              </Card.Title>
+              <div className="bg-light py-3 px-2 rounded mb-3 border">
+                <h2 className="fw-bold mb-0">
                   <a href={`tel:${verificationNumber}`} className="text-primary text-decoration-none">
                     {verificationNumber}
                   </a>
-                </h3>
+                </h2>
               </div>
               <Card.Text>
-                <small className="text-danger fw-bold">Failure to call may result in order cancellation.</small>
+                <span className="text-danger fw-bold">
+                  Failure to call may result in order cancellation
+                </span>
+                <p className="mt-2 small text-muted">
+                  Call this number to confirm your order. Tap the number above to dial automatically.
+                </p>
               </Card.Text>
             </div>
-          )}
-          
-          {!numberLoading && !numberError && !verificationNumber && (
-            <Alert variant="warning">
-              Could not retrieve the verification phone number. Please contact support with your Order ID: {orderId}.
-            </Alert>
-          )}
-        </Card.Body>
-      </Card>
+          </Card.Body>
+        </Card>
+      ) : (
+        <Alert variant="danger" className="mb-4">
+          <Alert.Heading>Verification Phone Number Missing</Alert.Heading>
+          <p>
+            No verification phone number was assigned to this order. Please contact customer
+            support with your Order ID: <strong>{orderId}</strong>.
+          </p>
+        </Alert>
+      )}
 
       <Card className="mb-3 shadow-sm">
         <Card.Header as="h5" className="bg-light">Order Summary</Card.Header>
@@ -306,63 +234,70 @@ const OrderSuccessPage = () => {
         </Card.Body>
       </Card>
 
-      <Accordion className="mb-3">
-        <Accordion.Item eventKey="0">
-          <Accordion.Header>Items Ordered</Accordion.Header>
-          <Accordion.Body className="p-3">
-            <div className="table-responsive">
-              <table className="table table-striped">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: '40%' }}>Product</th>
-                    <th style={{ width: '20%' }} className="text-center">Quantity</th>
-                    <th style={{ width: '20%' }} className="text-end">Price</th>
-                    <th style={{ width: '20%' }} className="text-end">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item) => (
+      <Card className="mb-3 shadow-sm">
+        <Card.Header as="h5" className="bg-light">Delivery Information</Card.Header>
+        <Card.Body className="p-3">
+          {order.deliveryLocation ? (
+            <>
+              <p className="mb-2">
+                <strong>Name:</strong> {order.deliveryLocation.name}
+                {order.deliveryLocation.isDefault && (
+                  <span className="badge bg-info ms-2 px-2">Default</span>
+                )}
+              </p>
+              <p className="mb-2"><strong>District:</strong> {order.deliveryLocation.district}</p>
+              <p className="mb-2"><strong>Contact Phone:</strong> {order.deliveryLocation.phone}</p>
+            </>
+          ) : (
+            <Alert variant="warning">
+              No delivery location information is available for this order.
+              Please contact customer support if this is unexpected.
+            </Alert>
+          )}
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-3 shadow-sm">
+        <Card.Header as="h5" className="bg-light">Items Ordered</Card.Header>
+        <Card.Body className="p-3">
+          <div className="table-responsive">
+            <table className="table table-striped">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '40%' }}>Product</th>
+                  <th style={{ width: '20%' }} className="text-center">Quantity</th>
+                  <th style={{ width: '20%' }} className="text-end">Price</th>
+                  <th style={{ width: '20%' }} className="text-end">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items && order.items.length > 0 ? (
+                  order.items.map((item) => (
                     <tr key={item.id}>
                       <td>{item.productName || `Product #${item.productId}`}</td>
                       <td className="text-center">{item.quantity}</td>
                       <td className="text-end">€{item.price.toFixed(2)}</td>
                       <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="table-light fw-bold">
+                  ))
+                ) : (
                   <tr>
-                    <td colSpan={3} className="text-end">Total:</td>
-                    <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                    <td colSpan={4} className="text-center">No items found in this order</td>
                   </tr>
-                </tfoot>
-              </table>
-            </div>
-          </Accordion.Body>
-        </Accordion.Item>
+                )}
+              </tbody>
+              <tfoot className="table-light fw-bold">
+                <tr>
+                  <td colSpan={3} className="text-end">Total:</td>
+                  <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card.Body>
+      </Card>
 
-        <Accordion.Item eventKey="1">
-          <Accordion.Header>Delivery Location</Accordion.Header>
-          <Accordion.Body className="p-3">
-            {order.deliveryLocation ? (
-              <>
-                <p className="mb-2">
-                  <strong>Name:</strong> {order.deliveryLocation.name}
-                  {order.deliveryLocation.isDefault && (
-                    <span className="badge bg-info ms-2 px-2">Default Location</span>
-                  )}
-                </p>
-                <p className="mb-2"><strong>District:</strong> {order.deliveryLocation.district}</p>
-                <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
-              </>
-            ) : (
-              <Alert variant="warning">No delivery location information available</Alert>
-            )}
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
-
-      <div className="d-flex justify-content-center gap-3 mt-3 mb-4">
+      <div className="d-flex justify-content-center gap-3 mt-4 mb-4">
         <Link to="/" className="btn btn-secondary rounded px-2 py-1 fw-medium" style={{ width: '120px', fontSize: '0.9rem' }}>
           Continue Shopping
         </Link>

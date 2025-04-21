@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaStore } from 'react-icons/fa';
+import api from '../utils/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -15,7 +16,7 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,7 +38,7 @@ const RegisterPage = () => {
     try {
       // --- Step 1: Attempt Registration ---
       console.log("Attempting registration for:", email);
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      const response = await api.post('/auth/register', {
         email: email,
         password: password,
       });
@@ -97,6 +98,11 @@ const RegisterPage = () => {
     }
   };
 
+  // If user is already authenticated, redirect to home
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Container fluid className="py-4">
       {/* Logo Section */}
@@ -124,27 +130,27 @@ const RegisterPage = () => {
               <Form onSubmit={handleRegister}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                   <Form.Text className="text-muted small">
                     Must be at least 6 characters long
@@ -153,14 +159,14 @@ const RegisterPage = () => {
                 
                 {/* Confirm Password input */}
                 <Form.Group className="mb-4" controlId="formBasicConfirmPassword">
-                  <Form.Label className="fw-medium">Confirm Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Confirm Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
@@ -170,7 +176,6 @@ const RegisterPage = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-100 py-2 rounded-pill fw-medium"
-                  size="lg"
                 >
                   {isLoading ? (
                     <>

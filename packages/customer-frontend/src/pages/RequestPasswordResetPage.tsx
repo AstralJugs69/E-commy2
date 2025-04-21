@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { FaStore } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'; // Make sure this matches your backend
 
@@ -47,52 +48,73 @@ const RequestPasswordResetPage = () => {
   };
 
   return (
-    <Container className="d-flex justify-content-center align-items-center vh-100">
-      <Row>
-        <Col md={8} lg={6} xl={5}>
-          <Card className="shadow-sm p-4">
-            <Card.Body>
-              <h2 className="text-center mb-4">Reset Password</h2>
+    <Container fluid className="py-4">
+      {/* Logo Section */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} className="text-center">
+          <div className="store-logo-container mb-3">
+            <FaStore size={45} className="text-primary mb-2" />
+            <h1 className="h3 fw-semibold text-primary">HybridStore</h1>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className="justify-content-center">
+        <Col xs={12} sm={10} md={8} lg={5} xl={4}>
+          <Card className="shadow-sm border-0 auth-card">
+            <Card.Body className="p-4">
+              <h2 className="text-center mb-4 fw-semibold">Reset Password</h2>
+              
               <p className="text-center text-muted mb-4">
                 Enter your email address and we'll send you instructions to reset your password (if an account exists).
               </p>
 
               {message && (
-                <Alert variant={isError ? 'danger' : 'success'} className="mb-3">
+                <Alert variant={isError ? 'danger' : 'success'} className="mb-4">
                   {message}
                 </Alert>
               )}
 
               <Form onSubmit={handleRequestReset}>
-                <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email address</Form.Label>
+                <Form.Group className="mb-4" controlId="formBasicEmail">
+                  <Form.Label className="fw-medium text-neutral-700">Email address</Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="Enter email"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="py-2"
                   />
                 </Form.Group>
 
-                <Button variant="primary" type="submit" className="w-100" disabled={isLoading}>
+                <Button 
+                  variant="primary" 
+                  type="submit" 
+                  className="w-100 py-2 rounded-pill fw-medium" 
+                  disabled={isLoading}
+                >
                   {isLoading ? (
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Sending Request...
+                    </>
                   ) : (
                     'Request Reset Link'
                   )}
                 </Button>
               </Form>
 
-              <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+              <div className="text-center mt-4">
+                <Link to="/login" className="text-decoration-none fw-medium">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>

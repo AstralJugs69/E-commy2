@@ -50,7 +50,7 @@ const AdminRequestPasswordResetPage = () => {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Reset Admin Password</h3>
               <p className="text-center text-muted mb-4">
@@ -65,7 +65,7 @@ const AdminRequestPasswordResetPage = () => {
 
               <Form onSubmit={handleRequestReset}>
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="Enter admin email"
@@ -73,10 +73,11 @@ const AdminRequestPasswordResetPage = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="py-2"
                   />
                 </Form.Group>
 
-                <Button variant="primary" type="submit" className="w-100" disabled={isLoading}>
+                <Button variant="primary" type="submit" className="w-100 py-2" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
@@ -89,7 +90,7 @@ const AdminRequestPasswordResetPage = () => {
               </Form>
 
               <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+                <Link to="/login" className="text-decoration-none">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>

@@ -15,8 +15,10 @@ import { FaChevronRight } from 'react-icons/fa';
 import { FaInfoCircle } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import { FaShieldAlt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 interface UserProfile {
   id: number;
@@ -88,6 +90,9 @@ const SettingsPage = () => {
   // Add state for tracking operations in progress
   const [isSettingDefault, setIsSettingDefault] = useState<number | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState<number | null>(null);
+  
+  // Add these state variables if they don't exist already (they seem to be defined around line 50)
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
@@ -467,6 +472,79 @@ const SettingsPage = () => {
     }
   };
 
+  // Add this function near the other handler functions (around line 205)
+  const handleShowPasswordModal = () => {
+    // Reset form state
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    setShowPasswordModal(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+  };
+
+  // Update the handlePasswordChange function to use the api utility
+  const handlePasswordChange = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingPassword(true);
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    
+    // Basic validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setUpdateError('All fields are required');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setUpdateError('New passwords do not match');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setUpdateError('New password must be at least 6 characters long');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    try {
+      // Use the api utility instead of axios directly
+      const response = await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      
+      setUpdateSuccess('Password updated successfully');
+      toast.success('Password has been changed');
+      
+      // Clear form fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        if (err.response.status === 401 && err.response.data.message === 'Incorrect current password.') {
+          setUpdateError('Current password is incorrect');
+        } else {
+          setUpdateError(err.response.data.message || 'Failed to update password');
+        }
+        console.error('Error changing password:', err.response.data);
+      } else {
+        setUpdateError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container className="py-4 text-center">
@@ -507,6 +585,11 @@ const SettingsPage = () => {
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>
+                <Nav.Link eventKey="security" className="py-3">
+                  <FaShieldAlt className="me-2" size={18} /> Security
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
                 <Nav.Link eventKey="preferences" className="py-3">
                   <FaCog className="me-2" size={18} /> Preferences
                 </Nav.Link>
@@ -528,16 +611,6 @@ const SettingsPage = () => {
                     </div>
                     <FaChevronRight className="text-muted" />
                   </div>
-                  
-                  <Link to="#" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaLock className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">Change Password</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </Link>
                   
                   <Link to="/orders" 
                     className="d-flex justify-content-between align-items-center list-group-item"
@@ -667,7 +740,7 @@ const SettingsPage = () => {
                             <FaEdit className="me-1" /> Edit
                           </Button>
                           <Button 
-                            variant="outline-danger"
+                            variant="danger"
                             size="sm"
                             onClick={() => handleDeleteLocation(location.id)}
                             disabled={isDeletingLocation !== null || isSettingDefault !== null}
@@ -696,6 +769,100 @@ const SettingsPage = () => {
                     ))}
                   </ListGroup>
                 )}
+              </Tab.Pane>
+              
+              {/* Security Tab */}
+              <Tab.Pane eventKey="security" className="p-4">
+                <h4 className="mb-4 fs-5 fw-semibold">Change Your Password</h4>
+                
+                {updateError && (
+                  <Alert variant="danger" className="mb-4">
+                    {updateError}
+                  </Alert>
+                )}
+                
+                {updateSuccess && (
+                  <Alert variant="success" className="mb-4">
+                    {updateSuccess}
+                  </Alert>
+                )}
+                
+                <Form onSubmit={handlePasswordChange}>
+                  <Row>
+                    <Col md={8} lg={6}>
+                      <Form.Group className="mb-3" controlId="formCurrentPassword">
+                        <Form.Label className="fw-medium">Current Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Enter your current password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
+                      
+                      <Form.Group className="mb-3" controlId="formNewPassword">
+                        <Form.Label className="fw-medium">New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                        />
+                        <Form.Text className="text-muted">
+                          Password must be at least 6 characters long.
+                        </Form.Text>
+                      </Form.Group>
+                      
+                      <Form.Group className="mb-4" controlId="formConfirmPassword">
+                        <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
+                      
+                      <Button
+                        variant="primary"
+                        type="submit"
+                        disabled={isUpdatingPassword}
+                        className="fw-medium py-2 rounded-pill px-4"
+                      >
+                        {isUpdatingPassword ? (
+                          <>
+                            <Spinner
+                              as="span"
+                              animation="border"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                              className="me-2"
+                            />
+                            Updating...
+                          </>
+                        ) : (
+                          'Update Password'
+                        )}
+                      </Button>
+                    </Col>
+                  </Row>
+                </Form>
+                
+                <hr className="my-4" />
+                
+                <div className="mt-4">
+                  <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
+                  <ul className="text-muted">
+                    <li>Use a combination of letters, numbers, and special characters</li>
+                    <li>Avoid using easily guessable information like birthdays</li>
+                    <li>Use different passwords for different accounts</li>
+                    <li>Change your password periodically for enhanced security</li>
+                  </ul>
+                </div>
               </Tab.Pane>
               
               {/* Preferences Tab */}
@@ -752,7 +919,6 @@ const SettingsPage = () => {
                 value={formName} 
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Enter your name"
-                className="auth-input"
               />
             </Form.Group>
             
@@ -799,7 +965,6 @@ const SettingsPage = () => {
                     value={locationForm.name}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.name}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -820,7 +985,6 @@ const SettingsPage = () => {
                     value={locationForm.phone}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.phone}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -839,7 +1003,6 @@ const SettingsPage = () => {
                     value={locationForm.district}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.district}
                   >
                     <option value="" disabled>-- Select District --</option>
@@ -867,6 +1030,88 @@ const SettingsPage = () => {
                     Saving...
                   </>
                 ) : (editingLocation ? 'Update Location' : 'Add Location')}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+      
+      {/* Password Change Modal */}
+      <Modal show={showPasswordModal} onHide={handleClosePasswordModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Change Password</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <Form onSubmit={handlePasswordChange}>
+            {updateError && (
+              <Alert variant="danger" className="mb-3">
+                {updateError}
+              </Alert>
+            )}
+            {updateSuccess && (
+              <Alert variant="success" className="mb-3">
+                {updateSuccess}
+              </Alert>
+            )}
+            
+            <Form.Group className="mb-3" controlId="formCurrentPassword">
+              <Form.Label className="fw-medium">Current Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <Form.Group className="mb-3" controlId="formNewPassword">
+              <Form.Label className="fw-medium">New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <Form.Text className="text-muted">
+                Password must be at least 6 characters long.
+              </Form.Text>
+            </Form.Group>
+            
+            <Form.Group className="mb-4" controlId="formConfirmPassword">
+              <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <div className="d-grid">
+              <Button 
+                variant="primary" 
+                type="submit"
+                disabled={isUpdatingPassword}
+                className="fw-medium py-2 rounded-pill"
+              >
+                {isUpdatingPassword ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
               </Button>
             </div>
           </Form>

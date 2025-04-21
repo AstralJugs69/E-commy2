@@ -75,7 +75,13 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setWishlistItems(response.data);
+      // Ensure response.data is an array
+      if (Array.isArray(response.data)) {
+        setWishlistItems(response.data);
+      } else {
+        console.error('Expected array for wishlist data, got:', response.data);
+        setWishlistItems([]);
+      }
     } catch (err) {
       console.error("Error fetching wishlist:", err);
       setError("Failed to load wishlist items.");

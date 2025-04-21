@@ -3,7 +3,7 @@
 
 ## 1. Current Progress
 
-Work has commenced on the `feature/customer-address-management` branch with the goal of enhancing the customer address management capabilities. This phase focuses on improving the user experience for managing shipping addresses and streamlining the checkout process.
+Work has commenced on the `refactor/code-polish-v2` branch with the goal of addressing high-priority technical debt and UX polish items identified during code review. This phase focuses on resolving infrastructure issues and improving the overall user experience.
 
 ## 1.1 Current Focus: Delivery Location Management
 
@@ -62,6 +62,17 @@ Branch merged into main. [Date: 2025-05-12]
 - Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
 - Refactored Admin Dashboard to show separate sections for Pending Call, Verified, Processing, Shipped orders.
 - Standardized action button styling across Admin Dashboard live order sections. [Date: 2025-05-26]
+
+## 1.4 Refactor/Polish Phase (Branch: refactor/code-polish-v2)
+
+### Goal:
+Address high-priority technical debt and UX polish items identified during code review.
+
+### Branch:
+`refactor/code-polish-v2` (created from main)
+
+### Current Focus:
+Fixing the phone number assignment race condition during order creation. Move assignment logic into the `POST /api/orders` transaction and remove the separate `/api/orders/assign-number/:orderId` endpoint. (Related to L13, L2.2)
 
 ## 2. Project Summary & Vision
 

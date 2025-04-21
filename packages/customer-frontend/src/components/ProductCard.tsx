@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = (import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads').replace(/\/+$/, '');
+import { getImageUrl } from '../utils/imageUrl';
 
 interface ProductImage {
   id: number;
@@ -37,7 +36,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   hideAddToCart = false,
   disableInternalLink = false 
 }) => {
-  const { addOrUpdateItemQuantity } = useCart();
+  const { addToCart } = useCart();
+  const { t } = useTranslation();
   const [hover, setHover] = React.useState(false);
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
@@ -51,13 +51,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleAddToCart = (product: Product) => {
-    addOrUpdateItemQuantity(product.id, quantity)
+    addToCart(product.id, quantity)
       .then(() => {
-        toast.success('Added to cart');
+        toast.success(t('cart.addedToCart', 'Added to cart'));
       })
-      .catch(error => {
+      .catch((error: Error) => {
         console.error('Error adding to cart:', error);
-        toast.error('Failed to add to cart');
+        toast.error(t('cart.failedToAdd', 'Failed to add to cart'));
       });
   };
 
@@ -66,20 +66,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card className="h-100 product-card shadow-sm border-0 transition-hover">
-      <div className="product-image-wrapper position-relative">
+      <div className="product-image-wrapper position-relative" style={{ aspectRatio: '1/1' }}>
         <Card.Img
           variant="top"
-          src={imageUrl ? (imageUrl.startsWith('/uploads/') ? `${UPLOADS_URL}${imageUrl.substring(8)}` : imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`) : '/placeholder-product.jpg'}
+          src={getImageUrl(imageUrl)}
           alt={product.name}
           className="product-image"
           onClick={() => navigate(`/products/${product.id}`)}
+          loading="lazy"
+          width="100%"
+          height="100%"
         />
         {product.discountPercentage > 0 && (
           <Badge 
             bg="danger" 
             className="position-absolute top-0 end-0 m-2 py-2 px-3 rounded-pill fs-6 fw-medium"
           >
-            {product.discountPercentage}% OFF
+            {product.discountPercentage}% {t('product.off', 'OFF')}
           </Badge>
         )}
       </div>
@@ -105,36 +108,38 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <span className="fw-bold fs-5">₹{product.price.toFixed(2)}</span>
           )}
         </div>
-        <div className="mt-auto">
-          <div className="d-flex gap-3 align-items-center">
-            <div className="quantity-control d-flex align-items-center border rounded">
+        {!hideAddToCart && (
+          <div className="mt-auto">
+            <div className="d-flex gap-3 align-items-center">
+              <div className="quantity-control d-flex align-items-center border rounded">
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaMinus />
+                </Button>
+                <span className="px-3">{quantity}</span>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaPlus />
+                </Button>
+              </div>
               <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="border-0 py-1 px-2"
+                variant="primary"
+                className="flex-grow-1 rounded-pill py-2 px-4"
+                onClick={() => handleAddToCart(product)}
               >
-                <FaMinus />
-              </Button>
-              <span className="px-3">{quantity}</span>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(quantity + 1)}
-                className="border-0 py-1 px-2"
-              >
-                <FaPlus />
+                <FaShoppingCart className="me-2" /> {t('common.add')}
               </Button>
             </div>
-            <Button
-              variant="primary"
-              className="flex-grow-1 rounded-pill py-2 px-4"
-              onClick={() => handleAddToCart(product)}
-            >
-              <FaShoppingCart className="me-2" /> Add
-            </Button>
           </div>
-        </div>
+        )}
       </Card.Body>
     </Card>
   );

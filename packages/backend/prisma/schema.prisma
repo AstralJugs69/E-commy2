@@ -73,14 +73,17 @@ model Order {
   totalAmount         Float
   locationCheckResult String?
   deliveryLocationId  Int?
+  assignedPhoneNumberId Int?           // New field to store the assigned phone number
   user                User              @relation(fields: [userId], references: [id])
   items               OrderItem[]
   deliveryLocation    DeliveryLocation? @relation(fields: [deliveryLocationId], references: [id])
+  assignedPhoneNumber PhoneNumber?     @relation(fields: [assignedPhoneNumberId], references: [id])
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@index([deliveryLocationId])
+  @@index([assignedPhoneNumberId])    // Add index for the new foreign key
 }
 
 model OrderItem {
@@ -115,6 +118,7 @@ model PhoneNumber {
   status       String   @default("Offline")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  orders       Order[]   // Add reverse relation for phone number to orders
 
   @@index([status])
 }

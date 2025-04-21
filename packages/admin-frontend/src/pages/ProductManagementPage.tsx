@@ -14,6 +14,7 @@ import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 import api from '../utils/api';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface Category {
   id: number;
@@ -511,14 +512,12 @@ const ProductManagementPage: React.FC = () => {
                       <td className="text-center">
                         {product.images && product.images.length > 0 ? (
                           <img 
-                            src={product.images[0].url.startsWith('/') 
-                              ? `${API_URL}${product.images[0].url}` 
-                              : product.images[0].url} 
+                            src={getImageUrl(product.images[0].url)} 
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
                             style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              (e.target as HTMLImageElement).src = `${API_URL}/placeholder.png`;
+                              (e.target as HTMLImageElement).src = getImageUrl("/placeholder.png");
                             }}
                           />
                         ) : (
@@ -564,7 +563,7 @@ const ProductManagementPage: React.FC = () => {
                             Edit
                           </Button>
                           <Button 
-                            variant="outline-danger" 
+                            variant="danger" 
                             size="sm"
                             onClick={() => handleShowDeleteModal(product)}
                           >
@@ -599,17 +598,18 @@ const ProductManagementPage: React.FC = () => {
               </Alert>
             )}
             <Form.Group className="mb-3">
-              <Form.Label>Name</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Name</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Product Name"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 required
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Price</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Price</Form.Label>
               <InputGroup>
                 <InputGroup.Text>$</InputGroup.Text>
                 <Form.Control
@@ -619,11 +619,12 @@ const ProductManagementPage: React.FC = () => {
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
                   required
+                  className="py-2"
                 />
               </InputGroup>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Cost Price (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Cost Price (Optional)</Form.Label>
               <InputGroup>
                 <InputGroup.Text>$</InputGroup.Text>
                 <Form.Control
@@ -632,35 +633,39 @@ const ProductManagementPage: React.FC = () => {
                   placeholder="0.00"
                   value={formCostPrice}
                   onChange={(e) => setFormCostPrice(e.target.value)}
+                  className="py-2"
                 />
               </InputGroup>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Description (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Description (Optional)</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
                 placeholder="Product Description"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Stock (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Stock (Optional)</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Stock Quantity"
                 value={formStock}
                 onChange={(e) => setFormStock(e.target.value)}
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="productImageFile">
-              <Form.Label>Product Images (Up to 5)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Product Images (Up to 5)</Form.Label>
               <Form.Control
                 type="file"
                 accept="image/png, image/jpeg, image/webp, image/gif"
                 onChange={handleFileSelection}
                 multiple
+                className="py-2"
               />
               <Form.Text className="text-muted">
                 Max 5 images total. Max file size: 5MB each. Supported formats: PNG, JPEG, WebP, GIF.
@@ -711,7 +716,7 @@ const ProductManagementPage: React.FC = () => {
                       style={{ width: '80px', height: '80px' }}
                     >
                       <Image 
-                        src={url.startsWith('/') ? `${API_URL}${url}` : url}
+                        src={getImageUrl(url)}
                         alt={`Image ${index + 1}`}
                         className="rounded"
                         style={{ width: '80px', height: '80px', objectFit: 'cover' }}
@@ -734,10 +739,11 @@ const ProductManagementPage: React.FC = () => {
               </div>
             )}
             <Form.Group className="mb-3">
-              <Form.Label>Category (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Category (Optional)</Form.Label>
               <Form.Select
                 value={formCategoryId}
                 onChange={(e) => setFormCategoryId(e.target.value)}
+                className="py-2"
               >
                 <option value="">None</option>
                 {categories.map(category => (
@@ -756,6 +762,7 @@ const ProductManagementPage: React.FC = () => {
               variant="primary" 
               type="submit"
               disabled={isModalLoading || isUploading}
+              className="py-2"
             >
               {isModalLoading || isUploading ? (
                 <>
@@ -784,7 +791,7 @@ const ProductManagementPage: React.FC = () => {
           <Button variant="secondary" onClick={handleCloseDeleteModal}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={handleConfirmDelete}>
+          <Button variant="danger" onClick={handleConfirmDelete} className="py-2">
             Delete
           </Button>
         </Modal.Footer>
@@ -805,13 +812,14 @@ const ProductManagementPage: React.FC = () => {
                   <span className="text-muted">Current stock: {stockProduct.stock || 0}</span>
                 </p>
                 <Form.Group className="mb-3">
-                  <Form.Label>Stock adjustment (+ to add, - to remove)</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Stock adjustment (+ to add, - to remove)</Form.Label>
                   <Form.Control
                     type="number"
                     value={stockAdjustment}
                     onChange={(e) => setStockAdjustment(e.target.value)}
                     placeholder="Enter adjustment value"
                     required
+                    className="py-2"
                   />
                   <Form.Text className="text-muted">
                     Example: Enter "5" to add 5 units or "-3" to remove 3 units
@@ -829,7 +837,7 @@ const ProductManagementPage: React.FC = () => {
             <Button variant="secondary" onClick={handleCloseStockModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="py-2">
               Save Changes
             </Button>
           </Modal.Footer>
