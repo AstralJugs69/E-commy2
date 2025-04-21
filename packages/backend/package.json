@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/index.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/index.js",
+    "start": "npx prisma migrate deploy && node dist/index.js",
     "setup": "npm install && npm install compression@1.7.4 @types/compression@1.7.5",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
