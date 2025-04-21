@@ -63,7 +63,9 @@
     "cartSummary": " የጋሪ ማጠቃለያ",
     "quantityError": " ብዛት ከ1 በታች መሆን አይችልም",
     "stockLimitError": " ከሚገኘው የአክሲዮን ብዛት በላይ ማከል አይቻልም",
-    "loginToCheckout": " እባክዎ ለመክፈል ይግቡ"
+    "loginToCheckout": " እባክዎ ለመክፈል ይግቡ",
+    "addedToCart": "[AI] ወደ ጋሪ ተጨምሯል",
+    "failedToAdd": "[AI] ወደ ጋሪ መጨመር አልተሳካም"
   },
   "checkout": {
     "title": " መክፈያ",
@@ -91,7 +93,10 @@
     "failedToAddLocation": " የማድረሻ ቦታ ማከል አልተሳካም።",
     "newLocationAdded": " አዲስ የማድረሻ ቦታ ተጨምሯል!",
     "errorPlacingOrder": " ትዕዛዝ ማስቀመጥ ላይ ስህተት። እባክዎን እንደገና ይሞክሩ።",
-    "orderSuccessful": " ትዕዛዝ በተሳካ ሁኔታ ተቀምጧል!"
+    "orderSuccessful": " ትዕዛዝ በተሳካ ሁኔታ ተቀምጧል!",
+    "fullName": "[AI] ሙሉ ስም",
+    "area": "[AI] አካባቢ",
+    "detailedAddress": "[AI] ዝርዝር አድራሻ"
   },
   "orders": {
     "title": " የእኔ ትዕዛዞች",
@@ -132,7 +137,9 @@
     "averageRating": " አማካይ ደረጃ",
     "outOf5": " ከ5 ውጪ",
     "basedOn": " የተመሰረተው",
-    "review": " ግምገማ"
+    "review": " ግምገማ",
+    "reviews": " ግምገማዎች",
+    "off": "[AI] ቅናሽ"
   },
   "auth": {
     "loginTitle": " ወደ መለያዎ ይግቡ",
@@ -206,7 +213,12 @@
     "addedToWishlist": " ምርት ወደ የምኞት ዝርዝር ተጨምሯል!",
     "removedFromWishlist": " ምርት ከየምኞት ዝርዝር ተወግዷል!",
     "moveToCart": " ወደ ጋሪ ያዛውሩ",
-    "removeFromWishlist": " ከየምኞት ዝርዝር አስወግድ"
+    "removeFromWishlist": " ከየምኞት ዝርዝር አስወግድ",
+    "loadingWishlist": "[AI] የምኞት ዝርዝርዎን በመጫን ላይ...",
+    "itemCount": "[AI] {{count}} ዕቃዎች በእርስዎ የምኞት ዝርዝር ውስጥ",
+    "itemCount_one": "[AI] 1 ዕቃ በእርስዎ የምኞት ዝርዝር ውስጥ",
+    "browseProducts": "[AI] ምርቶችን ይመልከቱ",
+    "errorRemoving": "[AI] ዕቃን ከየምኞት ዝርዝር ማስወገድ አልተሳካም"
   },
   "search": {
     "searchProducts": " ምርቶችን ይፈልጉ",

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
 import { getImageUrl } from '../utils/imageUrl';
@@ -36,6 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   disableInternalLink = false 
 }) => {
   const { addToCart } = useCart();
+  const { t } = useTranslation();
   const [hover, setHover] = React.useState(false);
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
@@ -51,11 +53,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const handleAddToCart = (product: Product) => {
     addToCart(product.id, quantity)
       .then(() => {
-        toast.success('Added to cart');
+        toast.success(t('cart.addedToCart', 'Added to cart'));
       })
       .catch((error: Error) => {
         console.error('Error adding to cart:', error);
-        toast.error('Failed to add to cart');
+        toast.error(t('cart.failedToAdd', 'Failed to add to cart'));
       });
   };
 
@@ -80,7 +82,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             bg="danger" 
             className="position-absolute top-0 end-0 m-2 py-2 px-3 rounded-pill fs-6 fw-medium"
           >
-            {product.discountPercentage}% OFF
+            {product.discountPercentage}% {t('product.off', 'OFF')}
           </Badge>
         )}
       </div>
@@ -133,7 +135,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 className="flex-grow-1 rounded-pill py-2 px-4"
                 onClick={() => handleAddToCart(product)}
               >
-                <FaShoppingCart className="me-2" /> Add
+                <FaShoppingCart className="me-2" /> {t('common.add')}
               </Button>
             </div>
           </div>

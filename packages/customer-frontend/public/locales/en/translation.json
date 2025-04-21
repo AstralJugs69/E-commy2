@@ -63,7 +63,9 @@
     "cartSummary": "Cart Summary",
     "quantityError": "Quantity cannot be less than 1",
     "stockLimitError": "Cannot add more than available stock",
-    "loginToCheckout": "Please log in to checkout"
+    "loginToCheckout": "Please log in to checkout",
+    "addedToCart": "Added to cart",
+    "failedToAdd": "Failed to add to cart"
   },
   "checkout": {
     "title": "Checkout",
@@ -91,7 +93,10 @@
     "failedToAddLocation": "Failed to add delivery location.",
     "newLocationAdded": "New delivery location added!",
     "errorPlacingOrder": "Error placing order. Please try again.",
-    "orderSuccessful": "Order placed successfully!"
+    "orderSuccessful": "Order placed successfully!",
+    "fullName": "Full Name",
+    "area": "Area",
+    "detailedAddress": "Detailed Address"
   },
   "orders": {
     "title": "My Orders",
@@ -133,7 +138,8 @@
     "outOf5": "out of 5",
     "basedOn": "based on",
     "review": "review",
-    "reviews": "reviews"
+    "reviews": "reviews",
+    "off": "OFF"
   },
   "auth": {
     "loginTitle": "Login to Your Account",
@@ -207,7 +213,12 @@
     "addedToWishlist": "Product added to wishlist!",
     "removedFromWishlist": "Product removed from wishlist!",
     "moveToCart": "Move to Cart",
-    "removeFromWishlist": "Remove from Wishlist"
+    "removeFromWishlist": "Remove from Wishlist",
+    "loadingWishlist": "Loading your wishlist...",
+    "itemCount": "{{count}} items in your wishlist",
+    "itemCount_one": "1 item in your wishlist",
+    "browseProducts": "Browse Products",
+    "errorRemoving": "Error removing item from wishlist"
   },
   "search": {
     "searchProducts": "Search Products",

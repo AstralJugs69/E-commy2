@@ -63,7 +63,9 @@
     "cartSummary": " Cuunfaa Gaarii",
     "quantityError": " Baay'inni 1 gadii ta'uu hin danda'u",
     "stockLimitError": " Baay'ina qabeenya argamuu ol ida'uu hin dandeessan",
-    "loginToCheckout": " Maaloo gara kaffaltii bahuuf seeni"
+    "loginToCheckout": " Maaloo gara kaffaltii bahuuf seeni",
+    "addedToCart": "[AI] Gaaritti dabalameera",
+    "failedToAdd": "[AI] Gaaritti dabaluun hin milkoofne"
   },
   "checkout": {
     "title": " Kaffaltii Bahi",
@@ -91,7 +93,10 @@
     "failedToAddLocation": " Bakka geessisa ida'uun dide.",
     "newLocationAdded": " Bakki geessisa haaraa itti ida'ame!",
     "errorPlacingOrder": " Ajaja kaa'uu keessatti dogoggora. Maaloo irra deebi'i yaali.",
-    "orderSuccessful": " Ajajni milkaa'inaan kaa'ame!"
+    "orderSuccessful": " Ajajni milkaa'inaan kaa'ame!",
+    "fullName": "[AI] Maqaa Guutuu",
+    "area": "[AI] Naannoo",
+    "detailedAddress": "[AI] Teessoo Bal'inaan"
   },
   "orders": {
     "title": " Ajaja Koo",
@@ -133,7 +138,8 @@
     "outOf5": " 5 keessaa",
     "basedOn": " Irratti Hundaa'ee",
     "review": " Gamisa",
-    "reviews": " Gamisawwan"
+    "reviews": " Gamisawwan",
+    "off": "[AI] HARCA"
   },
   "auth": {
     "loginTitle": " Akkaawuntii keessanitti seenaa",
@@ -207,7 +213,12 @@
     "addedToWishlist": " Oomishni tarree hawwiitti itti ida'ame!",
     "removedFromWishlist": " Oomishni tarree hawwii irraa haqameera!",
     "moveToCart": " Gara Gaariitti Dabarsi",
-    "removeFromWishlist": " Tarree Hawwii Irraa Balleessi"
+    "removeFromWishlist": " Tarree Hawwii Irraa Balleessi",
+    "loadingWishlist": "[AI] Tarree hawwii keessan fe'amu...",
+    "itemCount": "[AI] Meeshaalee {{count}} tarree hawwii keessan keessa",
+    "itemCount_one": "[AI] Meeshaa 1 tarree hawwii keessan keessa",
+    "browseProducts": "[AI] Oomishawwan Ilaali",
+    "errorRemoving": "[AI] Meeshaa tarree hawwii irraa balleessuu keessatti dogoggora"
   },
   "search": {
     "searchProducts": " Oomishawwan Barbaadi",

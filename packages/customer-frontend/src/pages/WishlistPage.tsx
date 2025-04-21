@@ -9,6 +9,7 @@ import { FaStar } from 'react-icons/fa';
 import { FaStarHalfAlt } from 'react-icons/fa';
 import { FaRegStar } from 'react-icons/fa';
 import { useWishlist } from '../context/WishlistContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
@@ -36,6 +37,7 @@ interface Product {
 
 const WishlistPage: React.FC = () => {
   const { wishlistItems, isLoading, error, fetchWishlist, removeFromWishlist } = useWishlist();
+  const { t } = useTranslation();
 
   // Reload wishlist when the component mounts
   useEffect(() => {
@@ -49,9 +51,10 @@ const WishlistPage: React.FC = () => {
     
     try {
       await removeFromWishlist(productId);
-      toast.success(`${productName} removed from wishlist`);
+      toast.success(t('wishlist.removedFromWishlist'));
     } catch (error) {
       console.error("Error removing item from wishlist:", error);
+      toast.error(t('wishlist.errorRemoving', 'Error removing item from wishlist'));
     }
   };
 
@@ -76,12 +79,12 @@ const WishlistPage: React.FC = () => {
 
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">My Wishlist</h2>
+      <h2 className="mb-4 fw-semibold">{t('wishlist.title')}</h2>
       
       <div className="mb-4">
         <Link to="/" className="text-decoration-none">
           <Button variant="outline-secondary" size="sm" className="rounded-pill px-3 py-2">
-            <FaChevronLeft className="me-2" /> Back to Shopping
+            <FaChevronLeft className="me-2" /> {t('cart.continueShopping')}
           </Button>
         </Link>
       </div>
@@ -89,22 +92,28 @@ const WishlistPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center my-5">
           <Spinner animation="border" role="status" variant="primary">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('common.loading')}</span>
           </Spinner>
-          <p className="mt-3">Loading your wishlist...</p>
+          <p className="mt-3">{t('wishlist.loadingWishlist', 'Loading your wishlist...')}</p>
         </div>
       ) : error ? (
         <Alert variant="danger">{error}</Alert>
       ) : wishlistItems.length === 0 ? (
         <EmptyState
           icon={<FaRegHeart />}
-          title="Your Wishlist is Empty"
-          message="Browse our products and add items you love to your wishlist!"
-          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Browse Products</Link>}
+          title={t('wishlist.emptyWishlist')}
+          message={t('wishlist.emptyWishlistMessage')}
+          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">{t('wishlist.browseProducts', 'Browse Products')}</Link>}
         />
       ) : (
         <>
-          <p className="text-muted mb-4">{wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} in your wishlist</p>
+          <p className="text-muted mb-4">
+            {t('wishlist.itemCount', '{{count}} items in your wishlist', { 
+              count: wishlistItems.length,
+              defaultValue_plural: '{{count}} items in your wishlist',
+              defaultValue_one: '1 item in your wishlist'
+            })}
+          </p>
           
           <Row className="g-3 my-3">
             {wishlistItems.map((item) => (
@@ -146,7 +155,7 @@ const WishlistPage: React.FC = () => {
                         className="position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow-sm"
                         style={{ width: '32px', height: '32px' }}
                         onClick={(e) => handleRemoveFromWishlist(e, item.product.id, item.product.name)}
-                        aria-label="Remove from wishlist"
+                        aria-label={t('wishlist.removeFromWishlist')}
                       >
                         <FaTrash className="text-danger" style={{ fontSize: '14px' }} />
                       </Button>

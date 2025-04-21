@@ -2,20 +2,25 @@ import React from 'react';
 import { FaStar } from 'react-icons/fa';
 import { FaStarHalfAlt } from 'react-icons/fa';
 import { FaRegStar } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 interface StarRatingProps {
   rating: number;
   maxRating?: number;
   size?: string;
   color?: string;
+  showValue?: boolean;
 }
 
 const StarRating: React.FC<StarRatingProps> = ({
   rating,
   maxRating = 5,
   size = '1em',
-  color = '#ffc107' // Bootstrap warning color (yellow)
+  color = '#ffc107', // Bootstrap warning color (yellow)
+  showValue = true
 }) => {
+  const { t } = useTranslation();
+  
   const getStars = () => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -60,8 +65,10 @@ const StarRating: React.FC<StarRatingProps> = ({
   return (
     <div className="d-inline-flex align-items-center">
       {getStars()}
-      {rating > 0 && (
-        <span className="ms-1 small text-muted">({rating.toFixed(1)})</span>
+      {showValue && rating > 0 && (
+        <span className="ms-1 small text-muted" title={t('product.rating')}>
+          ({rating.toFixed(1)})
+        </span>
       )}
     </div>
   );
