@@ -1,0 +1,21 @@
+{
+  "app": {
+    "name": "HybridStore",
+    "tagline": "Your friendly neighborhood hybrid e-commerce store"
+  },
+  "navigation": {
+    "home": "Home",
+    "cart": "Cart",
+    "wishlist": "Wishlist",
+    "orders": "Orders",
+    "settings": "Settings",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "about": "About Us"
+  },
+  "common": {
+    "loading": "Loading...",
+    "installApp": "Install App"
+  }
+} 

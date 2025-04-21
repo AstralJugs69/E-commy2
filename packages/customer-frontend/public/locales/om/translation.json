@@ -1,0 +1,21 @@
+{
+  "app": {
+    "name": "HybridStore",
+    "tagline": "Suuqii e-komeersii haybiriidii ollaa keessan gammachuu qabdu"
+  },
+  "navigation": {
+    "home": "Mana",
+    "cart": "Gaabbee",
+    "wishlist": "Tarree hawwii",
+    "orders": "Ajajawwan",
+    "settings": "Qindaa'inoota",
+    "login": "Seeni",
+    "register": "Galmaa'i",
+    "logout": "Ba'i",
+    "about": "Waa'ee Keenya"
+  },
+  "common": {
+    "loading": "Fe'ama jira...",
+    "installApp": "Applikeeshinii Fida"
+  }
+} 

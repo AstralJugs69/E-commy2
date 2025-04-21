@@ -1,0 +1,21 @@
+{
+  "app": {
+    "name": "ሃይብሪድስቶር",
+    "tagline": "የአካባቢህ ወዳጃዊ የሃይብሪድ ኢ-ኮሜርስ መደብር"
+  },
+  "navigation": {
+    "home": "ቤት",
+    "cart": "ጋሪ",
+    "wishlist": "የምኞት ዝርዝር",
+    "orders": "ትዕዛዞች",
+    "settings": "ቅንብሮች",
+    "login": "ግባ",
+    "register": "ይመዝገቡ",
+    "logout": "ውጣ",
+    "about": "ስለ እኛ"
+  },
+  "common": {
+    "loading": "በመጫን ላይ...",
+    "installApp": "መተግበሪያውን ጫን"
+  }
+} 
