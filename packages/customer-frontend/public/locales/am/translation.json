@@ -1,20 +1,20 @@
 {
   "app": {
     "name": "ሃይብሪድስቶር",
-    "tagline": "ኢ-ኮሜርስ መደብር"
+    "tagline": " የአካባቢህ ወዳጃዊ የሃይብሪድ ኢ-ኮሜርስ መደብር"
   },
   "navigation": {
     "home": " ቤት",
     "cart": " ጋሪ",
     "wishlist": " የምኞት ዝርዝር",
-    "orders": " ትዕዛዞች",
-    "settings": " ቅንብሮች",
-    "login": " ግባ",
-    "register": " ይመዝገቡ",
-    "logout": " ውጣ",
-    "about": " ስለ እኛ",
-    "menu": " ምናሌ",
-    "myWishlist": " የእኔ የምኞት ዝርዝር",
+    "orders": "[] ትዕዛዞች",
+    "settings": "[] ቅንብሮች",
+    "login": "[] ግባ",
+    "register": "[] ይመዝገቡ",
+    "logout": "[] ውጣ",
+    "about": "[] ስለ እኛ",
+    "menu": "[] ምናሌ",
+    "myWishlist": "[] የእኔ የምኞት ዝርዝር",
     "myOrders": " የእኔ ትዕዛዞች",
     "loginRegister": " ግባ / ይመዝገቡ"
   },
@@ -64,8 +64,8 @@
     "quantityError": " ብዛት ከ1 በታች መሆን አይችልም",
     "stockLimitError": " ከሚገኘው የአክሲዮን ብዛት በላይ ማከል አይቻልም",
     "loginToCheckout": " እባክዎ ለመክፈል ይግቡ",
-    "addedToCart": "[AI] ወደ ጋሪ ተጨምሯል",
-    "failedToAdd": "[AI] ወደ ጋሪ መጨመር አልተሳካም"
+    "addedToCart": " ወደ ጋሪ ተጨምሯል",
+    "failedToAdd": " ወደ ጋሪ መጨመር አልተሳካም"
   },
   "checkout": {
     "title": " መክፈያ",
@@ -94,9 +94,9 @@
     "newLocationAdded": " አዲስ የማድረሻ ቦታ ተጨምሯል!",
     "errorPlacingOrder": " ትዕዛዝ ማስቀመጥ ላይ ስህተት። እባክዎን እንደገና ይሞክሩ።",
     "orderSuccessful": " ትዕዛዝ በተሳካ ሁኔታ ተቀምጧል!",
-    "fullName": "[AI] ሙሉ ስም",
-    "area": "[AI] አካባቢ",
-    "detailedAddress": "[AI] ዝርዝር አድራሻ"
+    "fullName": " ሙሉ ስም",
+    "area": " አካባቢ",
+    "detailedAddress": " ዝርዝር አድራሻ"
   },
   "orders": {
     "title": " የእኔ ትዕዛዞች",
@@ -139,7 +139,7 @@
     "basedOn": " የተመሰረተው",
     "review": " ግምገማ",
     "reviews": " ግምገማዎች",
-    "off": "[AI] ቅናሽ"
+    "off": " ቅናሽ"
   },
   "auth": {
     "loginTitle": " ወደ መለያዎ ይግቡ",
@@ -212,13 +212,13 @@
     "emptyWishlistMessage": " እስካሁን ምንም ምርቶችን ወደ የምኞት ዝርዝርዎ አላከሉም።",
     "addedToWishlist": " ምርት ወደ የምኞት ዝርዝር ተጨምሯል!",
     "removedFromWishlist": " ምርት ከየምኞት ዝርዝር ተወግዷል!",
-    "moveToCart": " ወደ ጋሪ ያዛውሩ",
+    "moveToCart": " ወደ ጋሪ አዛውር",
     "removeFromWishlist": " ከየምኞት ዝርዝር አስወግድ",
-    "loadingWishlist": "[AI] የምኞት ዝርዝርዎን በመጫን ላይ...",
-    "itemCount": "[AI] {{count}} ዕቃዎች በእርስዎ የምኞት ዝርዝር ውስጥ",
-    "itemCount_one": "[AI] 1 ዕቃ በእርስዎ የምኞት ዝርዝር ውስጥ",
-    "browseProducts": "[AI] ምርቶችን ይመልከቱ",
-    "errorRemoving": "[AI] ዕቃን ከየምኞት ዝርዝር ማስወገድ አልተሳካም"
+    "loadingWishlist": " የምኞት ዝርዝርዎን በመጫን ላይ...",
+    "itemCount": " {{count}} ንጥሎች በእርስዎ የምኞት ዝርዝር ውስጥ",
+    "itemCount_one": " 1 ንጥል በእርስዎ የምኞት ዝርዝር ውስጥ",
+    "browseProducts": " ምርቶችን ያስሱ",
+    "errorRemoving": " ንጥልን ከየምኞት ዝርዝር ማስወገድ ላይ ስህተት"
   },
   "search": {
     "searchProducts": " ምርቶችን ይፈልጉ",
@@ -232,46 +232,43 @@
     "searchPlaceholder": " ምርቶችን ይፈልጉ..."
   },
   "errors": {
-    "generic": " አንዳች ነገር ተሳስቷል። እባክዎን እንደገና ይሞክሩ።",
-    "networkError": " የአውታረ መረብ ስህተት። እባክዎን ግንኙነትዎን ይፈትሹ።",
+    "generic": " የሆነ ነገር ተሳስቷል። እባክዎን እንደገና ይሞክሩ።",
+    "networkError": " የአውታረ መረብ ስህተት። እባክዎን ግንኙነትዎን ያረጋግጡ።",
     "authError": " የማረጋገጫ ስህተት። እባክዎን እንደገና ይግቡ።",
-    "notFound": " ገጹ አልተገኘም።",
+    "notFound": " ገጽ አልተገኘም።",
     "permissionDenied": " ፈቃድ ተከልክሏል።",
-    "serverError": " የአገልጋይ ስህተት። እባክዎን ቆይተው እንደገና ይሞክሩ።",
-    "validationError": " እባክዎን ግብአትዎን ይፈትሹ እና እንደገና ይሞክሩ።",
+    "serverError": " የአገልጋይ ስህተት። እባክዎን በኋላ እንደገና ይሞክሩ።",
+    "validationError": " እባክዎን ግብዓትዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
     "timeoutError": " ጥያቄው ጊዜው አልፎበታል። እባክዎን እንደገና ይሞክሩ።",
-    "unexpectedError": " የማይጠበቅ ስህተት ተከስቷል።"
+    "unexpectedError": " ያልተጠበቀ ስህተት ተከስቷል።"
   },
   "notifications": {
     "loggedOut": " በተሳካ ሁኔታ ወጥተዋል",
     "installationStarted": " የመተግበሪያ ጭነት ተጀምሯል!",
     "installationCancelled": " ጭነት ተሰርዟል",
-    "installationError": " መተግበሪያው አሁን ሊጫን አይችልም",
+    "installationError": " መተግበሪያውን አሁን መጫን አይቻልም",
     "installationPromptError": " የጭነት ጥያቄን ማሳየት አልተሳካም",
-    "updateAvailable": " አዲስ ሥሪት አለ! ለማዘመን ዳግም ያድሱ።",
-    "refreshNow": " አሁን አድስ",
-    "later": " በኋላ"
+    "serviceUnavailable": " አገልግሎት አልተገኘም"
   },
   "location": {
-    "permissionDenied": " የአካባቢ መዳረሻ ተከልክሏል። የማድረሻ ቦታ አይጠቀምም።",
-    "unavailable": " የአካባቢ መረጃ አይገኝም። የማድረሻ ቦታ አይጠቀምም።",
-    "timeout": " የአካባቢ ጥያቄ ጊዜው አልፎበታል። የማድረሻ ቦታ አይጠቀምም።",
-    "unsupported": " ጂኦሎኬሽን በዚህ አሳሽ አይደገፍም። የማድረሻ ቦታ አይጠቀምም።",
-    "unknown": " የማይታወቅ ስህተት ተከስቷል። የማድረሻ ቦታ አይጠቀምም።"
+    "nearbyStores": " በአቅራቢያዎ ያሉ መደብሮች",
+    "selectLocation": " ቦታ ይምረጡ",
+    "yourLocation": " የእርስዎ ቦታ",
+    "findStores": " መደብሮችን ይፈልጉ",
+    "storeDetails": " የመደብር ዝርዝሮች",
+    "openingHours": " የመክፈቻ ሰዓታት",
+    "contactInfo": " የመገናኛ መረጃ",
+    "getDirections": " አቅጣጫዎችን ያግኙ",
+    "distance": " ርቀት"
   },
   "about": {
-    "title": " ስለ እኛ",
-    "description": " የአካባቢህ ወዳጃዊ የሃይብሪድ ኢ-ኮሜርስ መደብር።",
     "ourStory": " የእኛ ታሪክ",
-    "mission": " የእኛ ተልዕኮ",
-    "values": " የእኛ እሴቶች",
-    "team": " የእኛ ቡድን",
-    "contact": " አግኙን",
-    "contactEmail": " ኢሜይል",
-    "contactPhone": " ስልክ",
-    "contactAddress": " አድራሻ",
-    "customerService": " የደንበኛ አገልግሎት",
-    "shippingPolicy": " የመላኪያ ፖሊሲ",
-    "returnPolicy": " የመመለሻ ፖሊሲ"
+    "ourMission": " የእኛ ተልዕኮ",
+    "ourTeam": " የእኛ ቡድን",
+    "contactUs": " እኛን ያግኙ",
+    "careers": " ሥራዎች",
+    "privacyPolicy": " የግላዊነት ፖሊሲ",
+    "termsOfService": " የአገልግሎት ውሎች",
+    "howItWorks": " እንዴት እንደሚሰራ"
   }
 } 

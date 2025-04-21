@@ -248,30 +248,27 @@
     "installationCancelled": "Installation cancelled",
     "installationError": "App cannot be installed right now",
     "installationPromptError": "Failed to show installation prompt",
-    "updateAvailable": "A new version is available! Refresh to update.",
-    "refreshNow": "Refresh Now",
-    "later": "Later"
+    "serviceUnavailable": "Service unavailable"
   },
   "location": {
-    "permissionDenied": "Location access denied. Delivery location will not be used.",
-    "unavailable": "Location information unavailable. Delivery location will not be used.",
-    "timeout": "Location request timed out. Delivery location will not be used.",
-    "unsupported": "Geolocation is not supported by this browser. Delivery location will not be used.",
-    "unknown": "An unknown error occurred. Delivery location will not be used."
+    "nearbyStores": "Nearby Stores",
+    "selectLocation": "Select Location",
+    "yourLocation": "Your Location",
+    "findStores": "Find Stores",
+    "storeDetails": "Store Details",
+    "openingHours": "Opening Hours",
+    "contactInfo": "Contact Information",
+    "getDirections": "Get Directions",
+    "distance": "Distance"
   },
   "about": {
-    "title": "About Us",
-    "description": "Your friendly neighborhood hybrid e-commerce store.",
     "ourStory": "Our Story",
-    "mission": "Our Mission",
-    "values": "Our Values",
-    "team": "Our Team",
-    "contact": "Contact Us",
-    "contactEmail": "Email",
-    "contactPhone": "Phone",
-    "contactAddress": "Address",
-    "customerService": "Customer Service",
-    "shippingPolicy": "Shipping Policy",
-    "returnPolicy": "Return Policy"
+    "ourMission": "Our Mission",
+    "ourTeam": "Our Team",
+    "contactUs": "Contact Us",
+    "careers": "Careers",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "howItWorks": "How It Works"
   }
 } 

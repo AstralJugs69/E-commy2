@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import axios from 'axios';
 import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
 import { FaPlus } from 'react-icons/fa';
@@ -26,6 +26,12 @@ const CategoryManagementPage: React.FC = () => {
   const [formImageUrl, setFormImageUrl] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   
   // Modal state
   const [showAddEditModal, setShowAddEditModal] = useState(false);
@@ -94,6 +100,9 @@ const CategoryManagementPage: React.FC = () => {
     setFormErrors({});
     setIsEditMode(false);
     setEditCategoryId(null);
+    setSelectedFile(null);
+    setCurrentImageUrl('');
+    setUploadError(null);
     setShowAddEditModal(true);
   };
 
@@ -103,9 +112,12 @@ const CategoryManagementPage: React.FC = () => {
       description: category.description || '' 
     });
     setFormImageUrl(category.imageUrl || '');
+    setCurrentImageUrl(category.imageUrl || '');
     setFormErrors({});
     setIsEditMode(true);
     setEditCategoryId(category.id);
+    setSelectedFile(null);
+    setUploadError(null);
     setShowAddEditModal(true);
   };
 
@@ -144,6 +156,16 @@ const CategoryManagementPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+      setSelectedFile(file);
+      setUploadError(null);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -158,10 +180,53 @@ const CategoryManagementPage: React.FC = () => {
       return;
     }
     
+    let finalImageUrl = isEditMode ? currentImageUrl : null;
+    
+    // Handle file upload if a file is selected
+    if (selectedFile) {
+      setIsUploading(true);
+      setUploadError(null);
+      
+      try {
+        const formData = new FormData();
+        formData.append('productImages', selectedFile); // Using 'productImages' as per existing endpoint
+        
+        const uploadResponse = await axios.post(
+          `${API_BASE_URL}/api/admin/upload`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (uploadResponse.data && uploadResponse.data.imageUrls && uploadResponse.data.imageUrls.length > 0) {
+          finalImageUrl = uploadResponse.data.imageUrls[0];
+        } else {
+          throw new Error('Invalid response from upload API');
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          setUploadError(err.response.data.message || 'Failed to upload image');
+          console.error('Error uploading image:', err.response.data);
+        } else {
+          setUploadError('Network error. Please check your connection.');
+          console.error('Network error:', err);
+        }
+        setIsSaving(false);
+        setIsUploading(false);
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
+    
     const categoryData = {
       name: formData.name.trim(),
       description: formData.description.trim() || null,
-      imageUrl: formImageUrl.trim() || null
+      imageUrl: finalImageUrl
     };
     
     try {
@@ -377,13 +442,58 @@ const CategoryManagementPage: React.FC = () => {
                 {formErrors.description}
               </Form.Control.Feedback>
             </Form.Group>
+            
+            {/* Image Preview Area */}
+            {(currentImageUrl || selectedFile) && (
+              <div className="mb-3 text-center">
+                <img 
+                  src={selectedFile ? URL.createObjectURL(selectedFile) : getImageUrl(currentImageUrl)} 
+                  alt="Category Preview" 
+                  style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', marginBottom: '10px' }} 
+                />
+                {selectedFile && <p className="text-muted small">New image selected: {selectedFile.name}</p>}
+              </div>
+            )}
+            
+            <Form.Group controlId="categoryImageFile" className="mb-3">
+              <Form.Label className="fw-medium text-neutral-700">Category Image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/png, image/jpeg, image/webp, image/gif"
+                onChange={handleFileChange}
+                disabled={isUploading || isSaving}
+                className="py-2"
+              />
+              {isUploading && <Spinner animation="border" size="sm" className="ms-2" />}
+              {uploadError && <Alert variant="danger" className="mt-2">{uploadError}</Alert>}
+              <Form.Text className="text-muted">
+                Upload a new image (optional). Max 5MB. Replaces existing image if provided.
+              </Form.Text>
+            </Form.Group>
+            
             <Form.Group className="mb-3">
               <Form.Label className="fw-medium text-neutral-700">Image URL</Form.Label>
               <Form.Control
                 type="text"
+                name="imageUrl"
                 placeholder="https://example.com/image.png"
                 value={formImageUrl}
-                onChange={(e) => setFormImageUrl(e.target.value)}
+                onChange={(e) => {
+                  setFormImageUrl(e.target.value);
+                  setCurrentImageUrl(e.target.value);
+                  // Clear selected file when URL is entered manually
+                  if (e.target.value) {
+                    setSelectedFile(null);
+                  }
+                  // Clear error when user types
+                  if (formErrors.imageUrl) {
+                    setFormErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.imageUrl;
+                      return newErrors;
+                    });
+                  }
+                }}
                 isInvalid={!!formErrors.imageUrl}
                 className="py-2"
               />
@@ -391,7 +501,7 @@ const CategoryManagementPage: React.FC = () => {
                 {formErrors.imageUrl}
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
-                Optional. Enter a valid URL for the category image.
+                Optional. You can either upload an image or enter a URL directly.
               </Form.Text>
             </Form.Group>
           </Modal.Body>
@@ -402,10 +512,10 @@ const CategoryManagementPage: React.FC = () => {
             <Button 
               variant="primary" 
               type="submit" 
-              disabled={isSaving}
+              disabled={isSaving || isUploading}
               className="py-2"
             >
-              {isSaving ? (
+              {isSaving || isUploading ? (
                 <>
                   <Spinner
                     as="span"
@@ -415,7 +525,7 @@ const CategoryManagementPage: React.FC = () => {
                     aria-hidden="true"
                     className="me-2"
                   />
-                  Saving...
+                  {isUploading ? 'Uploading...' : 'Saving...'}
                 </>
               ) : (
                 'Save Category'
