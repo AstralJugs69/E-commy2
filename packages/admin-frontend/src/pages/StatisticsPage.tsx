@@ -1,5 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for error type checking
 import { Container, Row, Col, Card, Alert, Spinner, Form, Badge } from 'react-bootstrap';
 import { FaUsers } from 'react-icons/fa';
 import { FaShoppingCart } from 'react-icons/fa';
@@ -68,9 +69,7 @@ interface AdminStats {
   }[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-const StatisticsPage = () => {
+const StatisticsPage: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,21 +102,20 @@ const StatisticsPage = () => {
           return;
         }
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
-        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+        const response = await api.get('/admin/stats', {
           headers: {
-            Authorization: formattedToken
+            Authorization: token
           }
         });
         
         setStats(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             // Handle unauthorized error
             localStorage.removeItem('admin_token');
             setError('Your session has expired. Please log in again.');
@@ -182,20 +180,16 @@ const StatisticsPage = () => {
         const formattedStartDate = format(startDate, 'yyyy-MM-dd');
         const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
         // Fetch sales data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
+        const response = await api.get(`/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, {
+          headers: {
+            Authorization: token
           }
-        );
+        });
         
         // Transform the data for chartjs
         if (response.data && Array.isArray(response.data)) {
@@ -219,9 +213,9 @@ const StatisticsPage = () => {
         } else {
           setSalesChartError('Invalid data format received from server.');
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             setSalesChartError('Your session has expired.');
           } else if (err.response) {
             setSalesChartError(err.response.data.message || 'Failed to fetch sales data');
@@ -281,20 +275,16 @@ const StatisticsPage = () => {
         const formattedStartDate = format(startDate, 'yyyy-MM-dd');
         const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
         // Fetch users data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
+        const response = await api.get(`/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, {
+          headers: {
+            Authorization: token
           }
-        );
+        });
         
         // Transform the data for chartjs
         if (response.data && Array.isArray(response.data)) {
@@ -318,9 +308,9 @@ const StatisticsPage = () => {
         } else {
           setUsersChartError('Invalid data format received from server.');
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             setUsersChartError('Your session has expired.');
           } else if (err.response) {
             setUsersChartError(err.response.data.message || 'Failed to fetch user data');
