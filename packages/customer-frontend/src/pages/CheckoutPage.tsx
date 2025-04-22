@@ -8,10 +8,6 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
 import api from '../utils/api';
 
-// Make sure the API URL is defined
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 interface DeliveryLocation {
   id: number;
   name: string;
@@ -155,7 +151,7 @@ const CheckoutPage: React.FC = () => {
     setDistrictError(null);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/districts`);
+      const response = await api.get('/districts');
       setDistricts(response.data);
       
       // Initialize the new location form with the first district
@@ -247,16 +243,8 @@ const CheckoutPage: React.FC = () => {
     try {
       console.log("Sending order data with location:", orderData);
 
-      // Use the API_URL constant defined at the top of the file
-      const response = await axios.post(
-        `${API_URL}/api/orders`,
-        orderData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // Use the configured api instance instead of direct axios calls
+      const response = await api.post('/orders', orderData);
 
       // --- BEGIN DEBUG LOGGING ---
       console.log("Checkout API Response Status:", response.status);
