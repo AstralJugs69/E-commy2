@@ -21,6 +21,8 @@ RUN npm run build
 FROM base AS production
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/package-lock.json ./package-lock.json
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
