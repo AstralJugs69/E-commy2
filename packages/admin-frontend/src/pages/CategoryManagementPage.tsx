@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
+import axios from 'axios';
 import api from '../utils/api';
 import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
 import { FaPlus } from 'react-icons/fa';
@@ -77,8 +78,8 @@ const CategoryManagementPage: React.FC = () => {
       });
       
       setCategories(response.data);
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
@@ -202,8 +203,8 @@ const CategoryManagementPage: React.FC = () => {
         } else {
           throw new Error('Invalid response from upload API');
         }
-      } catch (err) {
-        if (err.response) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
           setUploadError(err.response.data.message || 'Failed to upload image');
           console.error('Error uploading image:', err.response.data);
         } else {
@@ -251,8 +252,8 @@ const CategoryManagementPage: React.FC = () => {
       
       handleCloseModals();
       fetchCategories();
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 400) {
           setFormErrors(err.response.data.errors || {});
         } else if (err.response.status === 409) {
@@ -296,8 +297,8 @@ const CategoryManagementPage: React.FC = () => {
       showNotification('Category deleted successfully!');
       handleCloseModals();
       fetchCategories();
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 409) {
           showNotification('Cannot delete category with associated products.', 'danger');
         } else {

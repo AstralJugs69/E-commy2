@@ -12,6 +12,7 @@ import { FaTag } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
+import axios from 'axios';
 import api from '../utils/api';
 import { getImageUrl } from '../utils/imageUrl';
 
@@ -103,8 +104,8 @@ const ProductManagementPage: React.FC = () => {
     try {
       const response = await api.get('/admin/categories');
       setCategories(response.data);
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         setCategoriesError(err.response.data.message || 'Failed to fetch categories.');
         console.error('Error fetching categories:', err.response.data);
       } else {
@@ -124,8 +125,8 @@ const ProductManagementPage: React.FC = () => {
       // Use admin endpoint to get products with category information
       const response = await api.get('/admin/products');
       setProducts(response.data);
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
@@ -151,8 +152,8 @@ const ProductManagementPage: React.FC = () => {
       
       // Refresh product list
       fetchProducts();
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else if (err.response.status === 409) {
@@ -307,8 +308,8 @@ const ProductManagementPage: React.FC = () => {
         try {
           const newUrls = await uploadImages(selectedFiles);
           uploadedImageUrls = [...uploadedImageUrls, ...newUrls];
-        } catch (err) {
-          if (err.response) {
+        } catch (err: unknown) {
+          if (axios.isAxiosError(err) && err.response) {
             setUploadError(err.response.data.message || 'Failed to upload images.');
             console.error('Error uploading images:', err.response.data);
           } else {
@@ -356,8 +357,8 @@ const ProductManagementPage: React.FC = () => {
       // Success - close modal and refresh
       handleCloseModal();
       fetchProducts();
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         setModalError(err.response.data.message || 'Failed to save product.');
         console.error('Error saving product:', err.response.data);
       } else {
@@ -392,8 +393,8 @@ const ProductManagementPage: React.FC = () => {
       // Reset adjustment state
       setAdjustingProductId(null);
       setAdjustmentValue('');
-    } catch (err) {
-      if (err.response) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data.message || 'Failed to adjust stock');
         console.error('Error adjusting stock:', err.response.data);
       } else {
