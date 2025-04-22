@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { FaImage } from 'react-icons/fa';
 import { getImageUrl } from '../utils/imageUrl';
+import api from '../utils/api';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
@@ -58,9 +58,6 @@ interface ServiceZone {
   name: string;
   geoJsonPolygon: string; // The raw GeoJSON string
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_URL = API_BASE_URL;
 
 // A separate component for the Map to ensure it only renders when valid coordinates are provided
 const OrderLocationMap: React.FC<{
@@ -114,7 +111,7 @@ const OrderLocationMap: React.FC<{
                 pathOptions={{ color: 'red', weight: 2, fillOpacity: 0.1 }}
               />
             );
-          } catch (err) {
+          } catch (err: unknown) {
             console.error(`Error parsing GeoJSON for zone ${zone.id}:`, err);
             return null;
           }
@@ -168,12 +165,7 @@ const OrderDetailPage: React.FC = () => {
       setError(null);
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/orders/${orderId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
+        const response = await api.get(`/admin/orders/${orderId}`);
         console.log("Order details received:", response.data);
         console.log("Location data received:", {
           latitude: response.data.latitude,
@@ -181,16 +173,16 @@ const OrderDetailPage: React.FC = () => {
         });
 
         setOrder(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          if (err.response.status === 401) {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.message.includes('401')) {
             setError('Your session has expired. Please log in again.');
-          } else if (err.response.status === 404) {
+          } else if (err.message.includes('404')) {
             setError(`Order with ID ${orderId} not found.`);
           } else {
-            setError(err.response.data.message || 'Failed to fetch order details.');
+            setError(err.message || 'Failed to fetch order details.');
           }
-          console.error('Error fetching order details:', err.response.data);
+          console.error('Error fetching order details:', err);
         } else {
           setError('Network error. Please check your connection.');
           console.error('Network error:', err);
@@ -217,17 +209,13 @@ const OrderDetailPage: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/serviceareas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get(`/admin/serviceareas`);
         
         setZones(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
           setZoneError('Failed to load service zones');
-          console.error('Error fetching zones:', err.response.data);
+          console.error('Error fetching zones:', err);
         } else {
           setZoneError('Network error loading zones');
           console.error('Network error:', err);
