@@ -13,33 +13,43 @@
  * @returns A properly formatted absolute URL for the image
  */
 export function getImageUrl(relativePath?: string | null): string {
-  // API base URL from environment variable or fallback
-  // Use the same environment variable as in api.ts but without the '/api' suffix
-  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
+  // Get base URL from env vars (without /api) for serving static content
+  const BASE_URL = import.meta.env.VITE_API_URL || 
+                  (import.meta.env.VITE_API_BASE_URL ? 
+                   import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '') : 
+                   'http://localhost:3001');
   
+  // Allow explicit uploads URL to override base URL for uploads
+  const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || `${BASE_URL}/uploads`;
+   
   // Default placeholder image path
   const PLACEHOLDER_IMAGE_PATH = '/placeholder-image.svg';
-  
+   
   // Handle null, undefined or empty string
   if (!relativePath) {
     return PLACEHOLDER_IMAGE_PATH;
   }
-  
+   
   // Handle already absolute URLs
   if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
     return relativePath;
   }
-  
-  // Handle relative paths starting with /
-  if (relativePath.startsWith('/')) {
-    // Ensure no double slashes by removing trailing slash from API_BASE_URL if present
-    return `${API_BASE_URL.replace(/\/$/, '')}${relativePath}`;
+   
+  // Handle paths that start with /uploads specifically
+  if (relativePath.startsWith('/uploads/')) {
+    // For upload paths, use the dedicated UPLOADS_URL
+    return `${UPLOADS_URL.replace(/\/uploads\/?$/, '')}${relativePath}`;
   }
-  
+  // Handle other relative paths starting with /
+  else if (relativePath.startsWith('/')) {
+    // Use the base URL for other paths
+    return `${BASE_URL.replace(/\/$/, '')}${relativePath}`;
+  }
+   
   // For any other unexpected format, return the path combined with API_BASE_URL
   // This handles cases where the path doesn't start with / but is still relative
-  return `${API_BASE_URL.replace(/\/$/, '')}/${relativePath}`;
+  return `${BASE_URL.replace(/\/$/, '')}/${relativePath}`;
 }
 
 // Export as named export
-export default getImageUrl; 
+export default getImageUrl;
