@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatCurrency } from '../utils/formatters';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for error type checking
 
 // User interface with order count
 interface AdminUser {
@@ -15,8 +16,6 @@ interface AdminUser {
   totalSpent: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,21 +27,10 @@ const UserManagementPage: React.FC = () => {
       setError(null);
 
       try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-          setError('Authentication required. Please log in again.');
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await axios.get(`${API_BASE_URL}/admin/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/admin/users');
 
         setUsers(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
             setError('Your session has expired. Please log in again.');
@@ -129,4 +117,4 @@ const UserManagementPage: React.FC = () => {
   );
 };
 
-export default UserManagementPage; 
+export default UserManagementPage;

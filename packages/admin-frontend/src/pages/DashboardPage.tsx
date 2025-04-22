@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for type checking
 import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
@@ -37,7 +38,6 @@ interface AdminOrder {
   };
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 const REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
 const DashboardPage = () => {
@@ -73,14 +73,10 @@ const DashboardPage = () => {
           ? admin_token 
           : `Bearer ${admin_token}`;
         
-        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
-          headers: {
-            Authorization: formattedToken
-          }
-        });
+        const response = await api.get('/admin/stats');
         
         setStats(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           if (err.response?.status === 401) {
             // Handle unauthorized error
@@ -127,15 +123,11 @@ const DashboardPage = () => {
       
       // Pass status params correctly for backend array handling
       const statusesToFetch = ['Pending Call', 'Verified', 'Processing', 'Shipped'];
-      const apiUrl = `${API_BASE_URL}/admin/orders?${statusesToFetch.map(s => `status=${encodeURIComponent(s)}`).join('&')}&dateFilter=today`;
+      const apiUrl = `/admin/orders?${statusesToFetch.map(s => `status=${encodeURIComponent(s)}`).join('&')}&dateFilter=today`;
       console.log(`Fetching active orders from ${apiUrl}`);
       
       // Fetch orders with all relevant statuses
-      const response = await axios.get(apiUrl, {
-        headers: {
-          Authorization: formattedToken
-        }
-      });
+      const response = await api.get(apiUrl);
       
       // Update state with fetched orders
       if (response.data && Array.isArray(response.data.orders)) {
@@ -143,7 +135,7 @@ const DashboardPage = () => {
       } else {
         setActiveError('Invalid data format received from server.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 401) {
           setActiveError('Your session has expired. Please log in again.');
@@ -178,20 +170,11 @@ const DashboardPage = () => {
         : `Bearer ${admin_token}`;
       
       // Update the order status
-      await axios.put(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            Authorization: formattedToken,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
       
       // Refresh the orders after status update
       fetchActiveOrders();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setActiveError(err.response?.data?.message || 'Failed to update order status');
         console.error('Error updating order status:', err);

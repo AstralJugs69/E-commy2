@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Row, Col, Button, Spinner, Alert, Card } from 'react-bootstrap';
+import axios from 'axios';
 import { formatCurrency } from '../utils/formatters';
+import api from '../utils/api';
 
 interface Product {
   id: number;
@@ -17,8 +18,6 @@ interface Product {
   };
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -31,28 +30,19 @@ const ProductDetailPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('admin_token');
-      if (!token) {
-        setError('Authentication required. Please log in again.');
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/products/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get(`/admin/products/${id}`);
         setProduct(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
+        // Need to re-import axios for error type checking
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 404) {
             setError(`Product #${id} not found.`);
+          } else if (err.response.status === 401) {
+            setError('Your session has expired. Please log in again.');
           } else {
-            setError(err.response.data.message || 'Failed to fetch product details.');
+            setError(err.response.data.message || `Failed to fetch product #${id}.`);
           }
-          console.error('Error fetching product:', err.response.data);
         } else {
           setError('Network error. Please check your connection.');
           console.error('Network error:', err);
@@ -110,7 +100,7 @@ const ProductDetailPage: React.FC = () => {
           <Card>
             <Card.Img 
               src={product.imageUrl 
-                ? (product.imageUrl.startsWith('/') ? `${API_BASE_URL}${product.imageUrl}` : product.imageUrl)
+                ? (product.imageUrl.startsWith('/') ? `${api.defaults.baseURL}${product.imageUrl}` : product.imageUrl)
                 : '/placeholder-product.jpg'} 
               alt={product.name}
               style={{ height: '300px', objectFit: 'cover' }}
