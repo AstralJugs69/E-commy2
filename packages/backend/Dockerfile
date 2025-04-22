@@ -12,6 +12,7 @@ RUN npm install --production=false
 # ---- Builder ----
 FROM deps AS builder
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN npx prisma generate
 COPY src ./src
 COPY tsconfig.json ./
