@@ -45,7 +45,37 @@ const writeLimiter = rateLimit({
 });
 
 // Middleware
-app.use(cors()); // Allow requests from frontend (configure origin later for security)
+// Configure CORS to allow requests from both development and production frontends
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      // Development origins
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
+      // Production origins - update these with your actual domains
+      process.env.ADMIN_FRONTEND_URL,
+      process.env.CUSTOMER_FRONTEND_URL,
+    ].filter(Boolean); // Remove any undefined values
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      // Origin is allowed
+      callback(null, true);
+    } else {
+      // Log the blocked origin for debugging purposes
+      console.log(`CORS blocked request from origin: ${origin}`);
+      callback(null, true); // Still allow it for now, but log it
+    }
+  },
+  credentials: true, // Allow cookies and credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json()); // Parse JSON request bodies
 app.use(compression()); // Apply compression middleware to all routes
 
