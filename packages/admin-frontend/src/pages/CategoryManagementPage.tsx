@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
 import { FaPlus } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
@@ -70,7 +70,7 @@ const CategoryManagementPage: React.FC = () => {
     }
     
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/categories`, {
+      const response = await api.get('/admin/categories', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -78,7 +78,7 @@ const CategoryManagementPage: React.FC = () => {
       
       setCategories(response.data);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
@@ -191,15 +191,10 @@ const CategoryManagementPage: React.FC = () => {
         const formData = new FormData();
         formData.append('productImages', selectedFile); // Using 'productImages' as per existing endpoint
         
-        const uploadResponse = await axios.post(
-          `${API_BASE_URL}/api/admin/upload`,
+        const uploadResponse = await api.post(
+          '/admin/upload',
           formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-              Authorization: `Bearer ${token}`
-            }
-          }
+          { headers: { 'Content-Type': 'multipart/form-data' } }
         );
         
         if (uploadResponse.data && uploadResponse.data.imageUrls && uploadResponse.data.imageUrls.length > 0) {
@@ -208,7 +203,7 @@ const CategoryManagementPage: React.FC = () => {
           throw new Error('Invalid response from upload API');
         }
       } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
+        if (err.response) {
           setUploadError(err.response.data.message || 'Failed to upload image');
           console.error('Error uploading image:', err.response.data);
         } else {
@@ -231,8 +226,8 @@ const CategoryManagementPage: React.FC = () => {
     
     try {
       if (isEditMode && editCategoryId) {
-        await axios.put(
-          `${API_BASE_URL}/api/admin/categories/${editCategoryId}`,
+        await api.put(
+          `/admin/categories/${editCategoryId}`,
           categoryData,
           {
             headers: {
@@ -242,8 +237,8 @@ const CategoryManagementPage: React.FC = () => {
         );
         showNotification('Category updated successfully!');
       } else {
-        await axios.post(
-          `${API_BASE_URL}/api/admin/categories`,
+        await api.post(
+          '/admin/categories',
           categoryData,
           {
             headers: {
@@ -257,7 +252,7 @@ const CategoryManagementPage: React.FC = () => {
       handleCloseModals();
       fetchCategories();
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         if (err.response.status === 400) {
           setFormErrors(err.response.data.errors || {});
         } else if (err.response.status === 409) {
@@ -292,7 +287,7 @@ const CategoryManagementPage: React.FC = () => {
     }
     
     try {
-      await axios.delete(`${API_BASE_URL}/api/admin/categories/${categoryToDelete.id}`, {
+      await api.delete(`/admin/categories/${categoryToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -302,7 +297,7 @@ const CategoryManagementPage: React.FC = () => {
       handleCloseModals();
       fetchCategories();
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         if (err.response.status === 409) {
           showNotification('Cannot delete category with associated products.', 'danger');
         } else {

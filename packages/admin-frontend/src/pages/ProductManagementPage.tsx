@@ -1,5 +1,4 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import axios from 'axios';
 import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge, Row, Col, Card, Tabs, Tab } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import { FaImage } from 'react-icons/fa';
@@ -42,8 +41,6 @@ interface Product {
   };
   images?: ProductImage[];
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -107,7 +104,7 @@ const ProductManagementPage: React.FC = () => {
       const response = await api.get('/admin/categories');
       setCategories(response.data);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         setCategoriesError(err.response.data.message || 'Failed to fetch categories.');
         console.error('Error fetching categories:', err.response.data);
       } else {
@@ -128,7 +125,7 @@ const ProductManagementPage: React.FC = () => {
       const response = await api.get('/admin/products');
       setProducts(response.data);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
@@ -155,7 +152,7 @@ const ProductManagementPage: React.FC = () => {
       // Refresh product list
       fetchProducts();
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else if (err.response.status === 409) {
@@ -274,17 +271,10 @@ const ProductManagementPage: React.FC = () => {
       formData.append('productImages', file);
     });
     
-    // Since our api utility doesn't support FormData content type headers,
-    // we'll use axios directly for the file upload, but still leverage the API_URL
-    const uploadResponse = await axios.post(
-      `${API_URL}/api/admin/upload`,
+    const uploadResponse = await api.post(
+      '/admin/upload',
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${localStorage.getItem('admin_token')}`
-        }
-      }
+      { headers: { 'Content-Type': 'multipart/form-data' } }
     );
     
     return uploadResponse.data.imageUrls || [];
@@ -318,7 +308,7 @@ const ProductManagementPage: React.FC = () => {
           const newUrls = await uploadImages(selectedFiles);
           uploadedImageUrls = [...uploadedImageUrls, ...newUrls];
         } catch (err) {
-          if (axios.isAxiosError(err) && err.response) {
+          if (err.response) {
             setUploadError(err.response.data.message || 'Failed to upload images.');
             console.error('Error uploading images:', err.response.data);
           } else {
@@ -367,7 +357,7 @@ const ProductManagementPage: React.FC = () => {
       handleCloseModal();
       fetchProducts();
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         setModalError(err.response.data.message || 'Failed to save product.');
         console.error('Error saving product:', err.response.data);
       } else {
@@ -403,7 +393,7 @@ const ProductManagementPage: React.FC = () => {
       setAdjustingProductId(null);
       setAdjustmentValue('');
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         toast.error(err.response.data.message || 'Failed to adjust stock');
         console.error('Error adjusting stock:', err.response.data);
       } else {
