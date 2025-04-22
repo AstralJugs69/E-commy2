@@ -1,0 +1,22 @@
+# Ignore node modules and built files
+node_modules
+
+env# Ignore environment files (except example)
+.env*
+!.env.example
+
+dist
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Mac OS files
+.DS_Store
+
+# Tests and coverage
+src/**/*.test.ts
+tests/
+coverage/
+
+# Dev configs
+nodemon.json
