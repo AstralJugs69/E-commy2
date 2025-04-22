@@ -286,7 +286,13 @@ if __name__ == "__main__":
   "license": "ISC",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "i18next": "^23.10.0",
+    "i18next-browser-languagedetector": "^7.2.0",
+    "i18next-http-backend": "^2.5.0",
+    "react-i18next": "^14.0.8"
+  }
 }
 ```
 
@@ -294,207 +300,239 @@ if __name__ == "__main__":
 
 ```
 # Project Documentation: Hybrid E-commerce Platform (Comprehensive)
-*(Generated: 2025-04-15)*
+*(Generated: 2025-05-27 - End of Session on refactor/code-polish-v2)*
 
 ## 1. Current Progress
 
-Work has commenced on the `feature/customer-address-management` branch with the goal of enhancing the customer address management capabilities. This phase focuses on improving the user experience for managing shipping addresses and streamlining the checkout process.
+Work commenced on the `feature/customer-address-management` branch (merged or state incorporated into `main`) and continued on the `refactor/code-polish-v2` branch for polish, fixes, and deployment setup.
 
-## 1.1 Current Focus: Delivery Location Management
+### 1.1 Refactor/Polish Phase (Branch: `refactor/code-polish-v2`)
 
-### Goal: 
-Allow authenticated customers to save, edit, delete, and set default delivery locations on their profile (Settings page) and select a saved location during checkout.
+**Goal:** Address technical debt, UX polish items, add i18n foundation, and deploy the application to Render.com.
 
-### Branch: 
-`feature/customer-address-management`
+**Branch:** `refactor/code-polish-v2` (branched from main)
 
-### Progress:
+**Status:** Core refactors, fixes, i18n setup, and Render deployment configuration completed. The application is deployed on Render's free tier. Further polish and i18n translation can continue.
+
+**Completed on this branch:**
+
+*   **Backend - Phone Assignment:** Fixed potential race condition by moving phone number assignment (`Available` -> `Busy`) into the atomic `POST /api/orders` transaction. Removed the separate `GET /api/orders/assign-number/:orderId` route. Added `assignedPhoneNumberId` relation to `Order` model (Migration applied). (L13, L28)
+*   **Customer FE - Order Success Page:** Refined page to fetch and display the *specific* assigned verification phone number (as a `tel:` link) from order details, improving clarity. Removed generic reminder text.
+*   **FE - Image URL Handling:** Created `getImageUrl` utility functions in both Customer and Admin frontends to consistently handle image path construction (prepending API base URL for relative paths, using absolute URLs directly, providing placeholders). Updated components (`ProductCard`, `ProductDetailPage`, `CartPage`, `WishlistPage`, Admin tables/details) to use this utility. (L23)
+*   **Customer FE - Product Detail Page:** Implemented `react-bootstrap Carousel` to display multiple product images. Adjusted layout to improve visibility of Add-to-Cart button and resized "Back to Products" button.
+*   **Customer FE - Cart Page:** Fixed quantity adjustment logic using +/- buttons and context function, respecting stock/min limits. Removed direct input field.
+*   **Backend - Rate Limiting:** Adjusted `express-rate-limit` settings. Shortened general/write windows to 40s with adjusted limits (50/20). Increased login attempts slightly (15 per 15min). Verified stricter limits remain for password reset/register.
+*   **Admin FE - Password Change:** Added "Profile Settings" page (`/admin/profile`) allowing logged-in admins to change their own password (requires current password). Refactored Admin FE Auth to use `AuthContext`.
+*   **Customer FE - Password Change:** Added "Security" tab to Settings page (`/settings`) allowing logged-in customers to change their own password (requires current password).
+*   **Customer FE - Checkout Location:** Implemented Delivery Location selection dropdown on Checkout page. Added modal (`Add New Location`) to create new locations during checkout (using `POST /api/addresses`). Updated order submission (`POST /api/orders`) to send `deliveryLocationId`. Fetches districts for dropdown via `GET /api/districts`.
+*   **Customer FE - PWA Enhancements:** Added `PWAPrompt` component using `useRegisterSW` to handle update notifications (toast with refresh button). Added manual "Install App" button to Layout Navbar, triggered by `beforeinstallprompt` event. Added necessary PWA icons (`192x192`, `512x512`, `apple-touch-icon`, `favicon`) to `/public` folder. Verified basic installability and update prompt.
+*   **Admin FE - Category Image Upload:** Modified Category modal to use file upload via existing `/api/admin/upload` endpoint (using 'productImages' field name). Backend processes to WebP. Category CRUD now uses the returned image URL.
+*   **UI Consistency - Buttons:** Standardized button variants and sizes within Customer FE and Admin FE according to their respective themes and action types. (L10, L24)
+*   **UI Consistency - Forms (Admin FE):** Standardized labels, input padding, spacing, and feedback display across admin forms/modals.
+*   **UI Consistency - Forms (Customer FE):** Standardized labels, input padding, spacing, and feedback display across customer forms/modals.
+*   **Backend - Compression:** Added `compression` middleware to `index.ts` to enable gzip/brotli response compression.
+*   **i18n Setup (Customer FE):** Installed necessary libraries, configured `i18n.ts`, created placeholder locale files (`en`, `am`, `om`), added language switcher UI, internationalized `Layout.tsx`. (Full i18n refactor of other components deferred).
+*   **Deployment to Render.com:**
+    *   Deployed PostgreSQL (Free Tier - **WARNING: 90-day data limit**).
+    *   Created multi-stage `Dockerfile` and `.dockerignore` for backend.
+    *   Deployed Backend as Docker Web Service (Free Tier - Sleeps). Configured build commands (`npm install --production=false`), start commands (`npx prisma migrate deploy && ...`). Configured ENV VARS (`DATABASE_URL`, `JWT_SECRET`, `NODE_ENV`, `CORS_ORIGIN`).
+    *   Deployed Customer Frontend as Static Site. Configured `VITE_API_URL`.
+    *   Deployed Admin Frontend as Static Site. Configured `VITE_API_URL`.
+    *   Resolved deployment issues (missing types, migration execution, frontend API URL).
+
+**Next Steps / Deferred:**
+
+*   Complete i18n refactoring across all Customer FE components/pages.
+*   Obtain and implement actual Amharic/Oromo translations.
+*   Further UI/UX Polish (Feedback consistency, focus states, mobile responsiveness tuning, microcopy).
+*   Accessibility: Perform manual checks and address minor findings.
+*   Testing: Increase test coverage (backend integration, frontend components/flows).
+*   Consider migrating Render free tier DB to a permanent solution (e.g., Neon, paid Render plan) before the 90-day limit.
+*   Consider upgrading Render backend service to prevent sleeping if required for production use.
+
+
+### 1.2 Completed: Customer Address Management Foundation
+
+*(Details moved from previous Current Focus)*
+
+**Goal:** Allow authenticated customers to save, edit, delete, and set default delivery locations on their profile (Settings page) and select a saved location during checkout.
+
+**Branch:** Work done on `feature/customer-address-management` (merged or state incorporated into `main` before `refactor/code-polish-v2` branch). Integration into Checkout completed on `refactor/code-polish-v2`.
+
+**Progress:**
 - Refactored Prisma Schema (Address -> DeliveryLocation), Migrated.
 - Added `/api/districts` endpoint.
 - Refactored `/api/addresses` routes for DeliveryLocation CRUD.
-- Refactored `POST /api/orders` to use `deliveryLocationId`, removed old geo/shipping logic. [Date: 2025-05-15]
+- Refactored `POST /api/orders` to use `deliveryLocationId`.
+- Implemented Location selection/add modal in `CheckoutPage.tsx`.
+- Implemented Location management UI in `SettingsPage.tsx`.
 
-### Plan:
-1. Update Settings Page UI: Ensure the 'Delivery Locations' tab allows adding, viewing, editing, deleting, and setting default locations via the modal.
-2. Update Checkout Page (`CheckoutPage.tsx`): Allow users to select from saved delivery locations or create a new one. Pass the selected location ID correctly when placing the order.
-3. (Optional) Display selected/default location elsewhere if needed (e.g., simple display on main profile).
 
-## 1.2 Completed: Multiple Product Images
+### 1.3 Completed: Multiple Product Images
 
-The project is now supporting multiple product images rather than a single image URL. This enhancement allows for a more comprehensive product showcase.
+*(From previous docs)* The project supports multiple product images.
+- Updated DB schema (`imageUrl` -> `images` relation).
+- Updated Backend API.
+- Updated Admin FE Product Form.
+- Updated Customer FE components (ProductCard, DetailPage, Cart, Wishlist).
 
-### Status Update:
-- Updated the database schema to replace the `imageUrl` field with an `images` relation in the Product model.
-- Implemented backend API changes to support the new schema structure.
-- Created migration scripts to handle the transition from single to multiple images.
-- Updated Admin FE Product Form for multi-image upload/management.
-- Fixed Customer FE components (ProductCard, DetailPage, Cart, Wishlist) to correctly display images using the new `images` relation and handle image URL construction properly. [Date: 2025-04-18]
 
-### Code Review & Consistency Checks:
-- Verified database indexes on critical fields for query performance
-- Standardized API base URL usage across both frontends to prevent duplicate `/api` path segments
-- Fixed image upload endpoint in ProductManagementPage
-- Verified consistent Address model field names across backend and frontend components
-[Date: 2025-05-04]
+### 1.4 Completed: Initial Refactor/Review Phase
 
-## 1.3 Completed: Refactor/Review Phase (`refactor/code-review-performance-ux` branch)
-
-### Progress:
-- Added Database Indexes to schema and migrated.
-- Standardized API calls and verified Address schema usage.
-- Optimized Backend List Queries using select/include.
-- Frontend Optimizations:
-    - Optimized `react-icons` imports for smaller bundle size.
-    - Implemented `React.lazy` and `Suspense` for Admin FE page components (excluding ZoneManagement) to improve initial load time.
-    - Applied dynamic key workaround to Leaflet map on ZoneManagement page to resolve container reuse error. [Date: 2025-05-08]
-- Performed general aesthetics pass (spacing, alignment, button/card/form consistency).
-- Refined Settings page UX (tab clarity, list item affordance, icon colors), fixed UI hydration errors. [Date: 2025-05-12]
-
-Branch merged into main. [Date: 2025-05-12]
-
-- Added user-friendly descriptions for order statuses.
-- Implemented basic rate limiting on backend auth routes.
-- Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
-- Refactored Admin Dashboard to show separate sections for Pending Call, Verified, Processing, Shipped orders.
-- Standardized action button styling across Admin Dashboard live order sections. [Date: 2025-05-26]
+*(From previous docs - `refactor/code-review-performance-ux` branch, merged to main)*
+- Added DB Indexes.
+- Standardized API calls.
+- Optimized Backend List Queries.
+- Frontend Optimizations (`react-icons`, `React.lazy` for Admin FE).
+- Admin Zone Map fix.
+- General aesthetics pass (spacing, alignment, consistency).
+- Settings page UX refinement.
+- Order status descriptions added.
+- Basic rate limiting on backend auth.
+- Minor UX improvements (Order Success page).
+- Admin Dashboard order section refactor.
 
 ## 2. Project Summary & Vision
 
 ### 2.1. Core Concept
-This project implements a **Hybrid E-commerce Platform**, designed primarily for businesses requiring a manual verification step after an online order is placed. It combines the convenience of a modern, **mobile-first e-commerce storefront** (product discovery, cart management, online checkout) with a mandatory **customer-initiated phone call** for final order confirmation and verification.
+Hybrid E-commerce Platform for businesses needing manual phone verification after online order placement. Mobile-first customer frontend (React PWA) + Admin Panel (React).
 
 ### 2.2. Unique Workflow
-1.  Customers browse products via a **React-based Customer Frontend** (intended as a PWA).
-2.  During checkout, the customer provides necessary details and their **geolocation** is captured via the browser API.
-3.  Upon submitting the online order, the **Node.js/Express Backend API** performs several actions atomically:
-    *   Validates order data and stock availability.
-    *   Performs a **location check** using Turf.js to determine if the customer's coordinates fall within admin-defined **Service Areas**.
-    *   Saves the order details, including shipping information (as JSON), line items, total amount, location coordinates, and the location check result (`Inside Zone`, `Outside Zone`, `Not Provided`, `Check Failed`).
-    *   Decrements stock for ordered products.
-    *   *(Ideal Future Refinement: Atomically assign an available phone number and store it on the order)*.
-4.  The customer is redirected to an **Order Success Page** which instructs them to call a specific phone number for verification.
-5.  The verification phone number is dynamically retrieved via a separate API call (`GET /api/orders/assign-number/:orderId`) which finds an 'Available' number from an admin-managed pool and marks it 'Busy'. *(Note: Potential race condition exists here; planned refinement is to assign during order creation)*.
-6.  A separate **React-based Admin Panel** allows staff to:
-    *   Manage Products (CRUD, including stock, cost price, image URL, category).
-    *   Manage Categories (CRUD, including image URL).
-    *   Manage Service Zones (View list, Add new zones via interactive map drawing).
-    *   Manage Phone Numbers (Add new numbers, toggle status: Available/Busy/Offline).
-    *   Manage Orders (View list filtered by status/date, View full details including items and customer location map, Update order status).
-    *   Manage Users (View list with aggregates like order count/total spent, View user details including order history).
-    *   View Dashboard/Statistics (Counts, Revenue, Recent Orders, Sales/User timeline charts).
+1.  Customer browses/adds to cart (React PWA).
+2.  Checkout: provides delivery details (selects/adds DeliveryLocation), geolocation potentially captured.
+3.  Order Submission (`POST /api/orders`):
+    *   Validates data, delivery location.
+    *   **Atomically (within DB transaction):**
+        *   Finds and assigns an available `PhoneNumber` (marks as 'Busy', stores ID on Order). *If none available, transaction fails.*
+        *   Checks stock. *If insufficient, transaction fails.*
+        *   Performs optional location check (Turf.js) against `ServiceArea` polygons (if enabled).
+        *   Saves Order, OrderItems.
+        *   Decrements stock.
+    *   Returns Order ID on success.
+4.  Redirect to Order Success Page: Displays Order ID and the **assigned verification phone number** (fetched from order details). Instructs user to call.
+5.  Admin Panel: Manage Products, Categories (with image uploads), Delivery Locations (via map?), Phone Numbers (status), Orders (view details, map, update status), Users, Zones (map drawing), Dashboard/Stats. Manual phone verification updates order status via Admin Panel.
 
 ### 2.3. Problem Solved
-This platform caters to businesses where automated fulfillment isn't feasible or desired due to:
-*   High-value items requiring verification.
-*   Complex delivery logistics needing confirmation.
-*   Service area restrictions requiring location checks.
-*   A business model emphasizing direct customer contact for trust-building or upselling.
-*   Regulatory requirements.
-It bridges the gap between purely manual (phone/in-person) ordering and fully automated e-commerce, offering customers online convenience while retaining essential manual checks for the business.
+Bridges manual/phone orders and full e-commerce. Caters to businesses needing verification, delivery checks, or direct contact.
 
 ## 3. Goals
 
 ### 3.1. Business Goals
-*   **Increase Order Volume:** Capture online sales potential.
-*   **Improve Order Accuracy:** Reduce manual transcription errors.
-*   **Enhance Operational Control:** Centralized digital system for orders, inventory (stock tracking), customer data, service zones, and phone line availability via Admin Panel.
-*   **Manage Service Areas:** Systematically enforce delivery zone restrictions using geolocation.
-*   **Build Brand Credibility:** Professional, modern online presence.
-*   **Efficient Verification:** Streamline the process of connecting customers to available staff for verification calls.
+*   Increase Order Volume, Improve Accuracy, Enhance Control, Manage Service Areas, Build Credibility, Efficient Verification.
 
 ### 3.2. Customer Experience (UX) Goals (Mobile-First Priority)
-*   **Intuitive Browsing:** Easy product discovery (search, filtering by category/sorting).
-*   **Seamless Cart/Checkout:** Simple client-side cart (MVP+ includes backend persistence), straightforward checkout form (optional address), clear location permission request.
-*   **Clear Post-Order Flow:** Unambiguous instructions on the Order Success page, including the correct, dynamically assigned verification phone number (with `tel:` link).
-*   **Account Management:** Secure registration/login, password reset, viewable profile (email, name), editable password, viewable order history and details, wishlist functionality. *(Address Management deferred)*.
-*   **Mobile Optimization:** Layouts, navigation (Offcanvas menu), and interactions designed primarily for mobile devices.
-*   **Performance:** Fast page loads and interactions.
-*   **PWA Features (Basic):** Installable application icon, basic asset caching via Service Worker. *(Setup complete, needs final verification/refinement)*.
+*   Intuitive Browsing/Search/Filter, Seamless Cart/Checkout (with Delivery Location selection), Clear Post-Order Flow (with specific verification #), Account Management (Profile, Orders, Wishlist, Delivery Locations), Mobile Optimization, Performance, PWA Installability/Updates.
 
 ### 3.3. Admin Experience (UX) Goals
-*   **Efficient Workflows:** Streamlined processes for managing orders (live view dashboard, status updates, filtering), products (CRUD w/ modal), categories, zones (map interface), phones, and users.
-*   **Data Clarity:** Clear presentation of data in tables, cards, and detail views. Visual map display for customer location on order details and zone management. Dashboard statistics and charts for quick insights.
-*   **Ease of Management:** Simple interfaces for core administrative tasks.
+*   Efficient Workflows (CRUD, Order processing, Zone management), Data Clarity (Tables, Maps, Stats), Ease of Management.
 
 ### 3.4. Technical Goals
-*   **Reliability:** High uptime, robust error handling, atomic transactions for critical state changes (order creation, stock updates).
-*   **Security:** Secure password handling (bcrypt hashing for storage and reset tokens), JWT-based session management, input validation (Zod on backend, basic frontend), authorization checks (middleware), HTTPS (deployment requirement). Protection against common vulnerabilities (XSS, SQLi via ORM/validation).
-*   **Performance:** Responsive APIs (<500ms target), efficient database queries (Prisma ORM, indexing considered), optimized frontend builds (Vite), fast initial load times (code splitting, PWA caching).
-*   **Maintainability:** Modular code structure (monorepo, separate routes/contexts/components), TypeScript for type safety, consistent coding patterns, meaningful commit history, this documentation file, basic automated test infrastructure initiated.
-*   **Scalability:** Stateless API design where feasible, potential for database read replicas, capable underlying technologies (Node.js, PostgreSQL). Local image storage identified as a scalability limitation for production.
+*   Reliability (Atomic transactions), Security (Hashing, JWT, Validation, CORS, Rate Limiting), Performance (Responsive API, Optimized FE builds, DB Indexing, Image Optimization), Maintainability (Monorepo, TS, Docs, Tests), Scalability (Stateless API, Cloud DB option).
 
 ## 4. Architecture & Technology Stack
 
-*   **Architecture:** Monorepo managed via `npm` workspaces. Three distinct packages: `backend`, `customer-frontend`, `admin-frontend`. Communication via RESTful JSON API. Client-side state management via React Context.
-*   **Monorepo Tool:** `npm` 7+ (workspaces feature)
+*   **Architecture:** Monorepo (`npm` workspaces), 3 packages (`backend`, `customer-frontend`, `admin-frontend`), REST API, React Context (Customer FE, Admin FE).
+*   **Monorepo Tool:** `npm` 7+
 *   **Backend (`packages/backend`):**
-    *   **Runtime:** Node.js (LTS version assumed)
-    *   **Framework:** Express.js (v5.x)
-    *   **Language:** TypeScript (v5.x) compiled to CommonJS
-    *   **ORM:** Prisma (v6.x) with Prisma Client
-    *   **Database:** PostgreSQL (Local instance during development)
-    *   **Authentication:** `jsonwebtoken` (JWT signing/verification), `bcrypt` (hashing passwords & reset tokens)
-    *   **Validation:** `zod` (for request bodies/params)
-    *   **File Uploads:** `multer` (saves to local `public/uploads` directory)
-    *   **Geospatial:** `@turf/boolean-point-in-polygon`, `@turf/helpers`
-    *   **Middleware:** `cors`, `express.json`, Custom Auth (`isUser`, `isAdmin`)
-    *   **Dev Tools:** `nodemon`, `ts-node`
+    *   Runtime: Node.js (LTS - Node 18 used in Docker)
+    *   Framework: Express.js
+    *   Language: TypeScript
+    *   ORM: Prisma (v6.x)
+    *   Database: PostgreSQL
+    *   Auth: `jsonwebtoken`, `bcrypt`
+    *   Validation: `zod`
+    *   File Uploads: `multer` (to local `/public/uploads` temporarily), `sharp` (for processing to WebP)
+    *   Geospatial: `@turf/boolean-point-in-polygon`, `@turf/helpers`
+    *   Middleware: `cors`, `express.json`, `compression`, `express-rate-limit`, Custom Auth (`isUser`, `isAdmin`)
+    *   Dev Tools: `nodemon`, `ts-node`
+    *   Deployment: Docker container on Render.com (Web Service Free Tier)
 *   **Customer Frontend (`packages/customer-frontend`):**
-    *   **Framework:** React (v19) with Vite (v6.x)
-    *   **Language:** TypeScript (v5.x) with TSX
-    *   **Styling:** Bootstrap (v5.3.x), `react-bootstrap` (v2.10.x), Custom CSS Overrides (`index.css`)
-    *   **Routing:** `react-router-dom` (v6.30.x)
-    *   **State Management:** React Context API (`AuthContext`, `CartContext`, `WishlistContext`)
-    *   **API Client:** `axios`
-    *   **Notifications:** `react-hot-toast`
-    *   **Icons:** `react-icons` (specifically `Fa` icons)
-    *   **PWA:** `vite-plugin-pwa` (v1.x)
-    *   **Build Tool:** Vite
+    *   Framework: React (v19) with Vite (v6.x)
+    *   Language: TypeScript (TSX)
+    *   Styling: Bootstrap, `react-bootstrap`, Custom CSS (`index.css` - Sage Green theme)
+    *   Routing: `react-router-dom`
+    *   State Management: React Context (`AuthContext`, `CartContext`, `WishlistContext`)
+    *   API Client: `axios` (via `src/utils/api.ts`)
+    *   Notifications: `react-hot-toast`
+    *   Icons: `react-icons`
+    *   i18n: `i18next`, `react-i18next`, `i18next-browser-languagedetector`, `i18next-http-backend` (Supports en, am, om - setup complete, translations pending)
+    *   PWA: `vite-plugin-pwa` (Auto update, Install prompt)
+    *   Build Tool: Vite
+    *   Deployment: Static Site on Render.com (Free Tier)
 *   **Admin Frontend (`packages/admin-frontend`):**
-    *   **Framework:** React (v19) with Vite (v6.x)
-    *   **Language:** TypeScript (v5.x) with TSX
-    *   **Styling:** Bootstrap (v5.3.x), `react-bootstrap` (v2.10.x), Custom CSS Overrides (`index.css`)
-    *   **Routing:** `react-router-dom` (v6.30.0 - aligned from v7), `react-router-bootstrap` (v0.26.x)
-    *   **State Management:** Component state (`useState`, `useEffect`)
-    *   **API Client:** `axios`
-    *   **Notifications:** `react-hot-toast`
-    *   **Icons:** `react-icons` (specifically `Fi` and `Fa` icons)
-    *   **Mapping:** `leaflet`, `react-leaflet`, `leaflet-draw`, `@types/leaflet`, `@types/leaflet-draw`
-    *   **Charting:** `chart.js`, `react-chartjs-2`, `@types/chart.js`, `date-fns`
-    *   **Build Tool:** Vite
-*   **Testing Frameworks (Setup Initiated):**
-    *   Vitest
-    *   jsdom
-    *   React Testing Library (`@testing-library/react`)
-    *   Jest DOM Matchers (`@testing-library/jest-dom`)
-*   **Development Environment:** Local PostgreSQL instance preferred over initial Docker attempt due to user setup issues. Node managed via system install/nvm.
+    *   Framework: React (v19) with Vite (v6.x)
+    *   Language: TypeScript (TSX)
+    *   Styling: Bootstrap, `react-bootstrap`, Custom CSS (`index.css` - Neon Green theme)
+    *   Routing: `react-router-dom`, `react-router-bootstrap`
+    *   State Management: Component state, `AuthContext`
+    *   API Client: `axios` (via `src/utils/api.ts`)
+    *   Notifications: `react-hot-toast`
+    *   Icons: `react-icons`
+    *   Mapping: `leaflet`, `react-leaflet`, `leaflet-draw`
+    *   Charting: `chart.js`, `react-chartjs-2`
+    *   Build Tool: Vite
+    *   Deployment: Static Site on Render.com (Free Tier)
+*   **Testing Frameworks:** Vitest, jsdom, React Testing Library, Jest DOM Matchers
 
-## 5. Development Log, Key Decisions & Issues
+## 5. Development Log, Key Decisions & Issues (Reflects `refactor/code-polish-v2`)
 
-*   **Initial Planning:** Defined detailed requirements for a hybrid e-commerce model with phone verification. Established MVP scope focusing on core order flow, basic product display, and minimal admin controls.
-*   **Framework Selection:**
-    *   Initial proposal included Vue.js.
-    *   Switched to **React** for both frontends due to user preference and perceived larger ecosystem/easier troubleshooting after encountering initial tooling friction with Vue setup.
-    *   Backend choice: **Node.js/Express** selected for JavaScript ecosystem consistency and performance. Prisma chosen as ORM for type safety and ease of use with PostgreSQL.
-*   **Monorepo Tooling:** Started with `pnpm`, switched to **`npm` workspaces** due to user environment issues/preference. Required removing `pnpm-lock.yaml`, `pnpm-workspace.yaml` and configuring `workspaces` in root `package.json`, followed by reinstalling dependencies.
-*   **Styling:**
-    *   Initial attempt with **Tailwind CSS** abandoned due to configuration issues (`@tailwindcss/postcss` requirement, build errors).
-    *   Switched to **Bootstrap 5 + `react-bootstrap`** for component library approach and potentially simpler build integration.
-    *   Implemented **custom theming** via CSS variable overrides in `index.css` (Neon Green primary, Dark Gray secondary). Addressed button contrast issues.
-    *   Performed multiple **polish passes** focusing on spacing, alignment, typography, component consistency, interactive states, and mobile responsiveness using Bootstrap utilities.
-*   **Backend Development (Sprint 1 & Enhancements):**
-    *   Implemented core API endpoints following REST principles.
-    *   Integrated Prisma for database interactions.
-    *   Implemented **JWT authentication**; debugged initial 401 errors caused by **inconsistent JWT secret defaults** between signing (`authRoutes`) and verification (`authMiddleware`). Standardized secret handling using `.env` and consistent defaults. Cleaned up middleware logging.
-    *   Implemented **bcrypt password hashing** for registration and login, replacing initial plain text MVP approach. Verified impact on existing vs new users.
-    *   Implemented **hashed token password reset** flow (request, reset endpoints).
-    *   Implemented **persistent cart** API endpoints (`/api/cart`).
-    *   Implemented **wishlist** API endpoints (`/api/wishlist`).
-    *   Implemented **product review** API endpoints (`/api/reviews`, `/api/products/:id/reviews`), including updating product aggregate ratings.
-    *   Implemented **location check** using Turf.js within the `POST /api/orders` transaction. Verified logic and data saving.
-    *   Implemented **stock management** (check and decrement) within the `POST /api/orders` transaction. Added Admin stock adjustment endpoint.
-    *   Implemented **Admin CRUD** APIs for Products, Categories, Phones, Zones.
-    *   Implemented **Admin Reporting** APIs (`/stats`, `/reports/*`
+*   (Inherited logs from previous states...)
+*   **Branch `refactor/code-polish-v2` created** from main for polish/refactoring.
+*   **Fixed Phone Assignment Race Condition:** Moved assignment logic into `POST /api/orders` transaction. Added `assignedPhoneNumberId` to `Order` model. Removed separate assignment endpoint. (L13, L28)
+*   **Refined Order Success Page:** Updated Customer FE page to fetch and display the specific assigned verification number from order details. Improved clarity.
+*   **Standardized Image URL Handling:** Created `getImageUrl` utility in both FEs. Updated components (`ProductCard`, `ProductDetailPage`, `CartPage`, `WishlistPage`, admin pages) to use it. Ensures correct base URL prepending. (L23)
+*   **Improved Product Detail Page:** Added `react-bootstrap/Carousel` for multiple images. Adjusted layout for better visibility of 'Add to Cart'.
+*   **Fixed Cart Quantity Controls:** Implemented +/- buttons correctly using `updateCartItemQuantity` from context, respecting stock/min limits. Removed direct input field.
+*   **Adjusted Rate Limiting:** Tuned limits in backend (`general`, `write`, `auth`) for better balance between UX and abuse prevention.
+*   **Added In-App Password Change:** Implemented forms and backend logic (`POST /api/auth/change-password`) for logged-in users (Customer & Admin) to change their password via Settings/Profile pages, requiring current password.
+*   **Refactored Admin FE Auth:** Implemented `AuthContext` for admin frontend, replacing direct localStorage usage in components like `ProtectedRoute`, `AdminLayout`, `LoginPage`.
+*   **Implemented Checkout Location Selection:** Added dropdown and Add New modal to Customer FE Checkout page. Integrated with `DeliveryLocation` model and updated `POST /api/orders`.
+*   **Enhanced PWA:** Added manual install button, update prompt (`PWAPrompt` component), and required icons for better PWA installability and update experience on Customer FE.
+*   **Enabled Category Image Upload:** Modified Admin FE Category modal to allow file uploads (using existing `/api/admin/upload` route) instead of just URL input. Backend processes to WebP.
+*   **Standardized UI:** Applied consistent button variants/sizes and form element styles within both Customer FE and Admin FE according to their respective themes.
+*   **Backend - Compression:** Added `compression` middleware.
+*   **i18n Setup (Customer FE):** Installed necessary libraries, configured `i18n.ts`, created placeholder locale files (`en`, `am`, `om`), added language switcher UI, internationalized `Layout.tsx`. Deferred full component refactoring.
+*   **Containerized Backend:** Created `Dockerfile` and `.dockerignore` for the backend service.
+*   **Deployed to Render.com:** Configured PostgreSQL DB, Backend Docker Web Service, Customer Static Site, Admin Static Site. Configured build/start commands, environment variables. Successfully ran initial migrations via start script. Resolved deployment issues (missing types, migration execution, frontend API URL ENV VARs, CORS).
+
+## 6. Lessons Learned (Cumulative)
+
+*   L1: Validate AI Output Rigorously.
+*   L2: Explicit Instructions are Key.
+*   L3: Manual Steps are Critical (Git, npm, migrations, testing, ENV VARS).
+*   L4: Maintain Project Context (`project_docs.txt`).
+*   L5: Prioritize Backend/Foundations (MVP).
+*   L6: Visual Feedback Loop (User validation for UI).
+*   L7: Manage Async Operations Carefully (Loading/Error states, Toasts).
+*   L8: Component Design & Boundaries (Context API benefits).
+*   L9: Frontend State Management Strategy (Context vs. Local).
+*   L10: Styling Strategy & Consistency (Bootstrap + Custom CSS).
+*   L11: API Design & Consistency.
+*   L12: Database Schema Evolution (Use migrations systematically).
+*   L13: Backend Data Integrity & Transactions (Order/Stock/Phone).
+*   L14: Configuration & Environment Management (`.env`, Render Vars).
+*   L15: Build & Tooling Integration (Vite, TS, `npm` workspaces, `rollup-plugin-visualizer`).
+*   L16: Debugging Strategies (DevTools, Logs, API testing, Manual Test).
+*   L17: Code Cleanup & Refactoring.
+*   L18: Security Fundamentals (Hashing, JWT, Validation, Rate Limiting, CORS).
+*   L19: Handling Complex Features (Geolocation, PWA, File Uploads, i18n).
+*   L20: Mobile-First / Responsive Design.
+*   L21: Data Model/API Change Impact (Frontend updates needed).
+*   L22: Build/Dependency Cache Issues (Clean install, `prisma generate`).
+*   L23: Frontend/Backend URL Handling (`getImageUrl` utility, `VITE_API_URL`).
+*   L24: Iterative UI Refinement (Button/Form Consistency).
+*   L25: Deployment Configuration (Render specifics: env vars, `migrate deploy`, start cmd).
+*   L26: Environment-Specific CORS (Crucial for production).
+*   L27: Feature Branch Scope.
+*   L28: Business Logic Integrity & Transactions (Phone assignment fix).
+*   L29: Reusable Components (`LinkButton`, `getImageUrl`, `EmptyState`, `StarRating`).
+*   L30: Explicit Prop Handling.
+*   L31: PWA Setup: Requires icons, manifest, SW (`vite-plugin-pwa`). Install depends on browser heuristics. Test build/preview. Use `beforeinstallprompt` for manual trigger. `autoUpdate` strategy needs refresh prompt UI.
+*   L32: i18n Setup: `i18next` good structure. Needs config, locale files (`/public/locales`), component refactoring (`t()` function). AI translation needs human review. Use `Suspense` for loading states.
+*   L33: Docker for Node/Prisma: Multi-stage builds best. Include `prisma generate` in build. `prisma migrate deploy` needed at runtime start on limited platforms (like Render Free). Install *all* deps (`--production=false`) before build if devDeps needed. Use `.dockerignore`.
+*   L34: Deployment Platform Specifics: Free tiers have limits (sleep, DB deletion, no shell). Workarounds needed (migrations in start command). Check build commands (`--production=false`). Set ENV VARS correctly (`DATABASE_URL`, `VITE_API_URL`, `CORS_ORIGIN`).
+*   L35: Runtime Env Var Check: Use `console.log(import.meta.env.VAR_NAME)` in deployed frontend build to verify env vars are correctly passed during build/deployment.
+*   L36: CORS Configuration: Must exactly match frontend origins in production ENV VAR, comma-separated, no trailing slashes.
 ```
 
 ## File: `packages\admin-frontend\.gitignore`
@@ -809,24 +847,35 @@ export default defineConfig(({ mode }) => {
 ## File: `packages\admin-frontend\src\App.tsx`
 
 ```
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import PhoneManagementPage from './pages/PhoneManagementPage';
-import OrderManagementPage from './pages/OrderManagementPage';
-import OrderDetailPage from './pages/OrderDetailPage';
-import ProductManagementPage from './pages/ProductManagementPage';
-import ZoneManagementPage from './pages/ZoneManagementPage';
-import CategoryManagementPage from './pages/CategoryManagementPage';
-import UserManagementPage from './pages/UserManagementPage';
-import UserDetailPage from './pages/UserDetailPage';
-import StatisticsPage from './pages/StatisticsPage';
-import AdminRequestPasswordResetPage from './pages/AdminRequestPasswordResetPage';
-import AdminResetPasswordPage from './pages/AdminResetPasswordPage';
+import { Spinner, Container } from 'react-bootstrap';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout'; // Import the basic layout
 import { Toaster } from 'react-hot-toast';
+
+// Lazy load all page components
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const PhoneManagementPage = lazy(() => import('./pages/PhoneManagementPage'));
+const OrderManagementPage = lazy(() => import('./pages/OrderManagementPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
+const ProductManagementPage = lazy(() => import('./pages/ProductManagementPage'));
+const ZoneManagementPage = lazy(() => import('./pages/ZoneManagementPage'));
+const CategoryManagementPage = lazy(() => import('./pages/CategoryManagementPage'));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
+const StatisticsPage = lazy(() => import('./pages/StatisticsPage'));
+const AdminRequestPasswordResetPage = lazy(() => import('./pages/AdminRequestPasswordResetPage'));
+const AdminResetPasswordPage = lazy(() => import('./pages/AdminResetPasswordPage'));
+const ProfileSettingsPage = lazy(() => import('./pages/ProfileSettingsPage'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100vh - 200px)' }}> 
+    <Spinner animation="border" variant="primary" />
+  </Container>
+);
 
 // Helper function (can be defined here or imported)
 const isAuthenticated = (): boolean => !!localStorage.getItem('admin_token');
@@ -836,42 +885,45 @@ function App() {
     <BrowserRouter>
       {/* Add Toaster here in case it's not properly initialized in main.tsx */}
       <Toaster position="top-right" />
-      <Routes>
-        {/* Public Login Route */}
-        <Route
-          path="/login"
-          element={isAuthenticated() ? <Navigate to="/admin/dashboard" replace /> : <LoginPage />}
-        />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          {/* Public Login Route */}
+          <Route
+            path="/login"
+            element={isAuthenticated() ? <Navigate to="/admin/dashboard" replace /> : <LoginPage />}
+          />
 
-        {/* Public Password Reset Routes */}
-        <Route path="/request-password-reset" element={<AdminRequestPasswordResetPage />} />
-        <Route path="/reset-password/:token" element={<AdminResetPasswordPage />} />
+          {/* Public Password Reset Routes */}
+          <Route path="/request-password-reset" element={<AdminRequestPasswordResetPage />} />
+          <Route path="/reset-password/:token" element={<AdminResetPasswordPage />} />
 
-        {/* Protected Admin Section Wrapper */}
-        <Route element={<ProtectedRoute />}> {/* Checks Auth */}
-          <Route path="/admin" element={<AdminLayout />}> {/* Applies Layout */}
-            {/* Index route for /admin */}
-            <Route index element={<Navigate to="dashboard" replace />} />
-            {/* Nested Admin Pages */}
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="statistics" element={<StatisticsPage />} />
-            <Route path="phones" element={<PhoneManagementPage />} />
-            <Route path="orders" element={<OrderManagementPage />} />
-            <Route path="orders/:orderId" element={<OrderDetailPage />} />
-            <Route path="products" element={<ProductManagementPage />} />
-            <Route path="categories" element={<CategoryManagementPage />} />
-            <Route path="zones" element={<ZoneManagementPage />} />
-            <Route path="users" element={<UserManagementPage />} />
-            <Route path="users/:userId" element={<UserDetailPage />} />
+          {/* Protected Admin Section Wrapper */}
+          <Route element={<ProtectedRoute />}> {/* Checks Auth */}
+            <Route path="/admin" element={<AdminLayout />}> {/* Applies Layout */}
+              {/* Index route for /admin */}
+              <Route index element={<Navigate to="dashboard" replace />} />
+              {/* Nested Admin Pages */}
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="statistics" element={<StatisticsPage />} />
+              <Route path="phones" element={<PhoneManagementPage />} />
+              <Route path="orders" element={<OrderManagementPage />} />
+              <Route path="orders/:orderId" element={<OrderDetailPage />} />
+              <Route path="products" element={<ProductManagementPage />} />
+              <Route path="categories" element={<CategoryManagementPage />} />
+              <Route path="zones" element={<ZoneManagementPage />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="users/:userId" element={<UserDetailPage />} />
+              <Route path="profile" element={<ProfileSettingsPage />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Catch-all / Fallback Route - Only redirect to login if not already on login-related pages */}
-        <Route
-          path="*"
-          element={isAuthenticated() ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/login" replace />}
-        />
-      </Routes>
+          {/* Catch-all / Fallback Route - Only redirect to login if not already on login-related pages */}
+          <Route
+            path="*"
+            element={isAuthenticated() ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/login" replace />}
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
@@ -1466,7 +1518,7 @@ declare module '*.gif';
 ```
 import React, { useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button, Dropdown } from 'react-bootstrap';
 import { FiHome } from 'react-icons/fi';
 import { FiSmartphone } from 'react-icons/fi';
 import { FiShoppingCart } from 'react-icons/fi';
@@ -1476,7 +1528,10 @@ import { FiMap } from 'react-icons/fi';
 import { FiUsers } from 'react-icons/fi';
 import { FiLogOut } from 'react-icons/fi';
 import { FiBarChart2 } from 'react-icons/fi';
+import { FiUser } from 'react-icons/fi';
+import { FiSettings } from 'react-icons/fi';
 import { FaStore } from 'react-icons/fa';
+import LinkButton from './LinkButton';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -1488,50 +1543,80 @@ const AdminLayout = () => {
     navigate('/login', { replace: true });
   };
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+  };
+
   return (
     <div className="admin-layout d-flex flex-column min-vh-100">
       <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect className="mb-4 shadow-sm py-2">
         <Container>
-          <Navbar.Brand as={Link} to="dashboard" className="fw-bolder text-decoration-none">
+          <Navbar.Brand className="fw-bolder text-decoration-none" onClick={() => navigate('dashboard')} style={{ cursor: 'pointer' }}>
             <FaStore className="me-2 text-primary" size={22} />
             <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Hybrid</span>Store Admin
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
-              <Nav.Link as={Link} to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiHome size={16} /> Dashboard
+              <Nav.Link as="div" className="p-0">
+                <Link to="dashboard" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiHome size={16} /> Dashboard
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="statistics" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiBarChart2 size={16} /> Statistics
+              <Nav.Link as="div" className="p-0">
+                <Link to="statistics" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiBarChart2 size={16} /> Statistics
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="phones" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiSmartphone size={16} /> Phones
+              <Nav.Link as="div" className="p-0">
+                <Link to="phones" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiSmartphone size={16} /> Phones
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="orders" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiShoppingCart size={16} /> Orders
+              <Nav.Link as="div" className="p-0">
+                <Link to="orders" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiShoppingCart size={16} /> Orders
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="products" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiBox size={16} /> Products
+              <Nav.Link as="div" className="p-0">
+                <Link to="products" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiBox size={16} /> Products
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="categories" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiTag size={16} /> Categories
+              <Nav.Link as="div" className="p-0">
+                <Link to="categories" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiTag size={16} /> Categories
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="zones" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiMap size={16} /> Zones
+              <Nav.Link as="div" className="p-0">
+                <Link to="zones" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiMap size={16} /> Zones
+                </Link>
               </Nav.Link>
-              <Nav.Link as={Link} to="users" className="px-3 py-2 d-flex align-items-center gap-2">
-                <FiUsers size={16} /> Users
+              <Nav.Link as="div" className="p-0">
+                <Link to="users" className="px-3 py-2 d-flex align-items-center gap-2 nav-link">
+                  <FiUsers size={16} /> Users
+                </Link>
               </Nav.Link>
             </Nav>
-            <Button 
-              variant="outline-primary" 
-              size="sm" 
-              onClick={handleLogout} 
-              className="px-3 d-flex align-items-center gap-2"
-            >
-              <FiLogOut size={16} /> Logout
-            </Button>
+            <div className="d-flex gap-2">
+              <LinkButton
+                variant="secondary"
+                size="sm"
+                to="profile"
+                className="px-3 d-flex align-items-center gap-2"
+              >
+                <FiUser size={16} /> Profile
+              </LinkButton>
+              <Button 
+                variant="danger" 
+                size="sm" 
+                onClick={handleLogout} 
+                className="px-3 d-flex align-items-center gap-2"
+              >
+                <FiLogOut size={16} /> Logout
+              </Button>
+            </div>
           </Navbar.Collapse>
         </Container>
       </Navbar>
@@ -1558,6 +1643,41 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout; 
+```
+
+## File: `packages\admin-frontend\src\components\LinkButton.tsx`
+
+```
+import React from 'react';
+import { Button, ButtonProps } from 'react-bootstrap';
+import { Link, LinkProps } from 'react-router-dom';
+
+interface LinkButtonProps extends Omit<ButtonProps, 'as' | 'href'> {
+  to: LinkProps['to'];
+  children: React.ReactNode;
+}
+
+/**
+ * LinkButton component combines React Bootstrap Button with React Router Link
+ * This solves TypeScript issues when using Button with as={Link} by properly typing the component
+ */
+const LinkButton: React.FC<LinkButtonProps> = ({ 
+  to, 
+  children, 
+  ...buttonProps 
+}) => {
+  return (
+    <Button
+      {...buttonProps}
+      as={Link as any}
+      to={to}
+    >
+      {children}
+    </Button>
+  );
+};
+
+export default LinkButton; 
 ```
 
 ## File: `packages\admin-frontend\src\components\ProtectedRoute.tsx`
@@ -1629,7 +1749,7 @@ const AdminRequestPasswordResetPage = () => {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Reset Admin Password</h3>
               <p className="text-center text-muted mb-4">
@@ -1644,7 +1764,7 @@ const AdminRequestPasswordResetPage = () => {
 
               <Form onSubmit={handleRequestReset}>
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="Enter admin email"
@@ -1652,10 +1772,11 @@ const AdminRequestPasswordResetPage = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="py-2"
                   />
                 </Form.Group>
 
-                <Button variant="primary" type="submit" className="w-100" disabled={isLoading}>
+                <Button variant="primary" type="submit" className="w-100 py-2" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
@@ -1668,7 +1789,7 @@ const AdminRequestPasswordResetPage = () => {
               </Form>
 
               <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+                <Link to="/login" className="text-decoration-none">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>
@@ -1786,7 +1907,7 @@ const AdminResetPasswordPage = () => {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Reset Admin Password</h3>
 
@@ -1805,7 +1926,7 @@ const AdminResetPasswordPage = () => {
               {token && !isSuccess && (
                 <Form onSubmit={handleResetPassword}>
                   <Form.Group className="mb-3" controlId="formNewPassword">
-                    <Form.Label>New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Enter new password"
@@ -1814,6 +1935,7 @@ const AdminResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading}
+                      className="py-2"
                     />
                     <Form.Text className="text-muted">
                       Must be at least 6 characters long.
@@ -1821,7 +1943,7 @@ const AdminResetPasswordPage = () => {
                   </Form.Group>
 
                   <Form.Group className="mb-4" controlId="formConfirmPassword">
-                    <Form.Label>Confirm New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Confirm new password"
@@ -1830,6 +1952,7 @@ const AdminResetPasswordPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading}
+                      className="py-2"
                     />
                   </Form.Group>
 
@@ -1859,7 +1982,7 @@ const AdminResetPasswordPage = () => {
               )}
 
               <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+                <Link to="/login" className="text-decoration-none">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>
@@ -1875,13 +1998,15 @@ export default AdminResetPasswordPage;
 ## File: `packages\admin-frontend\src\pages\CategoryManagementPage.tsx`
 
 ```
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import axios from 'axios';
+import api from '../utils/api';
 import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
 import { FaPlus } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
 import { FaTrashAlt } from 'react-icons/fa';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface Category {
   id: number;
@@ -1902,6 +2027,12 @@ const CategoryManagementPage: React.FC = () => {
   const [formImageUrl, setFormImageUrl] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   
   // Modal state
   const [showAddEditModal, setShowAddEditModal] = useState(false);
@@ -1940,14 +2071,14 @@ const CategoryManagementPage: React.FC = () => {
     }
     
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/categories`, {
+      const response = await api.get('/admin/categories', {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
       setCategories(response.data);
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
@@ -1970,6 +2101,9 @@ const CategoryManagementPage: React.FC = () => {
     setFormErrors({});
     setIsEditMode(false);
     setEditCategoryId(null);
+    setSelectedFile(null);
+    setCurrentImageUrl('');
+    setUploadError(null);
     setShowAddEditModal(true);
   };
 
@@ -1979,9 +2113,12 @@ const CategoryManagementPage: React.FC = () => {
       description: category.description || '' 
     });
     setFormImageUrl(category.imageUrl || '');
+    setCurrentImageUrl(category.imageUrl || '');
     setFormErrors({});
     setIsEditMode(true);
     setEditCategoryId(category.id);
+    setSelectedFile(null);
+    setUploadError(null);
     setShowAddEditModal(true);
   };
 
@@ -2020,6 +2157,16 @@ const CategoryManagementPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+      setSelectedFile(file);
+      setUploadError(null);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -2034,16 +2181,54 @@ const CategoryManagementPage: React.FC = () => {
       return;
     }
     
+    let finalImageUrl = isEditMode ? currentImageUrl : null;
+    
+    // Handle file upload if a file is selected
+    if (selectedFile) {
+      setIsUploading(true);
+      setUploadError(null);
+      
+      try {
+        const formData = new FormData();
+        formData.append('productImages', selectedFile); // Using 'productImages' as per existing endpoint
+        
+        const uploadResponse = await api.post(
+          '/admin/upload',
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        
+        if (uploadResponse.data && uploadResponse.data.imageUrls && uploadResponse.data.imageUrls.length > 0) {
+          finalImageUrl = uploadResponse.data.imageUrls[0];
+        } else {
+          throw new Error('Invalid response from upload API');
+        }
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          setUploadError(err.response.data.message || 'Failed to upload image');
+          console.error('Error uploading image:', err.response.data);
+        } else {
+          setUploadError('Network error. Please check your connection.');
+          console.error('Network error:', err);
+        }
+        setIsSaving(false);
+        setIsUploading(false);
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
+    
     const categoryData = {
       name: formData.name.trim(),
       description: formData.description.trim() || null,
-      imageUrl: formImageUrl.trim() || null
+      imageUrl: finalImageUrl
     };
     
     try {
       if (isEditMode && editCategoryId) {
-        await axios.put(
-          `${API_BASE_URL}/api/admin/categories/${editCategoryId}`,
+        await api.put(
+          `/admin/categories/${editCategoryId}`,
           categoryData,
           {
             headers: {
@@ -2053,8 +2238,8 @@ const CategoryManagementPage: React.FC = () => {
         );
         showNotification('Category updated successfully!');
       } else {
-        await axios.post(
-          `${API_BASE_URL}/api/admin/categories`,
+        await api.post(
+          '/admin/categories',
           categoryData,
           {
             headers: {
@@ -2067,7 +2252,7 @@ const CategoryManagementPage: React.FC = () => {
       
       handleCloseModals();
       fetchCategories();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 400) {
           setFormErrors(err.response.data.errors || {});
@@ -2103,7 +2288,7 @@ const CategoryManagementPage: React.FC = () => {
     }
     
     try {
-      await axios.delete(`${API_BASE_URL}/api/admin/categories/${categoryToDelete.id}`, {
+      await api.delete(`/admin/categories/${categoryToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -2112,7 +2297,7 @@ const CategoryManagementPage: React.FC = () => {
       showNotification('Category deleted successfully!');
       handleCloseModals();
       fetchCategories();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 409) {
           showNotification('Cannot delete category with associated products.', 'danger');
@@ -2188,10 +2373,12 @@ const CategoryManagementPage: React.FC = () => {
                 <td>{category.name}</td>
                 <td>{category.description || '-'}</td>
                 <td>{category.imageUrl ? (
-                  <a href={category.imageUrl} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
+                  <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
                     {category.imageUrl}
                   </a>
-                ) : '-'}</td>
+                ) : (
+                  <span className="text-muted">No image</span>
+                )}</td>
                 <td>
                   <Button 
                     variant="outline-primary" 
@@ -2202,7 +2389,7 @@ const CategoryManagementPage: React.FC = () => {
                     <FaEdit /> Edit
                   </Button>
                   <Button 
-                    variant="outline-danger" 
+                    variant="danger" 
                     size="sm" 
                     onClick={() => handleShowDeleteModal(category)}
                   >
@@ -2223,20 +2410,21 @@ const CategoryManagementPage: React.FC = () => {
         <Form onSubmit={handleSaveCategory}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Category Name</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Category Name</Form.Label>
               <Form.Control
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 isInvalid={!!formErrors.name}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.name}
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Description</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
@@ -2244,25 +2432,72 @@ const CategoryManagementPage: React.FC = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 isInvalid={!!formErrors.description}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.description}
               </Form.Control.Feedback>
             </Form.Group>
+            
+            {/* Image Preview Area */}
+            {(currentImageUrl || selectedFile) && (
+              <div className="mb-3 text-center">
+                <img 
+                  src={selectedFile ? URL.createObjectURL(selectedFile) : getImageUrl(currentImageUrl)} 
+                  alt="Category Preview" 
+                  style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', marginBottom: '10px' }} 
+                />
+                {selectedFile && <p className="text-muted small">New image selected: {selectedFile.name}</p>}
+              </div>
+            )}
+            
+            <Form.Group controlId="categoryImageFile" className="mb-3">
+              <Form.Label className="fw-medium text-neutral-700">Category Image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/png, image/jpeg, image/webp, image/gif"
+                onChange={handleFileChange}
+                disabled={isUploading || isSaving}
+                className="py-2"
+              />
+              {isUploading && <Spinner animation="border" size="sm" className="ms-2" />}
+              {uploadError && <Alert variant="danger" className="mt-2">{uploadError}</Alert>}
+              <Form.Text className="text-muted">
+                Upload a new image (optional). Max 5MB. Replaces existing image if provided.
+              </Form.Text>
+            </Form.Group>
+            
             <Form.Group className="mb-3">
-              <Form.Label>Image URL</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Image URL</Form.Label>
               <Form.Control
                 type="text"
+                name="imageUrl"
                 placeholder="https://example.com/image.png"
                 value={formImageUrl}
-                onChange={(e) => setFormImageUrl(e.target.value)}
+                onChange={(e) => {
+                  setFormImageUrl(e.target.value);
+                  setCurrentImageUrl(e.target.value);
+                  // Clear selected file when URL is entered manually
+                  if (e.target.value) {
+                    setSelectedFile(null);
+                  }
+                  // Clear error when user types
+                  if (formErrors.imageUrl) {
+                    setFormErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.imageUrl;
+                      return newErrors;
+                    });
+                  }
+                }}
                 isInvalid={!!formErrors.imageUrl}
+                className="py-2"
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.imageUrl}
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
-                Optional. Enter a valid URL for the category image.
+                Optional. You can either upload an image or enter a URL directly.
               </Form.Text>
             </Form.Group>
           </Modal.Body>
@@ -2273,9 +2508,10 @@ const CategoryManagementPage: React.FC = () => {
             <Button 
               variant="primary" 
               type="submit" 
-              disabled={isSaving}
+              disabled={isSaving || isUploading}
+              className="py-2"
             >
-              {isSaving ? (
+              {isSaving || isUploading ? (
                 <>
                   <Spinner
                     as="span"
@@ -2283,9 +2519,9 @@ const CategoryManagementPage: React.FC = () => {
                     size="sm"
                     role="status"
                     aria-hidden="true"
-                    className="me-1"
+                    className="me-2"
                   />
-                  Saving...
+                  {isUploading ? 'Uploading...' : 'Saving...'}
                 </>
               ) : (
                 'Save Category'
@@ -2353,10 +2589,12 @@ export default CategoryManagementPage;
 
 ```
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for type checking
 import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
+import LinkButton from '../components/LinkButton';
 
 interface AdminStats {
   recentOrders: {
@@ -2390,7 +2628,6 @@ interface AdminOrder {
   };
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 const REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
 const DashboardPage = () => {
@@ -2426,14 +2663,10 @@ const DashboardPage = () => {
           ? admin_token 
           : `Bearer ${admin_token}`;
         
-        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
-          headers: {
-            Authorization: formattedToken
-          }
-        });
+        const response = await api.get('/admin/stats');
         
         setStats(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           if (err.response?.status === 401) {
             // Handle unauthorized error
@@ -2480,15 +2713,11 @@ const DashboardPage = () => {
       
       // Pass status params correctly for backend array handling
       const statusesToFetch = ['Pending Call', 'Verified', 'Processing', 'Shipped'];
-      const apiUrl = `${API_BASE_URL}/admin/orders?${statusesToFetch.map(s => `status=${encodeURIComponent(s)}`).join('&')}&dateFilter=today`;
+      const apiUrl = `/admin/orders?${statusesToFetch.map(s => `status=${encodeURIComponent(s)}`).join('&')}&dateFilter=today`;
       console.log(`Fetching active orders from ${apiUrl}`);
       
       // Fetch orders with all relevant statuses
-      const response = await axios.get(apiUrl, {
-        headers: {
-          Authorization: formattedToken
-        }
-      });
+      const response = await api.get(apiUrl);
       
       // Update state with fetched orders
       if (response.data && Array.isArray(response.data.orders)) {
@@ -2496,7 +2725,7 @@ const DashboardPage = () => {
       } else {
         setActiveError('Invalid data format received from server.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 401) {
           setActiveError('Your session has expired. Please log in again.');
@@ -2531,20 +2760,11 @@ const DashboardPage = () => {
         : `Bearer ${admin_token}`;
       
       // Update the order status
-      await axios.put(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            Authorization: formattedToken,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
       
       // Refresh the orders after status update
       fetchActiveOrders();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setActiveError(err.response?.data?.message || 'Failed to update order status');
         console.error('Error updating order status:', err);
@@ -2601,10 +2821,12 @@ const DashboardPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Dashboard</h2>
         <div>
-          <Link to="/admin/statistics" className="me-2">
-            <Button variant="primary">View Statistics</Button>
-          </Link>
-          <Button variant="outline-primary" onClick={() => window.location.reload()}>Refresh Data</Button>
+          <LinkButton to="/admin/statistics" variant="primary" className="me-2">
+            View Statistics
+          </LinkButton>
+          <Button variant="outline-primary" onClick={() => window.location.reload()}>
+            Refresh Data
+          </Button>
         </div>
       </div>
       
@@ -2660,17 +2882,20 @@ const DashboardPage = () => {
                           Mark Verified
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -2747,17 +2972,20 @@ const DashboardPage = () => {
                           Rollback to Pending
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -2834,17 +3062,20 @@ const DashboardPage = () => {
                           Rollback to Verified
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -2921,17 +3152,20 @@ const DashboardPage = () => {
                           Rollback to Processing
                         </Button>
                         <Button 
-                          variant="outline-danger" 
+                          variant="danger" 
                           size="sm"
                           onClick={() => handleStatusChange(order.id, 'Cancelled')}
                         >
                           Cancel Order
                         </Button>
-                        <Link to={`/admin/orders/${order.id}`} className="ms-auto">
-                          <Button variant="outline-secondary" size="sm">
-                            Details
-                          </Button>
-                        </Link>
+                        <LinkButton 
+                          to={`/admin/orders/${order.id}`}
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="ms-auto"
+                        >
+                          Details
+                        </LinkButton>
                       </div>
                     </Card.Footer>
                   </Card>
@@ -2987,9 +3221,13 @@ const DashboardPage = () => {
                         </td>
                         <td>{formatDate(order.createdAt)}</td>
                         <td>
-                          <Link to={`/admin/orders/${order.id}`}>
-                            <Button variant="outline-primary" size="sm">View</Button>
-                          </Link>
+                          <LinkButton 
+                            to={`/admin/orders/${order.id}`}
+                            variant="outline-secondary" 
+                            size="sm"
+                          >
+                            View
+                          </LinkButton>
                         </td>
                       </tr>
                     ))}
@@ -3134,38 +3372,40 @@ function LoginPage() {
     <Container fluid>
       <Row className="justify-content-center align-items-center min-vh-100">
         <Col md={6} lg={4}>
-          <Card className="shadow mb-4">
+          <Card className="shadow-sm mb-4">
             <Card.Body className="p-4">
               <h3 className="text-center mb-4">Admin Login</h3>
               
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label>Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Forgot Password Link */}
                 <div className="text-end mb-3">
-                  <Link to="/request-password-reset">Forgot Password?</Link>
+                  <Link to="/request-password-reset" className="text-decoration-none">Forgot Password?</Link>
                 </div>
                 
                 {/* Error message */}
@@ -3208,12 +3448,13 @@ export default LoginPage;
 ```
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { FaImage } from 'react-icons/fa';
+import { getImageUrl } from '../utils/imageUrl';
+import api from '../utils/api';
 
 // Define interfaces based on backend response structure
 interface OrderProduct {
@@ -3265,9 +3506,6 @@ interface ServiceZone {
   name: string;
   geoJsonPolygon: string; // The raw GeoJSON string
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_URL = API_BASE_URL;
 
 // A separate component for the Map to ensure it only renders when valid coordinates are provided
 const OrderLocationMap: React.FC<{
@@ -3321,7 +3559,7 @@ const OrderLocationMap: React.FC<{
                 pathOptions={{ color: 'red', weight: 2, fillOpacity: 0.1 }}
               />
             );
-          } catch (err) {
+          } catch (err: unknown) {
             console.error(`Error parsing GeoJSON for zone ${zone.id}:`, err);
             return null;
           }
@@ -3375,12 +3613,7 @@ const OrderDetailPage: React.FC = () => {
       setError(null);
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/orders/${orderId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
+        const response = await api.get(`/admin/orders/${orderId}`);
         console.log("Order details received:", response.data);
         console.log("Location data received:", {
           latitude: response.data.latitude,
@@ -3388,16 +3621,16 @@ const OrderDetailPage: React.FC = () => {
         });
 
         setOrder(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          if (err.response.status === 401) {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.message.includes('401')) {
             setError('Your session has expired. Please log in again.');
-          } else if (err.response.status === 404) {
+          } else if (err.message.includes('404')) {
             setError(`Order with ID ${orderId} not found.`);
           } else {
-            setError(err.response.data.message || 'Failed to fetch order details.');
+            setError(err.message || 'Failed to fetch order details.');
           }
-          console.error('Error fetching order details:', err.response.data);
+          console.error('Error fetching order details:', err);
         } else {
           setError('Network error. Please check your connection.');
           console.error('Network error:', err);
@@ -3424,17 +3657,13 @@ const OrderDetailPage: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/serviceareas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get(`/admin/serviceareas`);
         
         setZones(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
           setZoneError('Failed to load service zones');
-          console.error('Error fetching zones:', err.response.data);
+          console.error('Error fetching zones:', err);
         } else {
           setZoneError('Network error loading zones');
           console.error('Network error:', err);
@@ -3564,13 +3793,11 @@ const OrderDetailPage: React.FC = () => {
                         <td className="text-center">
                           {item.product?.images && item.product.images.length > 0 ? (
                             <img 
-                              src={item.product.images[0].url.startsWith('/') 
-                                ? `${API_BASE_URL}${item.product.images[0].url}` 
-                                : item.product.images[0].url}
+                              src={getImageUrl(item.product.images[0].url)}
                               alt={item.product.name}
                               style={{ width: '40px', height: '40px', objectFit: 'cover' }}
                               onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                                (e.target as HTMLImageElement).src = `${API_BASE_URL}/placeholder.png`;
+                                (e.target as HTMLImageElement).src = getImageUrl('/placeholder.png');
                               }}
                             />
                           ) : (
@@ -3832,7 +4059,7 @@ const OrderManagementPage = () => {
             
             {statusFilters.length > 0 && (
               <Button 
-                variant="outline-danger" 
+                variant="danger" 
                 size="sm"
                 onClick={clearStatusFilters}
                 className="ms-2"
@@ -4353,8 +4580,8 @@ const PhoneManagementPage = () => {
                 {addError}
               </Alert>
             )}
-            <Form.Group controlId="newPhoneNumber">
-              <Form.Label>Phone Number</Form.Label>
+            <Form.Group className="mb-3" controlId="newPhoneNumber">
+              <Form.Label className="fw-medium text-neutral-700">Phone Number</Form.Label>
               <InputGroup>
                 <Form.Control
                   type="tel"
@@ -4362,6 +4589,7 @@ const PhoneManagementPage = () => {
                   value={newPhoneNumber}
                   onChange={(e) => setNewPhoneNumber(e.target.value)}
                   required
+                  className="py-2"
                 />
               </InputGroup>
               <Form.Text className="text-muted">
@@ -4373,7 +4601,7 @@ const PhoneManagementPage = () => {
             <Button variant="secondary" onClick={handleCloseAddModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={isAdding}>
+            <Button variant="primary" type="submit" disabled={isAdding} className="py-2">
               {isAdding ? (
                 <>
                   <Spinner
@@ -4382,7 +4610,7 @@ const PhoneManagementPage = () => {
                     size="sm"
                     role="status"
                     aria-hidden="true"
-                    className="me-1"
+                    className="me-2"
                   />
                   Adding...
                 </>
@@ -4405,9 +4633,10 @@ export default PhoneManagementPage;
 ```
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Row, Col, Button, Spinner, Alert, Card } from 'react-bootstrap';
+import axios from 'axios';
 import { formatCurrency } from '../utils/formatters';
+import api from '../utils/api';
 
 interface Product {
   id: number;
@@ -4422,8 +4651,6 @@ interface Product {
   };
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -4436,28 +4663,19 @@ const ProductDetailPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('admin_token');
-      if (!token) {
-        setError('Authentication required. Please log in again.');
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/admin/products/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get(`/admin/products/${id}`);
         setProduct(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
+        // Need to re-import axios for error type checking
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 404) {
             setError(`Product #${id} not found.`);
+          } else if (err.response.status === 401) {
+            setError('Your session has expired. Please log in again.');
           } else {
-            setError(err.response.data.message || 'Failed to fetch product details.');
+            setError(err.response.data.message || `Failed to fetch product #${id}.`);
           }
-          console.error('Error fetching product:', err.response.data);
         } else {
           setError('Network error. Please check your connection.');
           console.error('Network error:', err);
@@ -4515,7 +4733,7 @@ const ProductDetailPage: React.FC = () => {
           <Card>
             <Card.Img 
               src={product.imageUrl 
-                ? (product.imageUrl.startsWith('/') ? `${API_BASE_URL}${product.imageUrl}` : product.imageUrl)
+                ? (product.imageUrl.startsWith('/') ? `${api.defaults.baseURL}${product.imageUrl}` : product.imageUrl)
                 : '/placeholder-product.jpg'} 
               alt={product.name}
               style={{ height: '300px', objectFit: 'cover' }}
@@ -4555,7 +4773,6 @@ export default ProductDetailPage;
 
 ```
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import axios from 'axios';
 import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge, Row, Col, Card, Tabs, Tab } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import { FaImage } from 'react-icons/fa';
@@ -4569,7 +4786,9 @@ import { FaTag } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
+import axios from 'axios';
 import api from '../utils/api';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface Category {
   id: number;
@@ -4597,8 +4816,6 @@ interface Product {
   };
   images?: ProductImage[];
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductManagementPage: React.FC = () => {
   // Products list state
@@ -4661,7 +4878,7 @@ const ProductManagementPage: React.FC = () => {
     try {
       const response = await api.get('/admin/categories');
       setCategories(response.data);
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         setCategoriesError(err.response.data.message || 'Failed to fetch categories.');
         console.error('Error fetching categories:', err.response.data);
@@ -4682,7 +4899,7 @@ const ProductManagementPage: React.FC = () => {
       // Use admin endpoint to get products with category information
       const response = await api.get('/admin/products');
       setProducts(response.data);
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
@@ -4709,7 +4926,7 @@ const ProductManagementPage: React.FC = () => {
       
       // Refresh product list
       fetchProducts();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
@@ -4829,17 +5046,10 @@ const ProductManagementPage: React.FC = () => {
       formData.append('productImages', file);
     });
     
-    // Since our api utility doesn't support FormData content type headers,
-    // we'll use axios directly for the file upload, but still leverage the API_URL
-    const uploadResponse = await axios.post(
-      `${API_URL}/api/admin/upload`,
+    const uploadResponse = await api.post(
+      '/admin/upload',
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${localStorage.getItem('admin_token')}`
-        }
-      }
+      { headers: { 'Content-Type': 'multipart/form-data' } }
     );
     
     return uploadResponse.data.imageUrls || [];
@@ -4872,7 +5082,7 @@ const ProductManagementPage: React.FC = () => {
         try {
           const newUrls = await uploadImages(selectedFiles);
           uploadedImageUrls = [...uploadedImageUrls, ...newUrls];
-        } catch (err) {
+        } catch (err: unknown) {
           if (axios.isAxiosError(err) && err.response) {
             setUploadError(err.response.data.message || 'Failed to upload images.');
             console.error('Error uploading images:', err.response.data);
@@ -4921,7 +5131,7 @@ const ProductManagementPage: React.FC = () => {
       // Success - close modal and refresh
       handleCloseModal();
       fetchProducts();
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         setModalError(err.response.data.message || 'Failed to save product.');
         console.error('Error saving product:', err.response.data);
@@ -4957,7 +5167,7 @@ const ProductManagementPage: React.FC = () => {
       // Reset adjustment state
       setAdjustingProductId(null);
       setAdjustmentValue('');
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data.message || 'Failed to adjust stock');
         console.error('Error adjusting stock:', err.response.data);
@@ -5067,14 +5277,12 @@ const ProductManagementPage: React.FC = () => {
                       <td className="text-center">
                         {product.images && product.images.length > 0 ? (
                           <img 
-                            src={product.images[0].url.startsWith('/') 
-                              ? `${API_URL}${product.images[0].url}` 
-                              : product.images[0].url} 
+                            src={getImageUrl(product.images[0].url)} 
                             alt={product.name} 
                             className="product-thumbnail rounded shadow-sm" 
                             style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              (e.target as HTMLImageElement).src = `${API_URL}/placeholder.png`;
+                              (e.target as HTMLImageElement).src = getImageUrl("/placeholder.png");
                             }}
                           />
                         ) : (
@@ -5120,7 +5328,7 @@ const ProductManagementPage: React.FC = () => {
                             Edit
                           </Button>
                           <Button 
-                            variant="outline-danger" 
+                            variant="danger" 
                             size="sm"
                             onClick={() => handleShowDeleteModal(product)}
                           >
@@ -5155,17 +5363,18 @@ const ProductManagementPage: React.FC = () => {
               </Alert>
             )}
             <Form.Group className="mb-3">
-              <Form.Label>Name</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Name</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Product Name"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 required
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Price</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Price</Form.Label>
               <InputGroup>
                 <InputGroup.Text>$</InputGroup.Text>
                 <Form.Control
@@ -5175,11 +5384,12 @@ const ProductManagementPage: React.FC = () => {
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
                   required
+                  className="py-2"
                 />
               </InputGroup>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Cost Price (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Cost Price (Optional)</Form.Label>
               <InputGroup>
                 <InputGroup.Text>$</InputGroup.Text>
                 <Form.Control
@@ -5188,35 +5398,39 @@ const ProductManagementPage: React.FC = () => {
                   placeholder="0.00"
                   value={formCostPrice}
                   onChange={(e) => setFormCostPrice(e.target.value)}
+                  className="py-2"
                 />
               </InputGroup>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Description (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Description (Optional)</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
                 placeholder="Product Description"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Stock (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Stock (Optional)</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Stock Quantity"
                 value={formStock}
                 onChange={(e) => setFormStock(e.target.value)}
+                className="py-2"
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="productImageFile">
-              <Form.Label>Product Images (Up to 5)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Product Images (Up to 5)</Form.Label>
               <Form.Control
                 type="file"
                 accept="image/png, image/jpeg, image/webp, image/gif"
                 onChange={handleFileSelection}
                 multiple
+                className="py-2"
               />
               <Form.Text className="text-muted">
                 Max 5 images total. Max file size: 5MB each. Supported formats: PNG, JPEG, WebP, GIF.
@@ -5267,7 +5481,7 @@ const ProductManagementPage: React.FC = () => {
                       style={{ width: '80px', height: '80px' }}
                     >
                       <Image 
-                        src={url.startsWith('/') ? `${API_URL}${url}` : url}
+                        src={getImageUrl(url)}
                         alt={`Image ${index + 1}`}
                         className="rounded"
                         style={{ width: '80px', height: '80px', objectFit: 'cover' }}
@@ -5290,10 +5504,11 @@ const ProductManagementPage: React.FC = () => {
               </div>
             )}
             <Form.Group className="mb-3">
-              <Form.Label>Category (Optional)</Form.Label>
+              <Form.Label className="fw-medium text-neutral-700">Category (Optional)</Form.Label>
               <Form.Select
                 value={formCategoryId}
                 onChange={(e) => setFormCategoryId(e.target.value)}
+                className="py-2"
               >
                 <option value="">None</option>
                 {categories.map(category => (
@@ -5312,6 +5527,7 @@ const ProductManagementPage: React.FC = () => {
               variant="primary" 
               type="submit"
               disabled={isModalLoading || isUploading}
+              className="py-2"
             >
               {isModalLoading || isUploading ? (
                 <>
@@ -5340,7 +5556,7 @@ const ProductManagementPage: React.FC = () => {
           <Button variant="secondary" onClick={handleCloseDeleteModal}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={handleConfirmDelete}>
+          <Button variant="danger" onClick={handleConfirmDelete} className="py-2">
             Delete
           </Button>
         </Modal.Footer>
@@ -5361,13 +5577,14 @@ const ProductManagementPage: React.FC = () => {
                   <span className="text-muted">Current stock: {stockProduct.stock || 0}</span>
                 </p>
                 <Form.Group className="mb-3">
-                  <Form.Label>Stock adjustment (+ to add, - to remove)</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Stock adjustment (+ to add, - to remove)</Form.Label>
                   <Form.Control
                     type="number"
                     value={stockAdjustment}
                     onChange={(e) => setStockAdjustment(e.target.value)}
                     placeholder="Enter adjustment value"
                     required
+                    className="py-2"
                   />
                   <Form.Text className="text-muted">
                     Example: Enter "5" to add 5 units or "-3" to remove 3 units
@@ -5385,7 +5602,7 @@ const ProductManagementPage: React.FC = () => {
             <Button variant="secondary" onClick={handleCloseStockModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" className="py-2">
               Save Changes
             </Button>
           </Modal.Footer>
@@ -5398,11 +5615,226 @@ const ProductManagementPage: React.FC = () => {
 export default ProductManagementPage; 
 ```
 
+## File: `packages\admin-frontend\src\pages\ProfileSettingsPage.tsx`
+
+```
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import { toast } from 'react-hot-toast';
+
+const ProfileSettingsPage = () => {
+  const navigate = useNavigate();
+  
+  // Admin profile data state
+  const [adminProfile, setAdminProfile] = useState<any>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Password change form state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  // Fetch admin profile data
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const response = await api.get('/auth/me');
+        setAdminProfile(response.data);
+      } catch (error) {
+        console.error('Error fetching admin profile:', error);
+        toast.error('Failed to load your profile information');
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
+
+  // Handle password change form submission
+  const handlePasswordChange = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Reset states
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setIsChangingPassword(true);
+    
+    // Basic validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All fields are required');
+      setIsChangingPassword(false);
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      setIsChangingPassword(false);
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long');
+      setIsChangingPassword(false);
+      return;
+    }
+    
+    try {
+      const response = await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      
+      setPasswordSuccess('Password updated successfully');
+      toast.success('Password has been changed');
+      
+      // Clear form fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+    } catch (error: any) {
+      if (error.response) {
+        // The request was made and the server responded with an error status
+        if (error.response.status === 401 && error.response.data.message === 'Incorrect current password.') {
+          setPasswordError('Current password is incorrect');
+        } else {
+          setPasswordError(error.response.data.message || 'Failed to update password');
+        }
+        console.error('Error changing password:', error.response.data);
+      } else {
+        setPasswordError('Network error. Please check your connection.');
+        console.error('Network error:', error);
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  return (
+    <Container>
+      <h1 className="mb-4">Profile Settings</h1>
+      
+      {isLoadingProfile ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      ) : (
+        <Row>
+          <Col lg={4} className="mb-4">
+            <Card className="shadow-sm h-100">
+              <Card.Body>
+                <h4 className="mb-4">Admin Information</h4>
+                {adminProfile && (
+                  <>
+                    <p><strong>Email:</strong> {adminProfile.email}</p>
+                    <p><strong>Role:</strong> {adminProfile.role}</p>
+                    <p><strong>Last Login:</strong> {adminProfile.lastLogin ? new Date(adminProfile.lastLogin).toLocaleString() : 'N/A'}</p>
+                  </>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+          
+          <Col lg={8}>
+            <Card className="shadow-sm">
+              <Card.Body>
+                <h4 className="mb-4">Change Password</h4>
+                
+                {passwordError && (
+                  <Alert variant="danger" className="mb-4">
+                    {passwordError}
+                  </Alert>
+                )}
+                
+                {passwordSuccess && (
+                  <Alert variant="success" className="mb-4">
+                    {passwordSuccess}
+                  </Alert>
+                )}
+                
+                <Form onSubmit={handlePasswordChange}>
+                  <Form.Group className="mb-3" controlId="formCurrentPassword">
+                    <Form.Label className="fw-medium text-neutral-700">Current Password</Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Enter your current password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      required
+                      className="py-2"
+                    />
+                  </Form.Group>
+                  
+                  <Form.Group className="mb-3" controlId="formNewPassword">
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="py-2"
+                    />
+                    <Form.Text className="text-muted">
+                      Password must be at least 6 characters long.
+                    </Form.Text>
+                  </Form.Group>
+                  
+                  <Form.Group className="mb-4" controlId="formConfirmPassword">
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="py-2"
+                    />
+                  </Form.Group>
+                  
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="py-2"
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                        Changing Password...
+                      </>
+                    ) : (
+                      'Update Password'
+                    )}
+                  </Button>
+                </Form>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+    </Container>
+  );
+};
+
+export default ProfileSettingsPage; 
+```
+
 ## File: `packages\admin-frontend\src\pages\StatisticsPage.tsx`
 
 ```
 import React, { useEffect, useState, lazy, Suspense } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for error type checking
 import { Container, Row, Col, Card, Alert, Spinner, Form, Badge } from 'react-bootstrap';
 import { FaUsers } from 'react-icons/fa';
 import { FaShoppingCart } from 'react-icons/fa';
@@ -5471,9 +5903,7 @@ interface AdminStats {
   }[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-const StatisticsPage = () => {
+const StatisticsPage: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -5506,21 +5936,20 @@ const StatisticsPage = () => {
           return;
         }
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
-        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+        const response = await api.get('/admin/stats', {
           headers: {
-            Authorization: formattedToken
+            Authorization: token
           }
         });
         
         setStats(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             // Handle unauthorized error
             localStorage.removeItem('admin_token');
             setError('Your session has expired. Please log in again.');
@@ -5585,20 +6014,16 @@ const StatisticsPage = () => {
         const formattedStartDate = format(startDate, 'yyyy-MM-dd');
         const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
         // Fetch sales data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
+        const response = await api.get(`/admin/reports/sales-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, {
+          headers: {
+            Authorization: token
           }
-        );
+        });
         
         // Transform the data for chartjs
         if (response.data && Array.isArray(response.data)) {
@@ -5622,9 +6047,9 @@ const StatisticsPage = () => {
         } else {
           setSalesChartError('Invalid data format received from server.');
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             setSalesChartError('Your session has expired.');
           } else if (err.response) {
             setSalesChartError(err.response.data.message || 'Failed to fetch sales data');
@@ -5684,20 +6109,16 @@ const StatisticsPage = () => {
         const formattedStartDate = format(startDate, 'yyyy-MM-dd');
         const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-        // Ensure the token is properly formatted
-        const formattedToken = admin_token.startsWith('Bearer ') 
+        const token = admin_token.startsWith('Bearer ') 
           ? admin_token 
           : `Bearer ${admin_token}`;
         
         // Fetch users data from the reports API
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, 
-          {
-            headers: {
-              Authorization: formattedToken
-            }
+        const response = await api.get(`/admin/reports/users-over-time?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, {
+          headers: {
+            Authorization: token
           }
-        );
+        });
         
         // Transform the data for chartjs
         if (response.data && Array.isArray(response.data)) {
@@ -5721,9 +6142,9 @@ const StatisticsPage = () => {
         } else {
           setUsersChartError('Invalid data format received from server.');
         }
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
             setUsersChartError('Your session has expired.');
           } else if (err.response) {
             setUsersChartError(err.response.data.message || 'Failed to fetch user data');
@@ -6351,10 +6772,11 @@ export default UserDetailPage;
 
 ```
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Container, Row, Col, Card, Table, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatCurrency } from '../utils/formatters';
+import api from '../utils/api';
+import axios from 'axios'; // Keep for error type checking
 
 // User interface with order count
 interface AdminUser {
@@ -6367,8 +6789,6 @@ interface AdminUser {
   totalSpent: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -6380,21 +6800,10 @@ const UserManagementPage: React.FC = () => {
       setError(null);
 
       try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-          setError('Authentication required. Please log in again.');
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await axios.get(`${API_BASE_URL}/admin/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/admin/users');
 
         setUsers(response.data);
-      } catch (err) {
+      } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
             setError('Your session has expired. Please log in again.');
@@ -6481,7 +6890,7 @@ const UserManagementPage: React.FC = () => {
   );
 };
 
-export default UserManagementPage; 
+export default UserManagementPage;
 ```
 
 ## File: `packages\admin-frontend\src\pages\ZoneManagementPage.tsx`
@@ -6751,18 +7160,19 @@ const ZoneManagementPage = () => {
               <h3>Add New Service Zone</h3>
               
               <Form onSubmit={handleAddZone}>
-                <Form.Group controlId="newZoneName">
-                  <Form.Label>Zone Name</Form.Label>
+                <Form.Group className="mb-3" controlId="newZoneName">
+                  <Form.Label className="fw-medium text-neutral-700">Zone Name</Form.Label>
                   <Form.Control 
                     type="text"
                     required
                     value={newZoneName}
                     onChange={(e) => setNewZoneName(e.target.value)} 
+                    className="py-2"
                   />
                 </Form.Group>
 
                 <div className="mt-3">
-                  <p className="mb-1">Zone Area</p>
+                  <p className="mb-1 fw-medium text-neutral-700">Zone Area</p>
                   <Alert variant="info">
                     Use the drawing tools on the map to create a polygon zone.
                   </Alert>
@@ -6778,12 +7188,12 @@ const ZoneManagementPage = () => {
                   variant="success" 
                   type="submit" 
                   disabled={isCreating} 
-                  className="mt-3"
+                  className="mt-3 py-2"
                 >
                   {isCreating ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                      <span className="ms-2">Creating...</span>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Creating...
                     </>
                   ) : 'Add Zone'}
                 </Button>
@@ -7072,6 +7482,93 @@ export const formatDate = (dateString: string): string => {
 }; 
 ```
 
+## File: `packages\admin-frontend\src\utils\imageUrl.ts`
+
+```
+/**
+ * Utility function to construct absolute image URLs from backend paths
+ * 
+ * This handles several cases:
+ * 1. Already absolute URLs (starting with http:// or https://)
+ * 2. Relative paths from the backend (starting with /)
+ * 3. Missing or empty paths (returns a placeholder)
+ */
+
+/**
+ * Converts a relative image path to an absolute URL
+ * @param relativePath The image path received from the backend, may be relative or already absolute
+ * @returns A properly formatted absolute URL for the image
+ */
+export function getImageUrl(relativePath?: string | null): string {
+  // Get base URL from env vars (without /api) for serving static content
+  const BASE_URL = import.meta.env.VITE_API_URL || 
+                  (import.meta.env.VITE_API_BASE_URL ? 
+                   import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '') : 
+                   'http://localhost:3001');
+  
+  // Allow explicit uploads URL to override base URL for uploads
+  const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || `${BASE_URL}/uploads`;
+   
+  // Default placeholder image path
+  const PLACEHOLDER_IMAGE_PATH = '/placeholder-image.svg';
+   
+  // Handle null, undefined or empty string
+  if (!relativePath) {
+    return PLACEHOLDER_IMAGE_PATH;
+  }
+   
+  // Handle already absolute URLs
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath;
+  }
+   
+  // Handle paths that start with /uploads specifically
+  if (relativePath.startsWith('/uploads/')) {
+    // For upload paths, use the dedicated UPLOADS_URL
+    return `${UPLOADS_URL.replace(/\/uploads\/?$/, '')}${relativePath}`;
+  }
+  // Handle other relative paths starting with /
+  else if (relativePath.startsWith('/')) {
+    // Use the base URL for other paths
+    return `${BASE_URL.replace(/\/$/, '')}${relativePath}`;
+  }
+   
+  // For any other unexpected format, return the path combined with API_BASE_URL
+  // This handles cases where the path doesn't start with / but is still relative
+  return `${BASE_URL.replace(/\/$/, '')}/${relativePath}`;
+}
+
+// Export as named export
+export default getImageUrl;
+```
+
+## File: `packages\backend\.dockerignore`
+
+```
+# Ignore node modules and built files
+node_modules
+
+env# Ignore environment files (except example)
+.env*
+!.env.example
+
+dist
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Mac OS files
+.DS_Store
+
+# Tests and coverage
+src/**/*.test.ts
+tests/
+coverage/
+
+# Dev configs
+nodemon.json
+```
+
 ## File: `packages\backend\.gitignore`
 
 ```
@@ -7185,6 +7682,44 @@ async function createAdminUser() {
 
 // Execute the function
 createAdminUser(); 
+```
+
+## File: `packages\backend\Dockerfile`
+
+```
+# ---- Base Node ----
+FROM node:18-slim AS base
+WORKDIR /app
+
+# ---- Dependencies ----
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+RUN npm install --production=false
+
+# ---- Builder ----
+FROM deps AS builder
+WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN npx prisma generate
+COPY src ./src
+COPY tsconfig.json ./
+RUN npm run build
+
+# ---- Production ----
+FROM base AS production
+WORKDIR /app
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/package-lock.json ./package-lock.json
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+ENV PORT=10000
+EXPOSE 10000
+CMD ["npm","run","start"]
 ```
 
 ## File: `packages\backend\fix-service-areas.js`
@@ -7351,7 +7886,8 @@ console.log(`Bearer ${invalidToken}`);
   "scripts": {
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/index.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/index.js",
+    "start": "npx prisma migrate deploy && node dist/index.js",
+    "setup": "npm install && npm install compression@1.7.4 @types/compression@1.7.5",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "test": "npx vitest run",
@@ -7371,6 +7907,7 @@ console.log(`Bearer ${invalidToken}`);
     "@turf/helpers": "^7.2.0",
     "@types/multer": "^1.4.12",
     "bcrypt": "^5.1.1",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
@@ -7379,10 +7916,12 @@ console.log(`Bearer ${invalidToken}`);
     "multer": "^1.4.5-lts.2",
     "react-router-bootstrap": "^0.26.3",
     "react-router-dom": "^6.30.0",
+    "sharp": "^0.33.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/express-rate-limit": "^6.0.0",
@@ -8410,6 +8949,26 @@ ALTER TABLE "Order" ADD CONSTRAINT "Order_deliveryLocationId_fkey" FOREIGN KEY (
 ALTER TABLE "DeliveryLocation" ADD CONSTRAINT "DeliveryLocation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ```
 
+## File: `packages\backend\prisma\migrations\20250420125359_assign_phone_in_order_tx\migration.sql`
+
+```
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "assignedPhoneNumberId" INTEGER;
+
+-- CreateIndex
+CREATE INDEX "Order_assignedPhoneNumberId_idx" ON "Order"("assignedPhoneNumberId");
+
+-- AddForeignKey
+ALTER TABLE "Order" ADD CONSTRAINT "Order_assignedPhoneNumberId_fkey" FOREIGN KEY ("assignedPhoneNumberId") REFERENCES "PhoneNumber"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+```
+
+## File: `packages\backend\prisma\migrations\20250422133105_add_user_role\migration.sql`
+
+```
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "role" TEXT NOT NULL DEFAULT 'customer';
+```
+
 ## File: `packages\backend\src\index.ts`
 
 ```
@@ -8417,6 +8976,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { rateLimit } from 'express-rate-limit';
+import compression from 'compression';
 import productRoutes from './routes/productRoutes';
 import adminRoutes from './routes/adminRoutes';
 import productAdminRoutes from './routes/productAdminRoutes';
@@ -8438,9 +8999,62 @@ dotenv.config(); // Load .env file variables
 const app = express();
 const port = process.env.PORT || 3001; // Use port from .env or default to 3001
 
+// Rate limiting middleware
+// General API rate limiter - 50 requests per 40 seconds
+const generalLimiter = rateLimit({
+  windowMs: 40 * 1000, // 40 seconds
+  max: 50, // Limit each IP to 50 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 40 seconds',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Write operations rate limiter - 20 requests per 40 seconds
+const writeLimiter = rateLimit({
+  windowMs: 40 * 1000, // 40 seconds
+  max: 20, // Limit each IP to 20 requests per windowMs
+  message: 'Too many write operations from this IP, please try again after 40 seconds',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
-app.use(cors()); // Allow requests from frontend (configure origin later for security)
+// Configure CORS to allow requests from both development and production frontends
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      // Development origins
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
+      // Production origins - update these with your actual domains
+      process.env.ADMIN_FRONTEND_URL,
+      process.env.CUSTOMER_FRONTEND_URL,
+    ].filter(Boolean); // Remove any undefined values
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      // Origin is allowed
+      callback(null, true);
+    } else {
+      // Log the blocked origin for debugging purposes
+      console.log(`CORS blocked request from origin: ${origin}`);
+      callback(null, true); // Still allow it for now, but log it
+    }
+  },
+  credentials: true, // Allow cookies and credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json()); // Parse JSON request bodies
+app.use(compression()); // Apply compression middleware to all routes
+
+// Apply general rate limiter to all requests
+app.use(generalLimiter);
 
 // Serve Static Files
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -8461,11 +9075,11 @@ app.use('/api/admin/products', productAdminRoutes);
 app.use('/api/admin/categories', categoryAdminRoutes);
 app.use('/api/admin/upload', uploadRoutes);
 app.use('/api/admin/reports', reportsAdminRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/addresses', addressRoutes);
+app.use('/api/orders', writeLimiter, orderRoutes);
+app.use('/api/reviews', writeLimiter, reviewRoutes);
+app.use('/api/cart', writeLimiter, cartRoutes);
+app.use('/api/wishlist', writeLimiter, wishlistRoutes);
+app.use('/api/addresses', writeLimiter, addressRoutes);
 app.use('/api/districts', districtRoutes);
 
 // Start Server
@@ -9326,7 +9940,7 @@ const SALT_ROUNDS = 10;
 // Basic limiter for login attempts
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 login requests per windowMs
+  max: 15, // Increased from 10 to 15 login requests per windowMs
   message: 'Too many login attempts from this IP, please try again after 15 minutes',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -10632,40 +11246,37 @@ import { Router, Request, Response } from 'express';
 
 const router = Router();
 
-// This is a list of common districts in India (as an example - you might want to customize this)
+// List of districts/neighborhoods in Shahsemen (Shashemene), Ethiopia
 const districts = [
-  'Mumbai',
-  'Delhi',
-  'Bangalore',
-  'Hyderabad',
-  'Chennai',
-  'Kolkata',
-  'Pune',
-  'Ahmedabad',
-  'Jaipur',
-  'Lucknow',
-  'Kanpur',
-  'Nagpur',
-  'Indore',
-  'Thane',
-  'Bhopal',
-  'Visakhapatnam',
-  'Patna',
-  'Vadodara',
-  'Ghaziabad',
-  'Ludhiana',
-  'Coimbatore',
-  'Kochi',
-  'Agra',
-  'Madurai',
-  'Nashik',
-  'Varanasi',
-  'Srinagar',
-  'Aurangabad',
-  'Dhanbad',
-  'Amritsar',
-  'Chandigarh',
-  'Guwahati'
+  'Arada',
+  'Alelu',
+  'Kebele 01',
+  'Kebele 02',
+  'Kebele 03',
+  'Kebele 04',
+  'Kebele 05',
+  'Kebele 06',
+  'Kebele 07',
+  'Kebele 08',
+  'Kebele 09',
+  'Kebele 10',
+  'Abosto',
+  'Kuyera',
+  'Melka Oda',
+  'Bulchana',
+  'Wondo Genet Road',
+  'Alaba Road',
+  'Kofele Road',
+  'Rift Valley',
+  'Malge',
+  'Awasho',
+  'Dida Boke',
+  'Jamaica Sefer',
+  'Lugo',
+  'Melka',
+  'Ilili',
+  'Gode',
+  'New City'
 ];
 
 // GET /api/districts - Get all districts
@@ -10823,6 +11434,28 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       console.log("Stock check passed for all items.");
       // --- End Stock Check ---
 
+      // --- Assign Available Phone Number ---
+      console.log("Finding available phone number for order...");
+      const availablePhone = await tx.phoneNumber.findFirst({
+        where: {
+          status: 'Available'
+        },
+        select: { id: true, numberString: true }
+      });
+      
+      if (!availablePhone) {
+        console.warn("No available phone numbers found for order creation!");
+        throw new Error('No verification phone lines are currently available. Please try again later.');
+      }
+      
+      // Mark the phone number as busy - this happens atomically within the transaction
+      await tx.phoneNumber.update({
+        where: { id: availablePhone.id },
+        data: { status: 'Busy' }
+      });
+      console.log(`Marked phone number ${availablePhone.numberString} (ID: ${availablePhone.id}) as Busy for new order`);
+      // --- End Phone Number Assignment ---
+
       // --- Create Order ---
       console.log("Creating order record...");
       const newOrder = await tx.order.create({
@@ -10833,22 +11466,27 @@ router.post('/', isUser, async (req: Request, res: Response) => {
           deliveryLocationId: deliveryLocationId, // Link to the chosen delivery location
           latitude: location?.lat || null, // Store latitude if available
           longitude: location?.lng || null, // Store longitude if available
+          assignedPhoneNumberId: availablePhone.id, // Link the assigned phone number to the order
         },
       });
       console.log(`Order created with ID: ${newOrder.id}`);
 
       // --- Create OrderItems and Decrement Stock ---
       for (const item of items) {
-        // Fetch product again inside transaction to ensure consistency? Or trust validation?
-        // Let's trust validation and use name/price from request for simplicity now.
-        // const product = await tx.product.findUniqueOrThrow({ where: { id: item.productId }, select: { name: true, price: true } });
-
-        console.log(`Creating order item for product ID: ${item.productId}, quantity: ${item.quantity}`);
+        // Explicitly fetch the current product name to ensure it's stored correctly
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { name: true }
+        });
+        
+        const productName = product?.name || item.name || `Product ${item.productId}`;
+        
+        console.log(`Creating order item for product ID: ${item.productId}, name: "${productName}", quantity: ${item.quantity}`);
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
             productId: item.productId,
-            productName: item.name || `Product ${item.productId}`, // Use name from cart or default
+            productName: productName, // Use the explicitly fetched name
             quantity: item.quantity,
             price: item.price, // Price at time of order (from validated cart item)
           },
@@ -10902,6 +11540,8 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(`Fetching order ${orderId} for user ${userId}...`);
+
     // Fetch the order with its items, ensure it belongs to the user
     const order = await prisma.order.findUnique({
       where: {
@@ -10923,6 +11563,11 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
             phone: true,
             isDefault: true // Added isDefault field to be returned to the frontend
           }
+        },
+        assignedPhoneNumber: { // Include the assigned phone number
+          select: {
+            numberString: true
+          }
         }
         // Optionally include user details if needed, but usually not required here
       }
@@ -10934,6 +11579,11 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(`Order ${orderId} found, processing details...`);
+    console.log(`Order has ${order.items?.length || 0} items`);
+    console.log(`Delivery location:`, order.deliveryLocation || 'Not available');
+    console.log(`Assigned phone:`, order.assignedPhoneNumber || 'Not available');
+
     // Map items to include necessary details
     const processedItems = order.items.map((item: any) => ({
         id: item.id,
@@ -10944,13 +11594,15 @@ router.get('/:id', isUser, async (req: Request, res: Response) => {
         imageUrl: item.product?.images?.[0]?.url // Get first image URL from relation
     }));
 
-    // Include the order data with processed items and delivery location
+    // Include the order data with processed items, delivery location, and phone number
     const responseOrder = {
         ...order,
         items: processedItems,
+        verificationPhoneNumber: order.assignedPhoneNumber?.numberString || null,
         // Keep deliveryLocation as is from the query
     };
 
+    console.log(`Returning order details with verification number: ${responseOrder.verificationPhoneNumber || 'None'}`);
     res.status(200).json(responseOrder);
   } catch (error) {
     console.error("Error fetching order:", error);
@@ -10991,82 +11643,6 @@ router.get('/', isUser, async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ message: "An internal server error occurred" });
-  }
-});
-
-// GET /api/orders/assign-number/:orderId - Assign a phone number to an order
-router.get('/assign-number/:orderId', isUser, async (req: Request, res: Response) => {
-  // 1. Extract and validate orderId from route parameters
-  const { orderId } = req.params;
-  const orderIdInt = parseInt(orderId, 10);
-  if (isNaN(orderIdInt)) {
-    res.status(400).json({ message: 'Invalid Order ID format.' });
-    return;
-  }
-
-  // 2. Extract userId from JWT payload (attached by isUser middleware)
-  const userId = req.user?.userId;
-  if (!userId) {
-    res.status(401).json({ message: "User ID not found in token" });
-    return;
-  }
-
-  try {
-    // 3. Verify the order exists, belongs to the user, and is 'Pending Call'
-    const order = await prisma.order.findUnique({
-      where: {
-        id: orderIdInt,
-        // Ensure the order belongs to the authenticated user
-        userId: userId,
-      },
-      select: { status: true, userId: true } // Select status for verification
-    });
-
-    if (!order) {
-      // Use 404 to indicate not found or not belonging to user
-      res.status(404).json({ message: 'Order not found or does not belong to user.' });
-      return;
-    }
-    // Allow fetching number even if status moved past Pending Call,
-    // but log if status is unexpected. Assignment should only happen once ideally.
-    if (order.status !== 'Pending Call') {
-       console.warn(`Assign number called for order ${orderIdInt} with status ${order.status}.`);
-       // Allow proceeding for now, maybe number was already assigned.
-       // return res.status(409).json({ message: `Order status is '${order.status}', not 'Pending Call'. Cannot assign number.` }); // 409 Conflict
-    }
-
-    // 4. Find the first available phone number
-    // Simple strategy: Find the first one marked 'Available'.
-    const availablePhone = await prisma.phoneNumber.findFirst({
-      where: {
-        status: 'Available'
-      },
-      select: { id: true, numberString: true }
-    });
-
-    // 5. Handle case where no phone number is available
-    if (!availablePhone) {
-      console.warn("No available phone numbers found for order ID:", orderIdInt);
-      // Return 503 Service Unavailable
-      res.status(503).json({ message: 'No verification phone lines are currently available. Please try again later.' });
-      return;
-    }
-
-    // 6. Mark the phone number as busy (Consider if this should only happen once)
-    // To prevent re-assigning/marking busy repeatedly, check if a number was already assigned
-    // For now, we proceed with marking busy - needs refinement if called multiple times.
-    await prisma.phoneNumber.update({
-      where: { id: availablePhone.id },
-      data: { status: 'Busy' }
-    });
-    console.log(`Marked phone number ${availablePhone.numberString} as Busy for order ${orderIdInt}`);
-
-    // 7. Return the assigned phone number string
-    res.status(200).json({ verificationPhoneNumber: availablePhone.numberString });
-
-  } catch (error) {
-    console.error(`Error assigning phone number for order ID ${orderIdInt}:`, error);
-    res.status(500).json({ message: 'Error assigning verification phone number' });
   }
 });
 
@@ -12133,6 +12709,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { isAdmin } from '../middleware/authMiddleware'; // Protect upload
 
 const router = Router();
@@ -12179,12 +12756,12 @@ const upload = multer({
 
 /**
  * @route POST /api/admin/upload
- * @description Upload multiple product images (admin only, up to 5 files)
+ * @description Upload multiple product images (admin only, up to 5 files), resize them, and convert to WebP
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
     // Handle multiple file uploads with manually typed callback
-    upload.array('productImages', 5)(req as any, res as any, (err: any) => {
+    upload.array('productImages', 5)(req as any, res as any, async (err: any) => {
         if (err) {
             let errorMessage = 'File upload failed.';
             
@@ -12210,14 +12787,47 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
             return;
         }
         
-        // Files upload successful
+        // Files upload successful - now process with sharp
         const files = req.files as Express.Multer.File[];
-        const imageUrls = files.map(file => `/uploads/${file.filename}`); // Paths relative to the 'public' dir
+        const processedImageUrls: string[] = [];
         
-        res.status(201).json({ 
-            message: 'Files uploaded successfully',
-            imageUrls: imageUrls
-        });
+        try {
+            // Process each file sequentially using Promise.all
+            await Promise.all(files.map(async (file) => {
+                try {
+                    // Define WebP output path
+                    const fileNameWithoutExt = file.filename.replace(/\.[^/.]+$/, "");
+                    const outputFileName = `${fileNameWithoutExt}.webp`;
+                    const outputFilePath = path.join(uploadsDir, outputFileName);
+                    
+                    // Process image with sharp - resize and convert to WebP
+                    await sharp(file.path)
+                        .resize({ width: 800, withoutEnlargement: true })
+                        .webp({ quality: 80 })
+                        .toFile(outputFilePath);
+                    
+                    // Add to processed images list
+                    processedImageUrls.push(`/uploads/${outputFileName}`);
+                    
+                    // Delete original file
+                    fs.unlinkSync(file.path);
+                } catch (sharpError) {
+                    console.error(`Error processing image ${file.filename}:`, sharpError);
+                    // Skip problematic file, don't add to processedImageUrls
+                }
+            }));
+            
+            res.status(201).json({ 
+                message: 'Files uploaded and processed successfully',
+                imageUrls: processedImageUrls
+            });
+        } catch (processingError) {
+            console.error('Error during image processing:', processingError);
+            res.status(500).json({ 
+                message: 'Error during image processing',
+                error: processingError instanceof Error ? processingError.message : 'Unknown error'
+            });
+        }
     });
 });
 
@@ -12632,10 +13242,14 @@ export default tseslint.config(
   "dependencies": {
     "axios": "^1.8.4",
     "bootstrap": "^5.3.5",
+    "i18next": "^23.10.0",
+    "i18next-browser-languagedetector": "^7.2.0",
+    "i18next-http-backend": "^2.5.0",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-i18next": "^14.0.8",
     "react-icons": "^5.5.0",
     "react-router-bootstrap": "^0.26.2",
     "react-router-dom": "^6.30.0"
@@ -12846,6 +13460,25 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000, // Define a specific port
       open: true, // Open browser on start
+      proxy: {
+        // Proxy API requests to backend server during development
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false
+        }
+      }
+    },
+    preview: {
+      port: 4173, // Default preview port
+      proxy: {
+        // Proxy API requests to backend server during preview
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     },
     define: {
       // Make env variables available in the client
@@ -12864,75 +13497,157 @@ export default defineConfig(({ mode }) => {
 ## File: `packages\customer-frontend\src\App.tsx`
 
 ```
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Spinner, Container } from 'react-bootstrap';
 import Layout from './components/Layout'; // Import the layout
-import HomePage from './pages/HomePage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import OrderSuccessPage from './pages/OrderSuccessPage';
-import ProductDetailPage from './pages/ProductDetailPage';
-import OrderHistoryPage from './pages/OrderHistoryPage'; // Import the new page
-import RequestPasswordResetPage from './pages/RequestPasswordResetPage'; // Import the new page
-import ResetPasswordPage from './pages/ResetPasswordPage'; // Import the new page
-import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage'; // Import the new page
-import SettingsPage from './pages/SettingsPage'; // Import the settings page
-import WishlistPage from './pages/WishlistPage'; // Import the wishlist page
-import AboutPage from './pages/AboutPage'; // Import the about page
 import { useAuth } from './context/AuthContext';
-// Import other pages as needed
+import PWAPrompt from './components/PWAPrompt'; // Import PWAPrompt component
+
+// Define the BeforeInstallPromptEvent type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+// Lazy load all page components
+const HomePage = lazy(() => import('./pages/HomePage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'));
+const RequestPasswordResetPage = lazy(() => import('./pages/RequestPasswordResetPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const CustomerOrderDetailPage = lazy(() => import('./pages/CustomerOrderDetailPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100vh - 200px)' }}> 
+    <Spinner animation="border" variant="primary" />
+  </Container>
+);
 
 function App() {
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <PWAPrompt onInstallPromptAvailable={setInstallPrompt} /> {/* Pass the setter function */}
+      <AppRoutes installPrompt={installPrompt} />
     </BrowserRouter>
   );
 }
 
-function AppRoutes() {
+interface AppRoutesProps {
+  installPrompt: BeforeInstallPromptEvent | null;
+}
+
+function AppRoutes({ installPrompt }: AppRoutesProps) {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} />
-      <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
-      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} />
+        <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-      {/* Routes with layout */}
-      <Route path="/" element={<Layout />}>
-        {/* Index route for the homepage */}
-        <Route index element={<HomePage />} />
-        <Route path="cart" element={<CartPage />} />
-        {/* Product detail page */}
-        <Route path="product/:productId" element={<ProductDetailPage />} />
-        {/* Wishlist page - requires authentication */}
-        <Route path="wishlist" element={isAuthenticated ? <WishlistPage /> : <Navigate to="/login" replace />} />
-        {/* Checkout route - requires authentication */}
-        <Route path="checkout" element={isAuthenticated ? <CheckoutPage /> : <Navigate to="/login" replace />} />
-        {/* Order Success page - needs parameter later */}
-        <Route path="order/success/:orderId" element={isAuthenticated ? <OrderSuccessPage /> : <Navigate to="/login" replace />} />
-        {/* Add the new route for order history */}
-        <Route path="orders" element={isAuthenticated ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
-        {/* Add the new route for order detail */}
-        <Route path="order/:orderId" element={isAuthenticated ? <CustomerOrderDetailPage /> : <Navigate to="/login" replace />} />
-        {/* Add the settings page route */}
-        <Route path="settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" replace />} />
-        {/* Add the about page route */}
-        <Route path="about" element={<AboutPage />} />
-        {/* Add other routes like product detail later */}
+        {/* Routes with layout */}
+        <Route path="/" element={<Layout installPrompt={installPrompt} />}>
+          {/* Index route for the homepage */}
+          <Route index element={<HomePage />} />
+          <Route path="cart" element={<CartPage />} />
+          {/* Product detail page */}
+          <Route path="product/:productId" element={<ProductDetailPage />} />
+          {/* Wishlist page - requires authentication */}
+          <Route path="wishlist" element={isAuthenticated ? <WishlistPage /> : <Navigate to="/login" replace />} />
+          {/* Checkout route - requires authentication */}
+          <Route path="checkout" element={isAuthenticated ? <CheckoutPage /> : <Navigate to="/login" replace />} />
+          {/* Order Success page - needs parameter later */}
+          <Route path="order/success/:orderId" element={isAuthenticated ? <OrderSuccessPage /> : <Navigate to="/login" replace />} />
+          {/* Add the new route for order history */}
+          <Route path="orders" element={isAuthenticated ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
+          {/* Add the new route for order detail */}
+          <Route path="order/:orderId" element={isAuthenticated ? <CustomerOrderDetailPage /> : <Navigate to="/login" replace />} />
+          {/* Add the settings page route */}
+          <Route path="settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" replace />} />
+          {/* Add the about page route */}
+          <Route path="about" element={<AboutPage />} />
+          {/* Add other routes like product detail later */}
 
-        {/* Optional: Catch-all within layout */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+          {/* Optional: Catch-all within layout */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 
 export default App;
+```
+
+## File: `packages\customer-frontend\src\i18n.ts`
+
+```
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import Backend from 'i18next-http-backend'; // Use http backend to load files
+
+i18n
+  // Load translation using http -> see /public/locales
+  .use(Backend)
+  // Detect user language
+  .use(LanguageDetector)
+  // Pass the i18n instance to react-i18next.
+  .use(initReactI18next)
+  // Init i18next
+  .init({
+    // Debugging: Set to true to see logs
+    debug: process.env.NODE_ENV === 'development', 
+    
+    // Default language
+    fallbackLng: 'en', 
+    
+    // Supported languages
+    supportedLngs: ['en', 'am', 'om'], 
+
+    // Namespace configuration (optional for now, default is 'translation')
+    // ns: ['translation'],
+    // defaultNS: 'translation',
+
+    interpolation: {
+      escapeValue: false, // React already safes from xss
+    },
+    
+    // Backend options (loading from /public/locales)
+    backend: {
+      loadPath: '/locales/{{lng}}/{{ns}}.json', // Path to translation files
+    },
+    
+    // Language detector options
+    detection: {
+      // Order and from where user language should be detected
+      order: ['localStorage', 'navigator', 'htmlTag', 'path', 'subdomain'],
+      // Cache user language choice in localStorage
+      caches: ['localStorage'], 
+    },
+
+    // React-i18next specific options
+    react: {
+      useSuspense: true, // Recommended with React.lazy/Suspense
+    }
+  });
+
+export default i18n; 
 ```
 
 ## File: `packages\customer-frontend\src\index.css`
@@ -14258,12 +14973,84 @@ th {
 .navbar-nav .nav-link:hover svg {
   transform: translateY(-2px);
 }
+
+/* Product Image Carousel Styles */
+.product-carousel {
+  background-color: var(--neutral-50);
+  border-radius: var(--card-border-radius);
+  overflow: hidden;
+  box-shadow: var(--card-box-shadow);
+  margin-bottom: 1rem;
+  height: 350px; /* Match new height from component */
+  position: relative;
+}
+
+/* Carousel navigation controls */
+.product-carousel .carousel-control-prev,
+.product-carousel .carousel-control-next {
+  width: 8%; /* Reduced from 10% to take up less space */
+  opacity: 0.7;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  z-index: 5;
+}
+
+.product-carousel .carousel-control-prev:hover,
+.product-carousel .carousel-control-next:hover {
+  opacity: 0.9;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Carousel indicators */
+.product-carousel .carousel-indicators {
+  margin-bottom: 0.25rem; /* Reduced margin */
+  z-index: 5;
+}
+
+.product-carousel .carousel-indicators button {
+  width: 8px; /* Smaller indicators */
+  height: 8px; 
+  border-radius: 50%;
+  background-color: rgba(var(--primary-rgb), 0.5);
+  margin: 0 3px; /* Reduced margin */
+}
+
+.product-carousel .carousel-indicators button.active {
+  background-color: var(--primary);
+}
+
+/* Responsive height adjustments */
+@media (max-width: 768px) {
+  .product-carousel {
+    height: 280px; /* Reduced from 300px */
+  }
+}
+
+@media (max-width: 576px) {
+  .product-carousel {
+    height: 220px; /* Reduced from 250px */
+  }
+}
+
+/* Additional spacing adjustments for product detail page */
+.product-detail-section h5 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  /* Ensure content is more compact on mobile */
+  .product-detail-container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
 ```
 
 ## File: `packages\customer-frontend\src\main.tsx`
 
 ```
-import React from 'react'
+import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 // Import Bootstrap CSS FIRST
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -14273,17 +15060,28 @@ import { AuthProvider } from './context/AuthContext'; // Import
 import { CartProvider } from './context/CartContext'; // Import
 import { WishlistProvider } from './context/WishlistContext'; // Import
 import { Toaster } from 'react-hot-toast';
+import { Spinner } from 'react-bootstrap';
+import './i18n'; // Import i18n configuration
+
+// Simple global fallback for Suspense (including translation loading)
+const GlobalLoadingFallback = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <Spinner animation="border" variant="primary" />
+  </div>
+);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider> {/* Wrap App */}
-      <CartProvider> {/* Wrap App */}
-        <WishlistProvider> {/* Wrap App */}
-          <Toaster position="top-center" />
-          <App />
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+    <Suspense fallback={<GlobalLoadingFallback />}> {/* Wrap Providers/App */}
+      <AuthProvider> {/* Wrap App */}
+        <CartProvider> {/* Wrap App */}
+          <WishlistProvider> {/* Wrap App */}
+            <Toaster position="top-center" />
+            <App />
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </Suspense>
   </React.StrictMode>,
 )
 ```
@@ -14292,6 +15090,26 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 ```
 /// <reference types="vite/client" />
+
+// Declaration for the virtual:pwa-register/react module
+declare module 'virtual:pwa-register/react' {
+  export interface RegisterSWOptions {
+    immediate?: boolean;
+    onNeedRefresh?: () => void;
+    onOfflineReady?: () => void;
+    onRegistered?: (registration: ServiceWorkerRegistration | undefined) => void;
+    onRegisterError?: (error: Error) => void;
+    onRegisteredSW?: (swUrl: string, registration: ServiceWorkerRegistration | undefined) => void;
+  }
+
+  export interface RegisterSWReturn {
+    needRefresh: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+    offlineReady: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+    updateServiceWorker: (reloadPage?: boolean) => Promise<void>;
+  }
+
+  export function useRegisterSW(options?: RegisterSWOptions): RegisterSWReturn;
+}
 ```
 
 ## File: `packages\customer-frontend\src\components\CartItem.tsx`
@@ -14350,10 +15168,11 @@ export default EmptyState;
 ```
 import React, { useContext, useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button } from 'react-bootstrap';
+import { Container, Navbar, Nav, Offcanvas, Badge, Row, Col, Button, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { FaShoppingCart } from 'react-icons/fa';
 import { FaUser } from 'react-icons/fa';
@@ -14364,17 +15183,48 @@ import { FaRegHeart } from 'react-icons/fa';
 import { FaStore } from 'react-icons/fa';
 import { FaHeart } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
+import { FaDownload } from 'react-icons/fa';
+import { FaGlobe } from 'react-icons/fa';
 
-const Layout = () => {
+// Define BeforeInstallPromptEvent type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface LayoutProps {
+  installPrompt: BeforeInstallPromptEvent | null;
+}
+
+const Layout = ({ installPrompt }: LayoutProps) => {
   const { isAuthenticated, logout } = useAuth();
   const { getItemCount } = useCart();
   const { wishlistItems } = useWishlist();
+  const { t, i18n } = useTranslation();
   const itemCount = getItemCount();
   const wishlistCount = wishlistItems.length;
   const [showOffcanvas, setShowOffcanvas] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Language names mapping
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'am': 'አማርኛ',
+    'om': 'Afaan Oromoo'
+  };
+
+  // Get current language display name
+  const getCurrentLanguageName = () => {
+    return languageNames[i18n.language] || languageNames['en'];
+  };
+
+  // Handle language change
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    handleCloseOffcanvas();
+  };
+
   const handleCloseOffcanvas = () => setShowOffcanvas(false);
   const handleShowOffcanvas = () => setShowOffcanvas(true);
 
@@ -14382,7 +15232,33 @@ const Layout = () => {
     logout();
     setShowOffcanvas(false);
     navigate('/');
-    toast.success('Logged out successfully');
+    toast.success(t('notifications.loggedOut'));
+  };
+
+  // Direct installation handler that preserves user gesture context
+  const handleInstallClick = (e: React.MouseEvent) => {
+    if (!installPrompt) {
+      toast.error(t('notifications.installationError'));
+      return;
+    }
+
+    // This preserves the user gesture context since it's synchronous with the click
+    installPrompt.prompt().catch(error => {
+      console.error('Installation prompt error:', error);
+      toast.error(t('notifications.installationPromptError'));
+    });
+
+    // Handle the user choice
+    installPrompt.userChoice.then(result => {
+      console.log(`User response to install prompt: ${result.outcome}`);
+      if (result.outcome === 'accepted') {
+        toast.success(t('notifications.installationStarted'));
+      } else {
+        toast(t('notifications.installationCancelled'));
+      }
+    }).catch(error => {
+      console.error('Installation choice error:', error);
+    });
   };
 
   return (
@@ -14391,10 +15267,51 @@ const Layout = () => {
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover">
             <FaStore className="me-2 text-primary" size={24} />
-            <span style={{ color: 'var(--primary)' }}>Hybrid</span>Store
+            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>{t('app.name').includes('Store') ? 'Store' : ''}
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
+            {/* Language Switcher Dropdown */}
+            <NavDropdown 
+              title={<><FaGlobe className="me-1" /> <span className="d-none d-md-inline">{getCurrentLanguageName()}</span></>}
+              id="language-dropdown"
+              align="end"
+              className="me-3"
+            >
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('en')} 
+                active={i18n.language === 'en'}
+              >
+                English
+              </NavDropdown.Item>
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('am')} 
+                active={i18n.language === 'am'}
+              >
+                አማርኛ
+              </NavDropdown.Item>
+              <NavDropdown.Item 
+                onClick={() => changeLanguage('om')} 
+                active={i18n.language === 'om'}
+              >
+                Afaan Oromoo
+              </NavDropdown.Item>
+            </NavDropdown>
+            
+            {/* Install App button */}
+            {installPrompt && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={handleInstallClick}
+                className="d-flex align-items-center gap-1 me-3 rounded-pill px-3 py-1"
+                title={t('common.installApp')}
+              >
+                <FaDownload />
+                <span className="d-none d-md-inline">{t('common.installApp')}</span>
+              </Button>
+            )}
+            
             {isAuthenticated && (
               <Link to="/wishlist" className="position-relative me-3 d-flex align-items-center text-decoration-none d-none d-lg-flex">
                 <div className="nav-icon-container p-2 rounded-circle">
@@ -14435,44 +15352,91 @@ const Layout = () => {
             <Offcanvas.Header closeButton className="border-bottom py-3">
               <Offcanvas.Title id="offcanvasNavbarLabel-expand-false" className="fw-bold d-flex align-items-center">
                 <FaStore className="me-2 text-primary" size={22} />
-                Menu
+                {t('navigation.menu')}
               </Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body className="p-0">
               <Nav className="justify-content-end flex-grow-1">
                 <Nav.Link as={Link} to="/" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                  <FaHome className="me-2 text-primary" /> Home
+                  <FaHome className="me-2 text-primary" /> {t('navigation.home')}
                 </Nav.Link>
                 <Nav.Link as={Link} to="/cart" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative px-3">
-                  <FaShoppingCart className="me-2 text-primary" /> Cart 
+                  <FaShoppingCart className="me-2 text-primary" /> {t('navigation.cart')}
                   {itemCount > 0 && <Badge pill bg="danger" className="ms-2">{itemCount}</Badge>}
                 </Nav.Link>
+                
+                {/* Language Switcher in Offcanvas Menu */}
+                <div className="py-3 border-bottom px-3">
+                  <div className="d-flex align-items-center mb-2">
+                    <FaGlobe className="me-2 text-primary" /> {t('common.language', 'Language')}
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    <Button 
+                      variant={i18n.language === 'en' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('en')}
+                      className="flex-grow-1"
+                    >
+                      English
+                    </Button>
+                    <Button 
+                      variant={i18n.language === 'am' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('am')}
+                      className="flex-grow-1"
+                    >
+                      አማርኛ
+                    </Button>
+                    <Button 
+                      variant={i18n.language === 'om' ? 'primary' : 'outline-primary'} 
+                      size="sm"
+                      onClick={() => changeLanguage('om')}
+                      className="flex-grow-1"
+                    >
+                      Afaan Oromoo
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Add Install App button to offcanvas menu if available */}
+                {installPrompt && (
+                  <Button
+                    variant="link"
+                    onClick={(e) => {
+                      handleInstallClick(e);
+                      handleCloseOffcanvas();
+                    }}
+                    className="py-3 border-bottom d-flex align-items-center w-100 text-decoration-none px-3"
+                  >
+                    <FaDownload className="me-2 text-primary" /> {t('common.installApp')}
+                  </Button>
+                )}
                 
                 {isAuthenticated ? (
                   <>
                     <Nav.Link as={Link} to="/wishlist" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center position-relative px-3">
-                      <FaHeart className="me-2 text-primary" /> My Wishlist
+                      <FaHeart className="me-2 text-primary" /> {t('navigation.myWishlist')}
                       {wishlistCount > 0 && <Badge pill bg="primary" className="ms-2">{wishlistCount}</Badge>}
                     </Nav.Link>
                     <Nav.Link as={Link} to="/settings" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaCog className="me-2 text-primary" /> Settings
+                      <FaCog className="me-2 text-primary" /> {t('navigation.settings')}
                     </Nav.Link>
                     <Nav.Link as={Link} to="/orders" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaList className="me-2 text-primary" /> My Orders
+                      <FaList className="me-2 text-primary" /> {t('navigation.myOrders')}
                     </Nav.Link>
                     <Button variant="link" onClick={handleLogout} className="py-3 border-bottom d-flex align-items-center w-100 text-danger text-decoration-none px-3">
-                      <FaSignOutAlt className="me-2" /> Logout
+                      <FaSignOutAlt className="me-2" /> {t('navigation.logout')}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Nav.Link as={Link} to="/login" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                      <FaUser className="me-2 text-primary" /> Login / Register
+                      <FaUser className="me-2 text-primary" /> {t('navigation.loginRegister')}
                     </Nav.Link>
                   </>
                 )}
                 <Nav.Link as={Link} to="/about" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
-                  <FaStore className="me-2 text-primary" /> About Us
+                  <FaStore className="me-2 text-primary" /> {t('navigation.about')}
                 </Nav.Link>
               </Nav>
             </Offcanvas.Body>
@@ -14500,7 +15464,7 @@ const Layout = () => {
                   className="mb-1"
                   style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Home</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.home')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -14521,7 +15485,7 @@ const Layout = () => {
                     </Badge>
                   )}
                 </div>
-                <small style={{ fontSize: '0.7rem' }}>Cart</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.cart')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -14535,7 +15499,7 @@ const Layout = () => {
                   className="mb-1"
                   style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Orders</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.orders')}</small>
               </Nav.Link>
               
               <Nav.Link 
@@ -14549,7 +15513,7 @@ const Layout = () => {
                   className="mb-1" 
                   style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }} 
                 />
-                <small style={{ fontSize: '0.7rem' }}>Settings</small>
+                <small style={{ fontSize: '0.7rem' }}>{t('navigation.settings')}</small>
               </Nav.Link>
             </Nav>
           </Container>
@@ -14569,11 +15533,10 @@ import React, { useState } from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = (import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads').replace(/\/+$/, '');
+import { getImageUrl } from '../utils/imageUrl';
 
 interface ProductImage {
   id: number;
@@ -14604,7 +15567,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   hideAddToCart = false,
   disableInternalLink = false 
 }) => {
-  const { addOrUpdateItemQuantity } = useCart();
+  const { addToCart } = useCart();
+  const { t } = useTranslation();
   const [hover, setHover] = React.useState(false);
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
@@ -14618,13 +15582,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleAddToCart = (product: Product) => {
-    addOrUpdateItemQuantity(product.id, quantity)
+    addToCart(product.id, quantity)
       .then(() => {
-        toast.success('Added to cart');
+        toast.success(t('cart.addedToCart', 'Added to cart'));
       })
-      .catch(error => {
+      .catch((error: Error) => {
         console.error('Error adding to cart:', error);
-        toast.error('Failed to add to cart');
+        toast.error(t('cart.failedToAdd', 'Failed to add to cart'));
       });
   };
 
@@ -14633,20 +15597,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card className="h-100 product-card shadow-sm border-0 transition-hover">
-      <div className="product-image-wrapper position-relative">
+      <div className="product-image-wrapper position-relative" style={{ aspectRatio: '1/1' }}>
         <Card.Img
           variant="top"
-          src={imageUrl ? (imageUrl.startsWith('/uploads/') ? `${UPLOADS_URL}${imageUrl.substring(8)}` : imageUrl.startsWith('http') ? imageUrl : `${API_BASE_URL}${imageUrl}`) : '/placeholder-product.jpg'}
+          src={getImageUrl(imageUrl)}
           alt={product.name}
           className="product-image"
           onClick={() => navigate(`/products/${product.id}`)}
+          loading="lazy"
+          width="100%"
+          height="100%"
         />
         {product.discountPercentage > 0 && (
           <Badge 
             bg="danger" 
             className="position-absolute top-0 end-0 m-2 py-2 px-3 rounded-pill fs-6 fw-medium"
           >
-            {product.discountPercentage}% OFF
+            {product.discountPercentage}% {t('product.off', 'OFF')}
           </Badge>
         )}
       </div>
@@ -14672,36 +15639,38 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <span className="fw-bold fs-5">₹{product.price.toFixed(2)}</span>
           )}
         </div>
-        <div className="mt-auto">
-          <div className="d-flex gap-3 align-items-center">
-            <div className="quantity-control d-flex align-items-center border rounded">
+        {!hideAddToCart && (
+          <div className="mt-auto">
+            <div className="d-flex gap-3 align-items-center">
+              <div className="quantity-control d-flex align-items-center border rounded">
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaMinus />
+                </Button>
+                <span className="px-3">{quantity}</span>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="border-0 py-1 px-2"
+                >
+                  <FaPlus />
+                </Button>
+              </div>
               <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="border-0 py-1 px-2"
+                variant="primary"
+                className="flex-grow-1 rounded-pill py-2 px-4"
+                onClick={() => handleAddToCart(product)}
               >
-                <FaMinus />
-              </Button>
-              <span className="px-3">{quantity}</span>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => setQuantity(quantity + 1)}
-                className="border-0 py-1 px-2"
-              >
-                <FaPlus />
+                <FaShoppingCart className="me-2" /> {t('common.add')}
               </Button>
             </div>
-            <Button
-              variant="primary"
-              className="flex-grow-1 rounded-pill py-2 px-4"
-              onClick={() => handleAddToCart(product)}
-            >
-              <FaShoppingCart className="me-2" /> Add
-            </Button>
           </div>
-        </div>
+        )}
       </Card.Body>
     </Card>
   );
@@ -14710,11 +15679,156 @@ const ProductCard: React.FC<ProductCardProps> = ({
 export default ProductCard; 
 ```
 
+## File: `packages\customer-frontend\src\components\PWAPrompt.tsx`
+
+```
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { Button } from 'react-bootstrap';
+import { useRegisterSW } from 'virtual:pwa-register/react';
+
+// Define a more specific type for the beforeinstallprompt event
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface PWAPromptProps {
+  onInstallPromptAvailable: (event: BeforeInstallPromptEvent | null) => void;
+}
+
+function PWAPrompt({ onInstallPromptAvailable }: PWAPromptProps) {
+  // Track install state at the top level, not inside useEffect
+  const [isInstalled, setIsInstalled] = useState(false);
+  
+  const {
+    offlineReady: [offlineReady, setOfflineReady],
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(swUrl: string, r: any) {
+      console.log(`Service Worker Registered: ${swUrl}`);
+      if (r?.waiting) {
+        // Send message to service worker to skip waiting if registration is successful
+        r.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+    },
+    onRegisterError(error: Error) {
+      console.error('SW registration error:', error);
+      toast.error('App offline features may not work properly.');
+    },
+  });
+
+  const close = () => {
+    setOfflineReady(false);
+    setNeedRefresh(false);
+  };
+
+  // Effect to handle beforeinstallprompt event
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault(); 
+      console.log('beforeinstallprompt event fired');
+      
+      // Pass the event to the parent component
+      if (!isInstalled) {
+        onInstallPromptAvailable(e as BeforeInstallPromptEvent);
+      }
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      onInstallPromptAvailable(null);
+      console.log('PWA was installed');
+      toast.success('App installed successfully!');
+    };
+
+    // Check if app is already installed
+    const checkIfInstalled = () => {
+      // @ts-ignore - This property exists in some browsers but TypeScript doesn't know about it
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        setIsInstalled(true);
+        onInstallPromptAvailable(null);
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Check if already installed
+    checkIfInstalled();
+
+    // Cleanup listeners on component unmount
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, [onInstallPromptAvailable, isInstalled]); // Add isInstalled to dependencies
+
+  // Handle offline readiness
+  React.useEffect(() => {
+    if (offlineReady) {
+      // In production, we can uncomment this to show a toast when the app is ready to work offline
+      // toast.success('App is ready to work offline!', { duration: 4000 });
+      setOfflineReady(false); // Close state
+    }
+  }, [offlineReady, setOfflineReady]);
+
+  // Handle update notifications
+  React.useEffect(() => {
+    if (needRefresh) {
+      // Show a persistent toast prompting the user to update
+      toast(
+        (t) => (
+          <div className="d-flex flex-column align-items-center">
+            <span className="mb-2">A new version is available! Refresh to update.</span>
+            <div className="d-flex gap-2 mt-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  updateServiceWorker(true); // Passing true reloads the page
+                  toast.dismiss(t.id); // Dismiss this toast on click
+                }}
+              >
+                Refresh Now
+              </Button>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  setNeedRefresh(false);
+                }}
+              >
+                Later
+              </Button>
+            </div>
+          </div>
+        ),
+        {
+          duration: Infinity, // Keep toast visible until dismissed or button clicked
+          id: 'pwa-update-toast', // Assign an ID to prevent duplicates
+        }
+      );
+    }
+  }, [needRefresh, setNeedRefresh, updateServiceWorker]);
+
+  // This component doesn't render anything directly in the DOM
+  return null;
+}
+
+export default PWAPrompt; 
+```
+
 ## File: `packages\customer-frontend\src\components\ShippingAddressForm.tsx`
 
 ```
 import React, { useState } from 'react';
 import { Card, Form, Row, Col, Button } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 
 interface ShippingAddressFormProps {
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -14722,7 +15836,12 @@ interface ShippingAddressFormProps {
   buttonText?: string;
 }
 
-const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, initialData, buttonText = "Save" }) => {
+const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ 
+  onSubmit, 
+  initialData, 
+  buttonText
+}) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState(initialData);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -14741,14 +15860,14 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
   return (
     <Card className="shadow-sm mb-4">
       <Card.Header className="bg-light py-3">
-        <h5 className="mb-0 fw-semibold">Shipping Address</h5>
+        <h5 className="mb-0 fw-semibold">{t('checkout.shippingAddress')}</h5>
       </Card.Header>
       <Card.Body className="p-4">
         <Form onSubmit={handleSubmit}>
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Full Name</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">{t('checkout.fullName', 'Full Name')}</Form.Label>
                 <Form.Control
                   type="text"
                   name="name"
@@ -14761,7 +15880,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Phone Number</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">{t('checkout.phoneNumber')}</Form.Label>
                 <Form.Control
                   type="tel"
                   name="phone"
@@ -14777,7 +15896,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>City/District</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">{t('checkout.district')}</Form.Label>
                 <Form.Control
                   type="text"
                   name="district"
@@ -14790,7 +15909,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Area</Form.Label>
+                <Form.Label className="fw-medium text-neutral-700">{t('checkout.area', 'Area')}</Form.Label>
                 <Form.Control
                   type="text"
                   name="area"
@@ -14804,7 +15923,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
           </Row>
 
           <Form.Group className="mb-4">
-            <Form.Label>Detailed Address</Form.Label>
+            <Form.Label className="fw-medium text-neutral-700">{t('checkout.detailedAddress', 'Detailed Address')}</Form.Label>
             <Form.Control
               as="textarea"
               name="details"
@@ -14821,7 +15940,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
               type="checkbox"
               id="setAsDefault"
               name="isDefault"
-              label="Set as default address"
+              label={t('account.setAsDefault')}
               checked={formData.isDefault}
               onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
               className="fw-medium"
@@ -14830,7 +15949,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({ onSubmit, ini
 
           <div className="d-flex justify-content-end">
             <Button type="submit" variant="primary" className="px-4 py-2 rounded-pill">
-              {buttonText}
+              {buttonText || t('common.save')}
             </Button>
           </div>
         </Form>
@@ -14849,20 +15968,25 @@ import React from 'react';
 import { FaStar } from 'react-icons/fa';
 import { FaStarHalfAlt } from 'react-icons/fa';
 import { FaRegStar } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 interface StarRatingProps {
   rating: number;
   maxRating?: number;
   size?: string;
   color?: string;
+  showValue?: boolean;
 }
 
 const StarRating: React.FC<StarRatingProps> = ({
   rating,
   maxRating = 5,
   size = '1em',
-  color = '#ffc107' // Bootstrap warning color (yellow)
+  color = '#ffc107', // Bootstrap warning color (yellow)
+  showValue = true
 }) => {
+  const { t } = useTranslation();
+  
   const getStars = () => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -14907,8 +16031,10 @@ const StarRating: React.FC<StarRatingProps> = ({
   return (
     <div className="d-inline-flex align-items-center">
       {getStars()}
-      {rating > 0 && (
-        <span className="ms-1 small text-muted">({rating.toFixed(1)})</span>
+      {showValue && rating > 0 && (
+        <span className="ms-1 small text-muted" title={t('product.rating')}>
+          ({rating.toFixed(1)})
+        </span>
       )}
     </div>
   );
@@ -15004,7 +16130,7 @@ export const useAuth = (): AuthContextType => {
 ## File: `packages\customer-frontend\src\context\CartContext.tsx`
 
 ```
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -15033,7 +16159,7 @@ interface CartItem extends Product {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addOrUpdateItemQuantity: (productId: number, quantity: number) => Promise<void>;
+  addToCart: (productId: number, quantity: number) => Promise<void>;
   updateCartItemQuantity: (productId: number, quantity: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -15041,16 +16167,21 @@ interface CartContextType {
   getItemCount: () => number;
   totalPrice: number;
   fetchCart: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Use environment variable for API URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Lock mechanism to prevent concurrent updates
+  const updateLocks = useRef<Record<number, boolean>>({});
   
   // Get token from localStorage
   const getToken = (): string | null => {
@@ -15082,25 +16213,32 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Cart data received:', response.data);
       
-      // Update local cart state with server data
-      setCartItems(response.data.map((item: any) => {
-        // Extract the first image URL if available
-        const firstImageUrl = item.product.images && item.product.images.length > 0 
-          ? item.product.images[0].url 
-          : null;
-          
-        return {
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          description: item.product.description,
-          images: item.product.images,
-          // For backward compatibility
-          imageUrl: firstImageUrl,
-          stock: item.product.stock,
-          quantity: item.quantity
-        };
-      }));
+      // Check if response.data is an array before using map
+      if (Array.isArray(response.data)) {
+        // Update local cart state with server data
+        setCartItems(response.data.map((item: any) => {
+          // Extract the first image URL if available
+          const firstImageUrl = item.product.images && item.product.images.length > 0 
+            ? item.product.images[0].url 
+            : null;
+            
+          return {
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            description: item.product.description,
+            images: item.product.images,
+            // For backward compatibility
+            imageUrl: firstImageUrl,
+            stock: item.product.stock,
+            quantity: item.quantity
+          };
+        }));
+      } else {
+        // If it's not an array (might be an empty object or different structure)
+        console.log('Cart data is not an array:', response.data);
+        setCartItems([]); // Set empty cart
+      }
     } catch (err) {
       console.error("Error fetching cart:", err);
       setError("Failed to load cart items.");
@@ -15113,14 +16251,104 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Add or update cart item quantity
-  const addOrUpdateItemQuantity = async (productId: number, quantity: number): Promise<void> => {
+  // Add new item to cart
+  const addToCart = async (productId: number, quantity: number): Promise<void> => {
     const token = getToken();
     
-    console.log('Adding/updating cart item:', { productId, quantity, isLoggedIn: !!token });
+    if (!token || !isAuthenticated()) {
+      toast.error("Please log in to add items to your cart.");
+      throw new Error("User not authenticated");
+    }
+    
+    if (quantity < 1) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('Adding new item to cart:', { productId, quantity });
+      
+      // Check if item already exists in cart
+      const existingItem = cartItems.find(item => item.id === productId);
+      
+      if (existingItem) {
+        // If item exists, check stock limits first
+        const newQuantity = existingItem.quantity + quantity;
+        
+        if (newQuantity > existingItem.stock) {
+          toast.error(`Cannot add more than available stock (${existingItem.stock})`);
+          setIsLoading(false);
+          updateLocks.current[productId] = false;
+          return;
+        }
+        
+        // If within stock limits, add to existing quantity
+        await updateCartItemQuantity(productId, newQuantity);
+        return;
+      }
+      
+      // For new items, we'll let the server validate stock
+      const response = await axios.post(
+        `${API_BASE_URL}/cart/item`,
+        { productId, quantity },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Add to cart response:', response.data);
+
+      // Refresh cart data from server
+      await fetchCart();
+      
+      // Show success message
+      toast.success(`${quantity} item(s) added to cart`);
+    } catch (err) {
+      console.error("Error adding item to cart:", err);
+      let errorMsg = "Failed to add item to cart.";
+      
+      if (axios.isAxiosError(err) && err.response) {
+        console.error('Error response data:', err.response.data);
+        
+        // Use specific error message from the server if available
+        if (err.response.data && err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data && typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        }
+        
+        // Common validation cases
+        if (err.response.status === 400) {
+          if (errorMsg.includes('stock') || errorMsg.includes('available')) {
+            errorMsg = `Cannot add more than available stock.`;
+          }
+        }
+      }
+      
+      toast.error(errorMsg);
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
+    }
+  };
+
+  // Update item quantity in cart
+  const updateCartItemQuantity = async (productId: number, quantity: number): Promise<void> => {
+    const token = getToken();
     
     if (!token || !isAuthenticated()) {
-      console.log('User not authenticated, token:', token);
       toast.error("Please log in to update your cart.");
       throw new Error("User not authenticated");
     }
@@ -15129,40 +16357,71 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await removeFromCart(productId);
       return;
     }
-
+    
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('Sending API request to add/update cart:', {
-        url: `${API_BASE_URL}/cart/item`,
-        data: { productId, quantity },
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log('Updating cart item quantity:', { productId, quantity });
       
-      // Use the POST /cart/item endpoint to add or update an item
-      await axios.post(
-        `${API_BASE_URL}/cart/item`,
-        { productId, quantity },
+      // Check current item in cart for local validation
+      const currentItem = cartItems.find(item => item.id === productId);
+      if (currentItem && quantity > currentItem.stock) {
+        toast.error(`Cannot add more than available stock (${currentItem.stock})`);
+        setIsLoading(false);
+        updateLocks.current[productId] = false;
+        return;
+      }
+      
+      // Use the update endpoint to set the quantity directly instead of incrementing
+      const response = await axios.post(
+        `${API_BASE_URL}/cart/update/${productId}`,
+        { quantity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('Cart update response:', response.data);
 
-      // Re-fetch the entire cart to ensure state consistency
+      // Update the cart item directly for immediate UI feedback
+      setCartItems(prevItems => 
+        prevItems.map(item => 
+          item.id === productId ? { ...item, quantity } : item
+        )
+      );
+      
+      // Then refresh cart data from server
       await fetchCart();
       
-      toast.success(`${quantity} item(s) added to cart.`);
+      // Show success message
+      toast.success(`Cart quantity updated to ${quantity}`);
     } catch (err) {
-      console.error("Error adding/updating cart:", err);
-      let errorMsg = "Failed to update cart item.";
+      console.error("Error updating cart item quantity:", err);
+      let errorMsg = "Failed to update quantity.";
       
       if (axios.isAxiosError(err) && err.response) {
-        console.log('API Error details:', {
-          status: err.response?.status,
-          data: err.response?.data,
-          message: err.message
-        });
+        console.error('Error response data:', err.response.data);
         
-        errorMsg = err.response.data.message || errorMsg;
+        // Use specific error message from the server if available
+        if (err.response.data && err.response.data.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.response.data && typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        }
+        
+        // Common validation cases
+        if (err.response.status === 400) {
+          if (errorMsg.includes('stock') || errorMsg.includes('available')) {
+            errorMsg = `Cannot add more than available stock.`;
+          }
+        }
       }
       
       toast.error(errorMsg);
@@ -15170,6 +16429,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw err;
     } finally {
       setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
     }
   };
 
@@ -15182,6 +16443,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error("User not authenticated");
     }
     
+    // Check if operation is already in progress
+    if (updateLocks.current[productId]) {
+      console.log('Operation already in progress for this item');
+      return;
+    }
+    
+    // Set lock
+    updateLocks.current[productId] = true;
     setIsLoading(true);
     setError(null);
     
@@ -15193,7 +16462,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Re-fetch cart or update local state
+      // Update local state immediately for responsiveness
+      setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+      
+      // Re-fetch cart to ensure consistency
       await fetchCart();
       
       toast.success("Item removed from cart.");
@@ -15210,6 +16482,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw err;
     } finally {
       setIsLoading(false);
+      // Release lock
+      updateLocks.current[productId] = false;
     }
   };
 
@@ -15234,7 +16508,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       // Update local state
-    setCartItems([]);
+      setCartItems([]);
       
       toast.success("Cart cleared successfully.");
     } catch (err) {
@@ -15274,14 +16548,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{ 
       cartItems, 
-      addOrUpdateItemQuantity,
-      updateCartItemQuantity: addOrUpdateItemQuantity,
+      addToCart,
+      updateCartItemQuantity,
       removeFromCart, 
       clearCart, 
       getCartTotal, 
       getItemCount,
       totalPrice,
-      fetchCart
+      fetchCart,
+      isLoading
     }}>
       {children}
     </CartContext.Provider>
@@ -15378,7 +16653,13 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setWishlistItems(response.data);
+      // Ensure response.data is an array
+      if (Array.isArray(response.data)) {
+        setWishlistItems(response.data);
+      } else {
+        console.error('Expected array for wishlist data, got:', response.data);
+        setWishlistItems([]);
+      }
     } catch (err) {
       console.error("Error fetching wishlist:", err);
       setError("Failed to load wishlist items.");
@@ -15562,26 +16843,56 @@ export default AboutPage;
 ## File: `packages\customer-frontend\src\pages\CartPage.tsx`
 
 ```
-import { Container, Row, Col, Table, Button, Alert, Card, Form, Image } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Form, Row, Col, Button, Card, Spinner, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaTrash } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { FaTrash, FaShoppingCart } from 'react-icons/fa';
-import EmptyState from '../components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
+import { toast } from 'react-hot-toast';
+import { getImageUrl } from '../utils/imageUrl';
+import axios from 'axios';
 
 const CartPage = () => {
-  // Get all required functions from cart context in one place
-  const { cartItems, removeFromCart, clearCart, getCartTotal, updateCartItemQuantity } = useCart();
+  const { cartItems, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal, fetchCart, isLoading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [inputValues, setInputValues] = useState<Record<number, string>>({});
+  const [pendingUpdate, setPendingUpdate] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Initialize input values from cart items
+  useEffect(() => {
+    const initialValues: Record<number, string> = {};
+    cartItems.forEach(item => {
+      initialValues[item.id] = item.quantity.toString();
+    });
+    setInputValues(initialValues);
+  }, [cartItems]);
+  
+  // Force refresh cart after updates
+  useEffect(() => {
+    if (pendingUpdate) {
+      const refreshTimer = setTimeout(() => {
+        fetchCart().then(() => {
+          setPendingUpdate(false);
+        });
+      }, 300);
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [pendingUpdate, fetchCart]);
   
   const cartIsEmpty = cartItems.length === 0;
   
   const handleCheckout = () => {
-    navigate('/checkout');
+    if (!isAuthenticated) {
+      toast.error('Please log in to checkout');
+      navigate('/login');
+    } else {
+      navigate('/checkout');
+    }
   };
   
   // Helper function to format currency
@@ -15589,17 +16900,159 @@ const CartPage = () => {
     return `€${value.toFixed(2)}`;
   };
   
-  // If not authenticated, show a message and login button
+  // Handle input change (update local state only)
+  const handleInputChange = (itemId: number, value: string) => {
+    setErrorMessage(null); // Clear any previous errors
+    setInputValues(prev => ({
+      ...prev,
+      [itemId]: value
+    }));
+  };
+  
+  // Extract error message from Axios error
+  const getErrorMessage = (error: any): string => {
+    let message = 'Failed to update quantity.';
+    
+    if (axios.isAxiosError(error) && error.response) {
+      if (error.response.data && error.response.data.message) {
+        message = error.response.data.message;
+      } else if (error.response.data && typeof error.response.data === 'string') {
+        message = error.response.data;
+      }
+    }
+    
+    return message;
+  };
+  
+  // Handle quantity update (send to server)
+  const handleQuantityUpdate = async (itemId: number, value: string, stockLimit: number) => {
+    const newQuantity = value === '' ? 1 : parseInt(value, 10);
+    
+    if (isNaN(newQuantity)) {
+      // Reset to current value in cart
+      const currentItem = cartItems.find(item => item.id === itemId);
+      if (currentItem) {
+        setInputValues(prev => ({
+          ...prev,
+          [itemId]: currentItem.quantity.toString()
+        }));
+      }
+      return;
+    }
+    
+    // Clear previous errors
+    setErrorMessage(null);
+    
+    // Client-side validation
+    if (newQuantity < 1) {
+      const errorMsg = 'Quantity cannot be less than 1';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to 1
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: '1'
+      }));
+      return;
+    }
+    
+    // Simple stock check
+    if (newQuantity > stockLimit) {
+      const errorMsg = `Cannot add more than available stock (${stockLimit})`;
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to stock limit
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: stockLimit.toString()
+      }));
+      return;
+    }
+    
+    // Get the current item
+    const currentItem = cartItems.find(item => item.id === itemId);
+    
+    // Skip update if quantity hasn't changed
+    if (currentItem && currentItem.quantity === newQuantity) return;
+    
+    setUpdatingItemId(itemId);
+    
+    try {
+      await updateCartItemQuantity(itemId, newQuantity);
+      setPendingUpdate(true);
+      
+      // Immediately update the local input value to the new quantity
+      setInputValues(prev => ({
+        ...prev,
+        [itemId]: newQuantity.toString()
+      }));
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      
+      // Get and display the error message
+      const errorMsg = getErrorMessage(error);
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+      
+      // Reset to the server's current value
+      await fetchCart(); // Force refresh from server
+      
+      // Then update the input value
+      const refreshedItem = cartItems.find(item => item.id === itemId);
+      if (refreshedItem) {
+        setInputValues(prev => ({
+          ...prev,
+          [itemId]: refreshedItem.quantity.toString()
+        }));
+      }
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+  
+  // Handle key press to submit on Enter
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLElement>, itemId: number, stockLimit: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      handleQuantityUpdate(itemId, target.value, stockLimit);
+      target.blur();
+    }
+  };
+  
+  // If not authenticated, show a message to login
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
         <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
-        <EmptyState
-          icon={<FaShoppingCart />}
-          title="Please Log In to View Your Cart"
-          message="You need to be logged in to view and manage your shopping cart."
-          actionButton={<Link to="/login" className="btn btn-primary px-4 rounded-pill">Log In</Link>}
-        />
+        <Card className="shadow-sm border-0 mb-4">
+          <Card.Body className="p-5 text-center">
+            <div className="empty-state">
+              <div className="empty-state-icon mb-4">
+                <FaTrash size={40} />
+              </div>
+              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
+              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
+                Start Shopping
+              </Link>
+            </div>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+  
+  // Show loading state while fetching cart
+  if (isLoading && cartItems.length === 0) {
+    return (
+      <Container className="py-4 text-center">
+        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <Spinner animation="border" role="status" className="my-5">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
       </Container>
     );
   }
@@ -15608,204 +17061,92 @@ const CartPage = () => {
     <Container className="py-4">
       <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
       
+      {errorMessage && (
+        <Alert variant="danger" className="mb-3" onClose={() => setErrorMessage(null)} dismissible>
+          {errorMessage}
+        </Alert>
+      )}
+      
       {cartIsEmpty ? (
-        <EmptyState
-          icon={<FaShoppingCart />}
-          title="Your cart is empty"
-          message="Looks like you haven't added anything yet. Start exploring now!"
-          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Start Shopping</Link>}
-        />
+        <Card className="shadow-sm border-0 mb-4">
+          <Card.Body className="p-5 text-center">
+            <div className="empty-state">
+              <div className="empty-state-icon mb-4">
+                <FaTrash size={40} />
+              </div>
+              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
+              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
+                Start Shopping
+              </Link>
+            </div>
+          </Card.Body>
+        </Card>
       ) : (
         <>
-          {/* Desktop/Tablet Cart Table - Hidden on small screens */}
-          <div className="table-responsive mb-4 d-none d-lg-block">
-            <Table hover responsive className="mb-0 shadow-sm rounded">
-              <thead>
-                <tr className="bg-light">
-                  <th className="py-3 px-4">Product</th>
-                  <th className="text-center py-3">Price</th>
-                  <th className="text-center py-3">Quantity</th>
-                  <th className="text-center py-3">Total</th>
-                  <th className="text-center py-3 px-4">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cartItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="py-3 px-4">
-                      <div className="d-flex align-items-center">
-                        {/* Use the first image URL if available, fall back to imageUrl for compatibility */}
-                        {(item.images?.[0]?.url || item.imageUrl) && (
-                          <img 
-                            src={item.images?.[0]?.url 
-                              ? (item.images[0].url.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                                : item.images[0].url)
-                              : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                                : item.imageUrl || '/placeholder-image.svg')} 
-                            alt={item.name} 
-                            style={{ width: '70px', height: '70px', objectFit: 'contain' }}
-                            className="me-3 border rounded p-1"
-                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              if (e.currentTarget.src !== '/placeholder-image.svg') {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = '/placeholder-image.svg';
-                              }
-                            }}
-                          />
-                        )}
-                        <div>
-                          <div className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>{item.name}</div>
-                          <small className="text-muted d-none d-md-inline">{item.id}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="text-center align-middle py-3 fw-medium">{formatCurrency(item.price)}</td>
-                    <td className="text-center align-middle py-3" style={{ minWidth: '120px' }}>
-                      <div className="d-flex align-items-center justify-content-center">
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-start px-2"
-                          onClick={() => {
-                            const newQuantity = Math.max(1, item.quantity - 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          -
-                        </Button>
-                        <Form.Control
-                          type="number"
-                          size="sm"
-                          min={1}
-                          max={item.stock}
-                          value={item.quantity}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const newQuantityStr = e.target.value;
-                            const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
-                            if (!isNaN(newQuantity)) {
-                              updateCartItemQuantity(item.id, newQuantity);
-                            }
-                          }}
-                          style={{ width: '50px', textAlign: 'center', borderRadius: 0 }}
-                          className="border-start-0 border-end-0"
-                          aria-label={`Quantity for ${item.name}`}
-                        />
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-end px-2"
-                          onClick={() => {
-                            const newQuantity = Math.min(item.stock, item.quantity + 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </td>
-                    <td className="text-center align-middle py-3 fw-bold">
-                      {formatCurrency(item.price * item.quantity)}
-                    </td>
-                    <td className="text-center align-middle py-3 px-4">
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm"
-                        className="rounded-pill px-3 py-1"
-                        onClick={() => removeFromCart(item.id)}
-                        aria-label={`Remove ${item.name} from cart`}
-                      >
-                        <FaTrash className="me-1" /> Remove
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-light">
-                  <td colSpan={3} className="text-end fw-bold py-3 px-4">Total:</td>
-                  <td className="text-center tfoot-total py-3 fw-bold">{formatCurrency(getCartTotal())}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </Table>
-          </div>
-          
-          {/* Mobile Cart Items View */}
-          <div className="d-block d-lg-none mb-3">
-            {cartItems.map((item) => (
+          {/* Cart Items */}
+          <div className="mb-4">
+            {cartItems.map(item => (
               <Card key={item.id} className="mb-3 shadow-sm border-0">
                 <Card.Body className="p-3">
-                  <Row className="g-3 align-items-center">
+                  <Row className="align-items-center">
                     {/* Image Col */}
                     <Col xs={3} sm={2}>
-                      <Image
-                        src={(item.images?.[0]?.url) 
-                          ? (item.images[0].url.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.images[0].url.substring(8)}`
-                            : item.images[0].url)
-                          : (item.imageUrl && item.imageUrl.startsWith('/uploads/') 
-                            ? `${UPLOADS_URL}${item.imageUrl.substring(8)}`
-                            : item.imageUrl || '/placeholder-image.svg')}
+                      <img 
+                        src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
                         alt={item.name}
-                        fluid
-                        className="rounded border p-1"
-                        style={{ objectFit: 'cover', height: '70px', width: '70px' }}
-                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                          if (e.currentTarget.src !== '/placeholder-image.svg') {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = '/placeholder-image.svg';
-                          }
-                        }}
+                        className="img-fluid rounded"
+                        style={{ maxHeight: '70px', objectFit: 'cover', width: '100%' }}
                       />
                     </Col>
-                    {/* Details Col */}
+                    
+                    {/* Name Col */}
                     <Col xs={6} sm={7}>
-                      <div className="fw-bold small text-truncate mb-1">{item.name}</div>
-                      <div className="text-muted small mb-2">{formatCurrency(item.price)}</div>
+                      <h6 className="mb-1">{item.name}</h6>
+                      <div className="text-muted small mb-2">{formatCurrency(item.price)} each</div>
+                      
+                      {/* Quantity Input - Mobile Only */}
+                      <div className="d-sm-none">
+                        <div className="d-flex align-items-center">
+                          <Form.Control
+                            type="number"
+                            size="sm"
+                            min={1}
+                            max={item.stock}
+                            value={inputValues[item.id] || item.quantity.toString()}
+                            onChange={(e) => handleInputChange(item.id, e.target.value)}
+                            onBlur={(e) => handleQuantityUpdate(item.id, e.target.value, item.stock)}
+                            onKeyPress={(e) => handleKeyPress(e, item.id, item.stock)}
+                            style={{ width: '80px', textAlign: 'center' }}
+                            className="border rounded"
+                            disabled={updatingItemId === item.id || isLoading}
+                          />
+                          <small className="ms-2 text-muted">
+                            of {item.stock} available
+                          </small>
+                        </div>
+                      </div>
+                    </Col>
+                    
+                    {/* Quantity Col - Desktop Only */}
+                    <Col xs={3} className="d-none d-sm-block">
                       <div className="d-flex align-items-center">
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-start p-0"
-                          style={{ width: '24px', height: '24px' }}
-                          onClick={() => {
-                            const newQuantity = Math.max(1, item.quantity - 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          -
-                        </Button>
                         <Form.Control
                           type="number"
                           size="sm"
                           min={1}
                           max={item.stock}
-                          value={item.quantity}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const newQuantityStr = e.target.value;
-                            const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
-                            
-                            if (!isNaN(newQuantity)) {
-                              updateCartItemQuantity(item.id, newQuantity);
-                            }
-                          }}
-                          style={{ width: '35px', textAlign: 'center', borderRadius: 0, height: '24px', padding: '0' }}
-                          className="border-start-0 border-end-0"
+                          value={inputValues[item.id] || item.quantity.toString()}
+                          onChange={(e) => handleInputChange(item.id, e.target.value)}
+                          onBlur={(e) => handleQuantityUpdate(item.id, e.target.value, item.stock)}
+                          onKeyPress={(e) => handleKeyPress(e, item.id, item.stock)}
+                          style={{ width: '80px', textAlign: 'center' }}
+                          className="border rounded"
+                          disabled={updatingItemId === item.id || isLoading}
                         />
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="border rounded-end p-0"
-                          style={{ width: '24px', height: '24px' }}
-                          onClick={() => {
-                            const newQuantity = Math.min(item.stock, item.quantity + 1);
-                            updateCartItemQuantity(item.id, newQuantity);
-                          }}
-                        >
-                          +
-                        </Button>
+                        <small className="ms-2 text-muted">
+                          of {item.stock} available
+                        </small>
                       </div>
                     </Col>
                     {/* Price/Remove Col */}
@@ -15814,10 +17155,11 @@ const CartPage = () => {
                         {formatCurrency(item.price * item.quantity)}
                       </div>
                       <Button
-                        variant="outline-danger"
+                        variant="danger"
                         size="sm"
                         className="rounded-pill px-2 py-1"
                         onClick={() => removeFromCart(item.id)}
+                        disabled={isLoading}
                       >
                         <FaTrash />
                       </Button>
@@ -15834,9 +17176,10 @@ const CartPage = () => {
               <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
               <div className="d-grid gap-3 d-md-flex justify-content-md-end">
                 <Button 
-                  variant="outline-secondary" 
+                  variant="outline-danger" 
                   className="rounded-pill px-4 py-2 fw-medium" 
                   onClick={() => clearCart()}
+                  disabled={isLoading}
                 >
                   Clear Cart
                 </Button>
@@ -15850,6 +17193,7 @@ const CartPage = () => {
                   variant="primary" 
                   className="rounded-pill px-4 py-2 fw-medium" 
                   onClick={handleCheckout}
+                  disabled={isLoading}
                 >
                   Proceed to Checkout
                 </Button>
@@ -15869,15 +17213,14 @@ export default CartPage;
 
 ```
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner } from 'react-bootstrap';
+import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-
-// Make sure the API URL is defined
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
+import api from '../utils/api';
 
 interface DeliveryLocation {
   id: number;
@@ -15898,6 +17241,28 @@ const CheckoutPage: React.FC = () => {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationErrorState, setLocationErrorState] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Add Location Modal state
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [addLocationError, setAddLocationError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [newLocationData, setNewLocationData] = useState({
+    name: '',
+    phone: '',
+    district: ''
+  });
+
+  // Districts state
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [districtError, setDistrictError] = useState<string | null>(null);
+
+  // New retry mechanism state variables
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const maxRetries = 3; // Maximum number of retry attempts
+  const retryDelay = 5000; // 5 seconds delay between retries
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -15955,88 +17320,145 @@ const CheckoutPage: React.FC = () => {
   // Fetch saved delivery locations
   useEffect(() => {
     if (!token) return;
-
-    const fetchLocations = async () => {
-      setIsLoadingLocations(true);
-      setLocationErrorState(null);
-
-      try {
-        const response = await axios.get(`${API_URL}/api/addresses`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        const locations = response.data;
-        setSavedLocations(locations);
-        
-        // If there's a default location, select it automatically
-        const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
-        if (defaultLocation) {
-          setSelectedLocationId(defaultLocation.id.toString());
-        } else if (locations.length > 0) {
-          // If no default but locations exist, select the first one
-          setSelectedLocationId(locations[0].id.toString());
-        } else {
-          // If no locations, leave as empty string
-          setSelectedLocationId('');
-        }
-      } catch (err) {
-        console.error('Error fetching delivery locations:', err);
-        setLocationErrorState('Failed to load your saved delivery locations.');
-      } finally {
-        setIsLoadingLocations(false);
-      }
-    };
-
+    
     fetchLocations();
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!token) {
-      toast.error('You must be logged in to place an order');
-      navigate('/login');
-      return;
-    }
+  // Fetch districts
+  useEffect(() => {
+    fetchDistricts();
+  }, []);
 
-    // Validate based on selected option
-    setValidationError(null); // Clear previous validation errors
-    setError(null); // Clear previous errors
-    
-    // Check if a delivery location is selected
-    if (!selectedLocationId) {
-      setValidationError('Please select a delivery location.');
-      return;
-    }
+  // Function to fetch saved delivery locations
+  const fetchLocations = async () => {
+    setIsLoadingLocations(true);
+    setLocationErrorState(null);
 
     try {
-      setLoading(true);
+      const response = await api.get('/addresses');
+      
+      const locations = response.data;
+      setSavedLocations(locations);
+      
+      // If there's a default location, select it automatically
+      const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
+      if (defaultLocation) {
+        setSelectedLocationId(defaultLocation.id.toString());
+      } else if (locations.length > 0) {
+        // If no default but locations exist, select the first one
+        setSelectedLocationId(locations[0].id.toString());
+      } else {
+        // If no locations, leave as empty string
+        setSelectedLocationId('');
+      }
+    } catch (err) {
+      console.error('Error fetching delivery locations:', err);
+      setLocationErrorState('Failed to load your saved delivery locations.');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
 
-      const orderData = {
-        items: cartItems.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        deliveryLocationId: parseInt(selectedLocationId, 10),
-        location: location, // Ensure location is included (will be undefined if not available)
-        totalAmount: totalPrice
-      };
+  // Function to fetch districts
+  const fetchDistricts = async () => {
+    setIsLoadingDistricts(true);
+    setDistrictError(null);
 
+    try {
+      const response = await api.get('/districts');
+      setDistricts(response.data);
+      
+      // Initialize the new location form with the first district
+      if (response.data.length > 0) {
+        setNewLocationData(prev => ({
+          ...prev,
+          district: response.data[0]
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching districts:', err);
+      setDistrictError('Failed to load districts.');
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
+
+  // New Location Modal handlers
+  const handleShowAddModal = () => {
+    setShowAddLocationModal(true);
+    setAddLocationError(null);
+    setFormErrors({});
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddLocationModal(false);
+    setAddLocationError(null);
+    setFormErrors({});
+  };
+
+  const handleNewLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewLocationData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveNewLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    const errors: {[key: string]: string} = {};
+    if (!newLocationData.name.trim()) errors.name = "Location name is required";
+    if (!newLocationData.phone.trim()) errors.phone = "Phone number is required";
+    if (!newLocationData.district.trim()) errors.district = "District is required";
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setIsAddingLocation(true);
+    setAddLocationError(null);
+    
+    try {
+      // Create new location
+      const response = await api.post('/addresses', newLocationData);
+      
+      toast.success("New delivery location added!");
+      
+      // Refresh locations and select the newly added one
+      const locationsResponse = await api.get('/addresses');
+      setSavedLocations(locationsResponse.data);
+      
+      // Select the newly added location
+      if (response.data && response.data.id) {
+        setSelectedLocationId(response.data.id.toString());
+      }
+      
+      // Close the modal
+      setShowAddLocationModal(false);
+    } catch (err) {
+      console.error('Error adding new location:', err);
+      if (axios.isAxiosError(err) && err.response) {
+        // Check if the error response contains field-specific validation errors
+        if (err.response.data.errors && typeof err.response.data.errors === 'object') {
+          setFormErrors(err.response.data.errors);
+        } else {
+          setAddLocationError(err.response.data.message || 'Failed to add delivery location.');
+        }
+      } else {
+        setAddLocationError('Network error. Please check your connection.');
+      }
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
+
+  // New function to attempt order placement that can be reused for retries
+  const attemptOrderPlacement = async (orderData: any) => {
+    try {
       console.log("Sending order data with location:", orderData);
 
-      // Use the API_URL constant defined at the top of the file
-      const response = await axios.post(
-        `${API_URL}/api/orders`,
-        orderData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // Use the configured api instance instead of direct axios calls
+      const response = await api.post('/orders', orderData);
 
       // --- BEGIN DEBUG LOGGING ---
       console.log("Checkout API Response Status:", response.status);
@@ -16055,6 +17477,7 @@ const CheckoutPage: React.FC = () => {
         console.error("ERROR PATH: Order ID *missing* in successful response!", response.data);
         toast.error('Failed to create order (Invalid confirmation from server)');
         setError("Order placed, but couldn't get confirmation ID.");
+        setLoading(false);
       }
     } catch (error) {
       console.error("ERROR PATH: API call caught an error object:", error);
@@ -16064,15 +17487,100 @@ const CheckoutPage: React.FC = () => {
           status: error.response.status,
           data: error.response.data
         });
-        toast.error(`Order failed: ${errorMessage}`);
-        setError(errorMessage);
+        
+        // Modify the isPhoneUnavailableError condition to include the "internal server error" message
+        const isPhoneUnavailableError = 
+          (error.response.status === 503 || error.response.status === 500) || 
+          (errorMessage.toLowerCase().includes('no available phone numbers') || 
+           errorMessage.toLowerCase().includes('verification line') ||
+           errorMessage.toLowerCase().includes('internal server error') ||
+           errorMessage.toLowerCase().includes('server error'));
+        
+        if (isPhoneUnavailableError && retryCount < maxRetries) {
+          // Increment retry count
+          const newRetryCount = retryCount + 1;
+          setRetryCount(newRetryCount);
+          setIsRetrying(true);
+          
+          // Show retry message to user with more visible toast
+          const retryMessage = `No verification line available currently. Retrying... (Attempt ${newRetryCount}/${maxRetries + 1})`;
+          // Dismiss any existing error toasts first
+          toast.dismiss();
+          // Use a persistent toast that doesn't auto-dismiss
+          toast.loading(retryMessage, { 
+            id: 'retry-toast',
+            duration: Infinity // Make the toast stay until explicitly dismissed
+          });
+          setError(retryMessage);
+          
+          // Retry after delay
+          setTimeout(() => {
+            // Dismiss the loading toast before retrying
+            toast.dismiss('retry-toast');
+            attemptOrderPlacement(orderData);
+          }, retryDelay);
+        } else if (isPhoneUnavailableError && retryCount >= maxRetries) {
+          // Max retries reached
+          setIsRetrying(false);
+          const maxRetriesMessage = "We couldn't find an available verification line after several attempts. Please try placing your order again later or contact support.";
+          toast.error(maxRetriesMessage);
+          setError(maxRetriesMessage);
+          setLoading(false);
+        } else {
+          // Other error, not related to phone verification
+          toast.error(`Order failed: ${errorMessage}`);
+          setError(errorMessage);
+          setIsRetrying(false);
+          setLoading(false);
+        }
       } else {
+        // Network or other non-axios error
         toast.error('Failed to place order. Please check your connection and try again.');
         setError('Network error. Please check your connection and try again.');
+        setIsRetrying(false);
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!token) {
+      toast.error('You must be logged in to place an order');
+      navigate('/login');
+      return;
+    }
+
+    // Reset retry state at the beginning of a new checkout attempt
+    setRetryCount(0);
+    setIsRetrying(false);
+
+    // Validate based on selected option
+    setValidationError(null); // Clear previous validation errors
+    setError(null); // Clear previous errors
+    
+    // Check if a delivery location is selected
+    if (!selectedLocationId) {
+      setValidationError('Please select a delivery location.');
+      return;
+    }
+
+    setLoading(true);
+
+    const orderData = {
+      items: cartItems.map(item => ({
+        productId: item.id,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      deliveryLocationId: parseInt(selectedLocationId, 10),
+      location: location, // Ensure location is included (will be undefined if not available)
+      totalAmount: totalPrice
+    };
+
+    // Attempt order placement with the prepared data
+    await attemptOrderPlacement(orderData);
   };
 
   if (cartItems.length === 0) {
@@ -16081,7 +17589,7 @@ const CheckoutPage: React.FC = () => {
         <Alert variant="warning">
           Your cart is empty. Add some products before checkout.
         </Alert>
-        <Button variant="primary" onClick={() => navigate('/')}>
+        <Button variant="secondary" onClick={() => navigate('/')} className="rounded-pill px-4 py-2">
           Continue Shopping
         </Button>
       </Container>
@@ -16107,7 +17615,13 @@ const CheckoutPage: React.FC = () => {
                 )}
                 
                 {error && (
-                  <Alert variant="danger" className="mb-3">
+                  <Alert variant={isRetrying ? "warning" : "danger"} className="mb-3">
+                    {isRetrying && (
+                      <div className="d-flex align-items-center mb-2">
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        <strong>Retry in progress</strong>
+                      </div>
+                    )}
                     {error}
                   </Alert>
                 )}
@@ -16119,18 +17633,31 @@ const CheckoutPage: React.FC = () => {
                 )}
                 
                 {/* Delivery Location Selection */}
-                {isLoadingLocations ? (
-                  <div className="text-center mb-3">
-                    <Spinner animation="border" size="sm" />
-                    <span className="ms-2">Loading delivery locations...</span>
+                <Form.Group className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <Form.Label className="fw-bold mb-0">Select Delivery Location</Form.Label>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={handleShowAddModal}
+                      className="d-flex align-items-center rounded-pill px-3 py-2"
+                      disabled={isLoadingLocations || isLoadingDistricts}
+                    >
+                      <FaPlus className="me-2" /> Add New Location
+                    </Button>
                   </div>
-                ) : savedLocations.length > 0 ? (
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-bold">Choose a Delivery Location</Form.Label>
+                  
+                  {isLoadingLocations ? (
+                    <div className="text-center my-4 py-3">
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      <span>Loading delivery locations...</span>
+                    </div>
+                  ) : savedLocations.length > 0 ? (
                     <Form.Select 
                       value={selectedLocationId}
                       onChange={(e) => setSelectedLocationId(e.target.value)}
                       required
+                      className="mb-3"
                     >
                       <option value="" disabled>-- Select Delivery Location --</option>
                       {savedLocations.map(location => (
@@ -16140,29 +17667,33 @@ const CheckoutPage: React.FC = () => {
                         </option>
                       ))}
                     </Form.Select>
-                  </Form.Group>
-                ) : (
-                  <Alert variant="warning">
-                    Please <Link to="/settings" state={{ initialTab: 'shipping' }}>add a Delivery Location</Link> in your Settings first.
-                  </Alert>
-                )}
-
+                  ) : (
+                    <Alert variant="info" className="mb-3">
+                      <div className="d-flex align-items-center mb-2">
+                        <FaMapMarkerAlt className="me-2 text-primary" size={18} />
+                        <span className="fw-medium">You don't have any saved delivery locations.</span>
+                      </div>
+                      <p className="mb-0">Please add a delivery location to continue with checkout.</p>
+                    </Alert>
+                  )}
+                </Form.Group>
+                
                 {locationError && (
                   <Alert variant="warning" className="mb-3">
                     {locationError}
                   </Alert>
                 )}
 
-                <Button
-                  variant="primary"
+                <Button 
                   type="submit"
-                  className="w-100 mt-2"
-                  disabled={loading || savedLocations.length === 0}
+                  variant={isRetrying ? "warning" : "primary"}
+                  className="w-100 mt-3 rounded-pill py-2"
+                  disabled={loading || isRetrying || !selectedLocationId}
                 >
-                  {loading ? (
+                  {loading || isRetrying ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Processing...
+                      <Spinner as="span" animation="border" size="sm" className="me-2" />
+                      {isRetrying ? `Automatic retry in progress (${retryCount}/${maxRetries + 1})` : 'Processing...'}
                     </>
                   ) : (
                     'Place Order'
@@ -16179,45 +17710,147 @@ const CheckoutPage: React.FC = () => {
               <h5 className="mb-0">Order Summary</h5>
             </Card.Header>
             <Card.Body>
-              <div className="table-responsive">
-                <Table responsive className="table-sm">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-end">Price</th>
+              <Table responsive className="mb-3">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th className="text-center">Qty</th>
+                    <th className="text-end">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cartItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td className="text-center">{item.quantity}</td>
+                      <td className="text-end">${(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {cartItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="text-truncate" style={{ maxWidth: '140px' }}>{item.name}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th colSpan={2}>Total:</th>
-                      <th className="text-end">€{totalPrice.toFixed(2)}</th>
-                    </tr>
-                  </tfoot>
-                </Table>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th colSpan={2}>Total</th>
+                    <th className="text-end">${totalPrice.toFixed(2)}</th>
+                  </tr>
+                </tfoot>
+              </Table>
+              <div className="d-grid gap-2">
+                <Link to="/cart" className="btn btn-outline-secondary">
+                  Edit Cart
+                </Link>
               </div>
-
-              {location && (
-                <Alert variant="success" className="mb-0 mt-3">
-                  <small>
-                    <strong>Delivery Location Detected</strong><br />
-                    Your order will be delivered based on your current location.
-                  </small>
-                </Alert>
-              )}
             </Card.Body>
           </Card>
         </Col>
       </Row>
+      
+      {/* Add New Location Modal */}
+      <Modal show={showAddLocationModal} onHide={handleCloseAddModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Add New Delivery Location</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {addLocationError && (
+            <Alert variant="danger" className="mb-3">
+              {addLocationError}
+            </Alert>
+          )}
+          
+          {districtError && (
+            <Alert variant="warning" className="mb-3">
+              {districtError}
+            </Alert>
+          )}
+          
+          <Form onSubmit={handleSaveNewLocation} noValidate>
+            <Row className="mb-3">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">Location Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Home, Work, etc."
+                    name="name"
+                    value={newLocationData.name}
+                    onChange={handleNewLocationChange}
+                    required
+                    isInvalid={!!formErrors.name}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.name}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row className="mb-3">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">Phone Number</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Phone number"
+                    name="phone"
+                    value={newLocationData.phone}
+                    onChange={handleNewLocationChange}
+                    required
+                    isInvalid={!!formErrors.phone}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.phone}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row className="mb-4">
+              <Col>
+                <Form.Group>
+                  <Form.Label className="fw-medium">District</Form.Label>
+                  <Form.Select
+                    name="district"
+                    value={newLocationData.district}
+                    onChange={handleNewLocationChange}
+                    required
+                    isInvalid={!!formErrors.district}
+                    disabled={isLoadingDistricts}
+                  >
+                    {isLoadingDistricts ? (
+                      <option value="">Loading districts...</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>-- Select District --</option>
+                        {districts.map((district) => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </>
+                    )}
+                  </Form.Select>
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.district}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <div className="d-grid">
+              <Button 
+                variant="primary" 
+                type="submit" 
+                disabled={isAddingLocation || isLoadingDistricts}
+                className="rounded-pill py-2 fw-medium"
+              >
+                {isAddingLocation ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                    Saving...
+                  </>
+                ) : 'Add Location'}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };
@@ -16233,26 +17866,37 @@ import axios from 'axios';
 import { Container, Row, Col, Card, Table, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck } from 'react-icons/fa';
+import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck, FaPhone } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 
 // Interfaces based on expected API response for GET /api/orders/:id
+interface ProductImage {
+  id: number;
+  url: string;
+}
+
 interface OrderItem {
   id: number;
   quantity: number;
   price: number; // Price per item at time of order
   productId: number;
-  product: { // Assuming backend includes product name via relation
+  productName?: string; // Fallback for product name
+  product?: { // Assuming backend includes product name via relation
     name: string;
+    images?: ProductImage[];
   };
 }
 
-interface ShippingDetails { 
-  fullName: string;
-  address: string; // Assuming address is a single string from textarea
+interface DeliveryLocation { 
+  name: string;
   phone: string;
-  // Add other fields like city, zip, country if they are stored separately
+  district: string;
+  isDefault: boolean;
+}
+
+interface AssignedPhoneNumber {
+  numberString: string;
 }
 
 interface CustomerOrder {
@@ -16260,8 +17904,11 @@ interface CustomerOrder {
   status: string;
   totalAmount: number;
   createdAt: string; // ISO String
-  shippingDetails: ShippingDetails | null; 
+  shippingDetails?: any | null; // Legacy field
+  deliveryLocation?: DeliveryLocation | null;
   items: OrderItem[];
+  assignedPhoneNumber?: AssignedPhoneNumber | null; // Add assignedPhoneNumber field
+  verificationPhoneNumber?: string; // Field populated from assignedPhoneNumber.numberString
   // Other fields like userId, latitude, longitude might be present but not displayed
 }
 
@@ -16304,7 +17951,16 @@ const CustomerOrderDetailPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setOrder(response.data);
+        
+        // Validate response
+        if (response.data && typeof response.data === 'object') {
+          console.log("Order details received:", response.data);
+          setOrder(response.data);
+        } else {
+          console.error("Invalid order data received:", response.data);
+          setError("Received invalid order data format");
+          setOrder(null);
+        }
       } catch (err) {
         console.error('Error fetching order details:', err);
         if (axios.isAxiosError(err)) {
@@ -16318,6 +17974,7 @@ const CustomerOrderDetailPage = () => {
         } else {
             setError('An unexpected error occurred.');
         }
+        setOrder(null);
       } finally {
         setIsLoading(false);
       }
@@ -16363,24 +18020,40 @@ const CustomerOrderDetailPage = () => {
               <Col xs={12} md={6} className="mb-3 mb-md-0">
                 <h5 className="border-bottom pb-2">Order Summary</h5>
                 <p className="mb-2"><strong>Date Placed:</strong> {formatDateTime(order.createdAt)}</p>
-                <p><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
-                {order.status === 'Pending Call' && (
-                  <p className="text-danger small mt-2">
-                    Remember to call the verification number provided after checkout to complete your order.
+                <p className="mb-2"><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
+                
+                {/* Display verification phone number if available */}
+                {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) && (
+                  <p className="mb-2">
+                    <strong><FaPhone className="me-1" /> Verification Phone:</strong>{' '}
+                    <a 
+                      href={`tel:${order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString}`} 
+                      className="text-primary fw-bold"
+                    >
+                      {order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString}
+                    </a>
                   </p>
+                )}
+                
+                {order.status === 'Pending Call' && (
+                  <Alert variant="warning" className="mt-2 p-2 small">
+                    <strong>Action Required:</strong> Please call the verification number {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) ? 'above' : 'provided after checkout'} to complete your order.
+                  </Alert>
                 )}
               </Col>
               <Col xs={12} md={6}>
-                <h5 className="border-bottom pb-2">Shipping Details</h5>
-                {order.shippingDetails ? (
+                <h5 className="border-bottom pb-2">Delivery Details</h5>
+                {order.deliveryLocation ? (
                     <>
-                        <p className="mb-2"><strong>Name:</strong> {order.shippingDetails.fullName}</p>
-                        <p className="mb-2"><strong>Phone:</strong> {order.shippingDetails.phone}</p>
-                        <p className="mb-0"><strong>Address:</strong> {order.shippingDetails.address || 'N/A'}</p>
-                        {/* Add City, Zip, Country if available */}
+                        <p className="mb-2"><strong>Name:</strong> {order.deliveryLocation.name}</p>
+                        <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
+                        <p className="mb-0"><strong>District:</strong> {order.deliveryLocation.district || 'N/A'}</p>
+                        {order.deliveryLocation.isDefault && (
+                          <Badge bg="info" className="mt-2">Default Location</Badge>
+                        )}
                     </>
                 ) : (
-                    <p className="mb-0">Not Available</p>
+                    <p className="mb-0">Delivery information not available</p>
                 )}
               </Col>
             </Row>
@@ -16400,7 +18073,9 @@ const CustomerOrderDetailPage = () => {
                   <tbody>
                     {order.items.map((item) => (
                       <tr key={item.id}>
-                        <td className="text-break">{item.product?.name || 'Product not found'}</td>
+                        <td className="text-break">
+                          {item.product?.name || item.productName || `Product #${item.productId}`}
+                        </td>
                         <td className="text-center">{item.quantity}</td>
                         <td className="text-center">{formatCurrency(item.price)}</td>
                         <td className="text-end">{formatCurrency(item.quantity * item.price)}</td>
@@ -16442,6 +18117,7 @@ import { FaHeart } from 'react-icons/fa';
 import { FaRegHeart } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface ProductImage {
   id: number;
@@ -16476,7 +18152,6 @@ interface PaginatedProductsResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16529,13 +18204,23 @@ const HomePage = () => {
       console.log(`Fetching products from ${apiUrl}`);
       const response = await axios.get<PaginatedProductsResponse>(apiUrl);
       
-      // Update state with paginated response data
-      setProducts(response.data.products);
-      setCurrentPage(response.data.currentPage);
-      setTotalPages(response.data.totalPages);
-      setTotalProducts(response.data.totalProducts);
-      
-      console.log(`Loaded page ${response.data.currentPage} of ${response.data.totalPages}`);
+      // Ensure we have valid data before updating state
+      if (response.data && response.data.products) {
+        // Update state with paginated response data
+        setProducts(response.data.products || []);
+        setCurrentPage(response.data.currentPage || 1);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalProducts(response.data.totalProducts || 0);
+        
+        console.log(`Loaded page ${response.data.currentPage || 1} of ${response.data.totalPages || 1}`);
+      } else {
+        console.error('Invalid product data received:', response.data);
+        setProducts([]);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalProducts(0);
+        setError('Invalid data received from server');
+      }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         const errorMessage = err.response.data.message || 'Failed to fetch products';
@@ -16545,6 +18230,11 @@ const HomePage = () => {
         setError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      // Set empty defaults in case of error
+      setProducts([]);
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalProducts(0);
     } finally {
       setIsLoading(false);
     }
@@ -16570,11 +18260,19 @@ const HomePage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       setIsLoadingCategories(true);
+            
       try {
         const response = await axios.get(`${API_BASE_URL}/categories`);
-        setCategories(response.data);
+        // Ensure response.data is an array
+        if (Array.isArray(response.data)) {
+          setCategories(response.data);
+        } else {
+          console.error('Expected array for categories data, got:', response.data);
+          setCategories([]);
+        }
       } catch (err) {
         console.error('Error fetching categories:', err);
+        setCategories([]);
         // Optionally set an error state for categories
       } finally {
         setIsLoadingCategories(false);
@@ -16616,7 +18314,8 @@ const HomePage = () => {
           {/* Show limited number of page buttons */}
           {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
             // For simplicity, show pages around current page
-            let pageNum;
+            let pageNum = 1; // Default to page 1 if calculations fail
+            
             if (totalPages <= 5) {
               // If 5 or fewer pages, show all
               pageNum = idx + 1;
@@ -16693,9 +18392,7 @@ const HomePage = () => {
                   onClick={() => setSelectedCategoryId(category.id.toString())}
                 >
                   <img 
-                    src={category.imageUrl 
-                      ? `${API_BASE_URL}${category.imageUrl}` 
-                      : '/placeholder-image.svg'}
+                    src={getImageUrl(category.imageUrl)} 
                     alt={category.name} 
                     className="category-image"
                     onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
@@ -16786,19 +18483,11 @@ const HomePage = () => {
                         {((product.images && product.images.length > 0) || product.imageUrl) ? (
                           <Card.Img 
                             variant="top" 
-                            src={
+                            src={getImageUrl(
                               product.images && product.images.length > 0
-                                ? (product.images[0].url.startsWith('/uploads/') 
-                                  ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
-                                  : product.images[0].url.startsWith('http')
-                                    ? product.images[0].url
-                                    : `${API_BASE_URL}${product.images[0].url}`)
-                                : (product.imageUrl?.startsWith('/uploads/')
-                                  ? `${UPLOADS_URL}${product.imageUrl.substring(8)}`
-                                  : product.imageUrl?.startsWith('http')
-                                    ? product.imageUrl
-                                    : `${API_BASE_URL}${product.imageUrl || ''}`)
-                            } 
+                                ? product.images[0].url
+                                : product.imageUrl
+                            )} 
                             alt={product.name}
                             style={{ height: '160px', objectFit: 'cover' }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -17037,27 +18726,27 @@ const LoginPage = () => {
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
@@ -17072,7 +18761,6 @@ const LoginPage = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-100 py-2 rounded-pill fw-medium"
-                  size="lg"
                 >
                   {isLoading ? (
                     <>
@@ -17155,7 +18843,15 @@ const OrderHistoryPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setOrders(response.data);
+        
+        // Ensure we have an array
+        if (Array.isArray(response.data)) {
+          setOrders(response.data);
+        } else {
+          console.error('Expected array of orders but received:', response.data);
+          setOrders([]);
+          setError('Received invalid data format from server');
+        }
       } catch (err) {
         console.error('Error fetching orders:', err);
         if (axios.isAxiosError(err)) {
@@ -17168,6 +18864,8 @@ const OrderHistoryPage = () => {
         } else {
           setError('An unexpected error occurred.');
         }
+        // Set empty orders in case of error
+        setOrders([]);
       } finally {
         setIsLoading(false); // Finish loading order list
       }
@@ -17263,8 +18961,8 @@ export default OrderHistoryPage;
 
 ```
 import { useEffect, useState, useRef } from 'react';
-import { Container, Card, Alert, Spinner, Accordion } from 'react-bootstrap';
-import { useParams, Link } from 'react-router-dom';
+import { Container, Card, Alert, Spinner, Accordion, Badge } from 'react-bootstrap';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -17274,6 +18972,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   productName: string;
+  imageUrl?: string;
 }
 
 interface DeliveryLocation {
@@ -17285,6 +18984,10 @@ interface DeliveryLocation {
   userId: number;
 }
 
+interface AssignedPhoneNumber {
+  numberString: string;
+}
+
 interface Order {
   id: string;
   userId: string;
@@ -17294,169 +18997,98 @@ interface Order {
   updatedAt: string;
   items: OrderItem[];
   deliveryLocation?: DeliveryLocation;
+  verificationPhoneNumber?: string;
+  assignedPhoneNumber?: AssignedPhoneNumber | null;
 }
-
-const MAX_RETRIES = 5; // Max number of retry attempts
-const RETRY_DELAY_MS = 10000; // 10 seconds
 
 const OrderSuccessPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { token } = useAuth();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+  const navigate = useNavigate();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [verificationNumber, setVerificationNumber] = useState<string | null>(null);
-  const [numberLoading, setNumberLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [numberError, setNumberError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout ID
-  
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+  const verificationNumber = order?.assignedPhoneNumber?.numberString || order?.verificationPhoneNumber || '';
 
   const fetchOrderDetails = async () => {
     if (!orderId || !token) {
-      setError('Order ID or authentication token is missing');
+      setError("Missing order ID or authentication token");
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError('');
-
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/orders/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      console.log(`Fetching order details for order ${orderId}...`);
+      const response = await axios.get(`${API_BASE_URL}/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
 
-      setOrder(response.data);
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      setError('Failed to load order details. Please try again later.');
+      if (response.data) {
+        // Deep debug logging
+        console.log("============ ORDER DETAILS FROM API ============");
+        console.log(JSON.stringify(response.data, null, 2));
+        console.log("==============================================");
+
+        setOrder(response.data);
+        
+        // Verification phone number debugging - check both possible sources
+        const phoneNumber = response.data.assignedPhoneNumber?.numberString || response.data.verificationPhoneNumber;
+        if (!phoneNumber) {
+          console.warn("⚠️ NO VERIFICATION PHONE NUMBER FOUND");
+          setNumberError("No verification phone number was assigned to this order. Please contact support.");
+        } else {
+          console.log(`✅ Verification phone number: ${phoneNumber}`);
+        }
+
+        // Delivery location debugging
+        if (response.data.deliveryLocation) {
+          console.log(`✅ Delivery location found: ${JSON.stringify(response.data.deliveryLocation)}`);
+        } else {
+          console.warn("⚠️ NO DELIVERY LOCATION FOUND");
+        }
+
+        // Order items debugging
+        if (response.data.items && response.data.items.length > 0) {
+          console.log(`✅ Order items found: ${response.data.items.length} items`);
+          response.data.items.forEach((item: any, index: number) => {
+            console.log(`Item ${index + 1}: ${JSON.stringify(item)}`);
+          });
+        } else {
+          console.warn("⚠️ NO ORDER ITEMS FOUND");
+        }
+      } else {
+        console.error("❌ Invalid or empty response data");
+        setError("Invalid order data received");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching order:", err);
+      if (axios.isAxiosError(err) && err.response) {
+        console.error("Response error data:", err.response.data);
+        console.error("Response status:", err.response.status);
+        
+        if (err.response.status === 401) {
+          setError("You must be logged in to view this order");
+        } else if (err.response.status === 404) {
+          setError("Order not found");
+        } else {
+          setError(err.response.data?.message || "Failed to fetch order details");
+        }
+      } else {
+        setError("Network error while fetching order details");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchVerificationNumber = async (currentRetry = 0) => { // Pass currentRetry
-    if (!orderId || !token) {
-      setNumberError('Order ID is missing');
-      setNumberLoading(false);
-      return;
-    }
-    
-    // Clear previous specific number error *if* retrying
-    if (currentRetry > 0) {
-      setNumberError(null);
-    } else {
-      // Only set loading true on the first attempt
-      setNumberLoading(true);
-      setNumberError(null);
-      setRetryCount(0); // Reset retry count on initial call
-    }
-    
-    // Clear previous timeout if any
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    console.log(`Attempt ${currentRetry + 1} to fetch verification number for order ${orderId}...`);
-    
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/orders/assign-number/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      if (response.data && response.data.verificationPhoneNumber) {
-        setVerificationNumber(response.data.verificationPhoneNumber);
-        setNumberError(null); // Clear any previous retry messages
-        setNumberLoading(false); // Success, stop loading
-        console.log("Verification number retrieved successfully.");
-      } else {
-        // Should not happen if backend sends correct data on 200
-        setNumberError("Could not retrieve verification number (invalid response).");
-        setNumberLoading(false);
-      }
-    } catch (err) {
-      console.error(`Attempt ${currentRetry + 1} failed:`, err);
-      let errorMsg = "Failed to get verification number.";
-      let canRetry = false;
-      
-      if (axios.isAxiosError(err) && err.response) {
-        // --- Check for specific "No lines available" error ---
-        // Option A: Check status code (if backend returns 503 specifically for this)
-        if (err.response.status === 503) {
-          canRetry = true;
-          errorMsg = `No verification lines currently available. Retrying in ${RETRY_DELAY_MS / 1000}s... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
-        }
-        // Option B: Check specific message (if backend returns consistent message)
-        // else if (err.response.data?.message?.includes("No verification phone lines")) {
-        //     canRetry = true;
-        //     errorMsg = `No lines available, retrying... (Attempt ${currentRetry + 2}/${MAX_RETRIES + 1})`;
-        // }
-        else {
-          // Handle other errors (401, 404, 500 etc.) - Do not retry these
-          errorMsg = err.response.data?.message || `Error: ${err.response.status}`;
-          if (err.response.status === 401) errorMsg = "Authentication error.";
-          if (err.response.status === 404) errorMsg = "Order details not found for number assignment.";
-        }
-      } else {
-        // Network error - Maybe allow retry? Or maybe not? Let's not retry network errors for now.
-        errorMsg = "Network error while fetching number.";
-      }
-      
-      // --- Handle Retry Logic ---
-      if (canRetry && currentRetry < MAX_RETRIES) {
-        setRetryCount(currentRetry + 1);
-        setNumberError(errorMsg); // Show temporary retry message
-        // Set timeout for next retry
-        timeoutRef.current = setTimeout(() => {
-          fetchVerificationNumber(currentRetry + 1);
-        }, RETRY_DELAY_MS);
-        // Keep numberLoading as true while retrying
-        setNumberLoading(true);
-      } else {
-        // Max retries reached or non-retryable error
-        if (canRetry) { // If it failed after max retries
-          setNumberError(`Still no lines available after ${MAX_RETRIES + 1} attempts. Please contact support.`);
-        } else { // Other error
-          setNumberError(errorMsg);
-        }
-        setNumberLoading(false); // Stop loading on final failure
-      }
-    }
-    // Removed finally block - loading state is handled within try/catch now
-  };
-
   useEffect(() => {
     fetchOrderDetails();
-    
-    // Clear previous timeouts when component unmounts or dependencies change
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [orderId, token, API_BASE_URL]);
-
-  useEffect(() => {
-    if (orderId && token) {
-      fetchVerificationNumber(0); // Start initial fetch (attempt 0)
-    } else if (!token) {
-      setNumberError("Authentication error. Cannot fetch details.");
-      setNumberLoading(false);
-    }
-    // Dependency array remains [orderId, token] - fetch runs when these change
   }, [orderId, token, API_BASE_URL]);
 
   if (loading) {
@@ -17505,52 +19137,46 @@ const OrderSuccessPage = () => {
       <div className="text-center mb-3">
         <h2 className="text-success fw-bold">Order Placed Successfully!</h2>
         <p>Your Order ID: <strong className="text-primary fs-5">#{orderId}</strong></p>
+        <Badge bg={order.status === 'Pending Call' ? 'warning' : 'success'} className="px-3 py-2 fs-6 mb-3">
+          {order.status}
+        </Badge>
       </div>
 
-      {/* --- Verification Number Section --- MOVED TO TOP */}
-      <Card className="mb-3 shadow-sm border-danger">
-        <Card.Header as="h5" className="bg-light text-danger">Phone Verification Required</Card.Header>
-        <Card.Body className="p-3 text-center">
-          {numberLoading && (
+      {verificationNumber ? (
+        <Card className="mb-4 shadow border-danger">
+          <Card.Header as="h5" className="bg-danger text-white">Important: Phone Verification Required</Card.Header>
+          <Card.Body className="p-4 text-center">
             <div className="py-2">
-              <Spinner animation="border" size="sm" className="me-2" />
-              <span>Checking verification line availability...</span>
-              {/* Display retry message if applicable */}
-              {retryCount > 0 && <p className="text-muted small mt-2">{numberError}</p>}
-            </div>
-          )}
-
-          {!numberLoading && numberError && (
-            <Alert variant={retryCount >= MAX_RETRIES ? "danger" : "warning"}>
-              {numberError}
-            </Alert>
-          )}
-
-          {!numberLoading && !numberError && verificationNumber && (
-            <div className="py-2">
-              <Card.Text className="mb-2">
-                To complete your order, please call this number immediately:
-              </Card.Text>
-              <div className="bg-light py-3 px-2 rounded mb-2">
-                <h3 className="fw-bold mb-0">
+              <Card.Title className="mb-3 fs-5">
+                To complete your order, please call this verification number:
+              </Card.Title>
+              <div className="bg-light py-3 px-2 rounded mb-3 border">
+                <h2 className="fw-bold mb-0">
                   <a href={`tel:${verificationNumber}`} className="text-primary text-decoration-none">
                     {verificationNumber}
                   </a>
-                </h3>
+                </h2>
               </div>
               <Card.Text>
-                <small className="text-danger fw-bold">Failure to call may result in order cancellation.</small>
+                <span className="text-danger fw-bold">
+                  Failure to call may result in order cancellation
+                </span>
+                <p className="mt-2 small text-muted">
+                  Call this number to confirm your order. Tap the number above to dial automatically.
+                </p>
               </Card.Text>
             </div>
-          )}
-          
-          {!numberLoading && !numberError && !verificationNumber && (
-            <Alert variant="warning">
-              Could not retrieve the verification phone number. Please contact support with your Order ID: {orderId}.
-            </Alert>
-          )}
-        </Card.Body>
-      </Card>
+          </Card.Body>
+        </Card>
+      ) : (
+        <Alert variant="danger" className="mb-4">
+          <Alert.Heading>Verification Phone Number Missing</Alert.Heading>
+          <p>
+            No verification phone number was assigned to this order. Please contact customer
+            support with your Order ID: <strong>{orderId}</strong>.
+          </p>
+        </Alert>
+      )}
 
       <Card className="mb-3 shadow-sm">
         <Card.Header as="h5" className="bg-light">Order Summary</Card.Header>
@@ -17570,63 +19196,70 @@ const OrderSuccessPage = () => {
         </Card.Body>
       </Card>
 
-      <Accordion className="mb-3">
-        <Accordion.Item eventKey="0">
-          <Accordion.Header>Items Ordered</Accordion.Header>
-          <Accordion.Body className="p-3">
-            <div className="table-responsive">
-              <table className="table table-striped">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: '40%' }}>Product</th>
-                    <th style={{ width: '20%' }} className="text-center">Quantity</th>
-                    <th style={{ width: '20%' }} className="text-end">Price</th>
-                    <th style={{ width: '20%' }} className="text-end">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item) => (
+      <Card className="mb-3 shadow-sm">
+        <Card.Header as="h5" className="bg-light">Delivery Information</Card.Header>
+        <Card.Body className="p-3">
+          {order.deliveryLocation ? (
+            <>
+              <p className="mb-2">
+                <strong>Name:</strong> {order.deliveryLocation.name}
+                {order.deliveryLocation.isDefault && (
+                  <span className="badge bg-info ms-2 px-2">Default</span>
+                )}
+              </p>
+              <p className="mb-2"><strong>District:</strong> {order.deliveryLocation.district}</p>
+              <p className="mb-2"><strong>Contact Phone:</strong> {order.deliveryLocation.phone}</p>
+            </>
+          ) : (
+            <Alert variant="warning">
+              No delivery location information is available for this order.
+              Please contact customer support if this is unexpected.
+            </Alert>
+          )}
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-3 shadow-sm">
+        <Card.Header as="h5" className="bg-light">Items Ordered</Card.Header>
+        <Card.Body className="p-3">
+          <div className="table-responsive">
+            <table className="table table-striped">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '40%' }}>Product</th>
+                  <th style={{ width: '20%' }} className="text-center">Quantity</th>
+                  <th style={{ width: '20%' }} className="text-end">Price</th>
+                  <th style={{ width: '20%' }} className="text-end">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items && order.items.length > 0 ? (
+                  order.items.map((item) => (
                     <tr key={item.id}>
                       <td>{item.productName || `Product #${item.productId}`}</td>
                       <td className="text-center">{item.quantity}</td>
                       <td className="text-end">€{item.price.toFixed(2)}</td>
                       <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="table-light fw-bold">
+                  ))
+                ) : (
                   <tr>
-                    <td colSpan={3} className="text-end">Total:</td>
-                    <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                    <td colSpan={4} className="text-center">No items found in this order</td>
                   </tr>
-                </tfoot>
-              </table>
-            </div>
-          </Accordion.Body>
-        </Accordion.Item>
+                )}
+              </tbody>
+              <tfoot className="table-light fw-bold">
+                <tr>
+                  <td colSpan={3} className="text-end">Total:</td>
+                  <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card.Body>
+      </Card>
 
-        <Accordion.Item eventKey="1">
-          <Accordion.Header>Delivery Location</Accordion.Header>
-          <Accordion.Body className="p-3">
-            {order.deliveryLocation ? (
-              <>
-                <p className="mb-2">
-                  <strong>Name:</strong> {order.deliveryLocation.name}
-                  {order.deliveryLocation.isDefault && (
-                    <span className="badge bg-info ms-2 px-2">Default Location</span>
-                  )}
-                </p>
-                <p className="mb-2"><strong>District:</strong> {order.deliveryLocation.district}</p>
-                <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
-              </>
-            ) : (
-              <Alert variant="warning">No delivery location information available</Alert>
-            )}
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
-
-      <div className="d-flex justify-content-center gap-3 mt-3 mb-4">
+      <div className="d-flex justify-content-center gap-3 mt-4 mb-4">
         <Link to="/" className="btn btn-secondary rounded px-2 py-1 fw-medium" style={{ width: '120px', fontSize: '0.9rem' }}>
           Continue Shopping
         </Link>
@@ -17646,7 +19279,7 @@ export default OrderSuccessPage;
 ```
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -17661,6 +19294,7 @@ import { FaStarHalfAlt } from 'react-icons/fa';
 import { FaHeart } from 'react-icons/fa';
 import { FaRegHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Define interface for product data matching backend response
 interface ProductImage {
@@ -17705,7 +19339,6 @@ interface PaginatedProductsResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
 
 const ProductDetailPage = () => {
   // State for product
@@ -17737,7 +19370,7 @@ const ProductDetailPage = () => {
   // Hooks
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const { addOrUpdateItemQuantity, cartItems } = useCart();
+  const { addToCart, cartItems } = useCart();
   const { isAuthenticated, token } = useAuth();
   const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
   
@@ -17864,7 +19497,7 @@ const ProductDetailPage = () => {
     setIsAddingToCart(true);
     
     try {
-      await addOrUpdateItemQuantity(product.id, 1);
+      await addToCart(product.id, 1);
       // Success toast is handled by context
     } catch (error) {
       // Error is handled by context
@@ -18041,7 +19674,7 @@ const ProductDetailPage = () => {
         <Alert variant="danger">
           {error}
         </Alert>
-        <Button variant="secondary" onClick={handleBackClick}>
+        <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
           Back to Products
         </Button>
       </Container>
@@ -18055,7 +19688,7 @@ const ProductDetailPage = () => {
         <Alert variant="warning">
           Product not found or has been removed.
         </Alert>
-        <Button variant="secondary" onClick={handleBackClick}>
+        <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
           Back to Products
         </Button>
       </Container>
@@ -18064,10 +19697,32 @@ const ProductDetailPage = () => {
   
   // Render product details
   return (
-    <Container className="py-3">
+    <Container className="py-3 product-detail-container">
+      <style>
+        {`
+          .product-description {
+            max-height: 150px;
+            overflow-y: auto;
+            padding-right: 5px;
+          }
+          .product-description::-webkit-scrollbar {
+            width: 6px;
+          }
+          .product-description::-webkit-scrollbar-thumb {
+            background-color: #ced4da;
+            border-radius: 3px;
+          }
+          @media (max-width: 768px) {
+            .product-detail-section {
+              min-height: 350px;
+            }
+          }
+        `}
+      </style>
+      
       <Row className="mb-2">
         <Col>
-          <Button variant="secondary" onClick={handleBackClick} className="mb-2">
+          <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
             &larr; Back to Products
           </Button>
         </Col>
@@ -18077,19 +19732,69 @@ const ProductDetailPage = () => {
         {/* Product Image Column */}
         <Col xs={12} md={6} className="mb-3 mb-md-0">
           <div className="position-relative">
-            {product.images && product.images.length > 0 ? (
+            {product.images && product.images.length > 1 ? (
+              <Carousel 
+                interval={null} 
+                className="product-carousel" 
+                indicators={true} 
+                controls={true}
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '0.5rem',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  height: '350px'
+                }}
+              >
+                {product.images.map((image, index) => (
+                  <Carousel.Item 
+                    key={image.id}
+                    style={{
+                      height: '350px',
+                      textAlign: 'center',
+                      padding: '10px'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <img
+                        className="d-block"
+                        src={getImageUrl(image.url)}
+                        alt={`${product.name} - Image ${index + 1}`}
+                        style={{ 
+                          objectFit: 'contain',
+                          maxHeight: '330px',
+                          width: 'auto',
+                          maxWidth: '95%'
+                        }}
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          if (e.currentTarget.src !== '/placeholder-image.svg') {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder-image.svg';
+                            console.warn(`Failed to load image: ${image.url || 'unknown'}`);
+                          }
+                        }}
+                      />
+                    </div>
+                  </Carousel.Item>
+                ))}
+              </Carousel>
+            ) : (
               <Card.Img 
                 variant="top" 
-                src={
-                  product.images[0].url.startsWith('/uploads/') 
-                    ? `${UPLOADS_URL}${product.images[0].url.substring(8)}`
-                    : product.images[0].url.startsWith('http') 
-                      ? product.images[0].url
-                      : `${API_BASE_URL}${product.images[0].url}`
+                src={product.images && product.images.length > 0 
+                  ? getImageUrl(product.images[0].url)
+                  : getImageUrl(null)
                 } 
                 alt={product.name}
                 style={{ 
-                  height: '400px', 
+                  height: '350px', 
                   objectFit: 'contain',
                   backgroundColor: '#f8f9fa' 
                 }}
@@ -18101,18 +19806,11 @@ const ProductDetailPage = () => {
                   }
                 }}
               />
-            ) : (
-              <Card.Img 
-                variant="top" 
-                src="/placeholder-image.svg"
-                alt={product.name}
-                style={{ height: '400px', objectFit: 'contain' }}
-              />
             )}
             {isNewProduct() && (
               <Badge 
                 bg="info" 
-                className="position-absolute top-0 start-0 m-2"
+                className="position-absolute top-0 start-0 m-2 z-1"
               >
                 New!
               </Badge>
@@ -18121,8 +19819,8 @@ const ProductDetailPage = () => {
         </Col>
         
         {/* Product Details Column */}
-        <Col xs={12} md={6}>
-          <div className="d-flex justify-content-between align-items-start mb-2">
+        <Col xs={12} md={6} className="product-detail-section d-flex flex-column">
+          <div className="d-flex justify-content-between align-items-start mb-1">
             <h1 className="mb-0 fs-2">{product.name}</h1>
             <Button 
               variant="outline-danger" 
@@ -18141,11 +19839,11 @@ const ProductDetailPage = () => {
             </Button>
           </div>
           
-          <h2 className="text-primary mb-2 fs-3">€{product.price.toFixed(2)}</h2>
+          <h2 className="text-primary mb-1 fs-3">€{product.price.toFixed(2)}</h2>
           
           {/* Display Rating */}
           {product.averageRating !== undefined && product.averageRating !== null && (
-            <div className="mb-2 d-flex align-items-center">
+            <div className="mb-1 d-flex align-items-center">
               <StarRating rating={product.averageRating} />
               <span className="ms-2 text-muted">
                 ({product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'})
@@ -18153,7 +19851,7 @@ const ProductDetailPage = () => {
             </div>
           )}
           
-          <div className="mb-2">
+          <div className="mb-1">
             {product.stock > 0 ? (
               <Badge 
                 bg={product.stock > 10 ? "success" : "warning"} 
@@ -18171,161 +19869,161 @@ const ProductDetailPage = () => {
             )}
           </div>
           
+          <div className="mb-1">
+            <p className="text-muted small mb-0">Added on {formatDate(product.createdAt)}</p>
+          </div>
+          
+          {/* Description with reduced margin */}
           <div className="mb-2">
-            <p className="text-muted small">Added on {formatDate(product.createdAt)}</p>
+            <h5 className="mb-1">Description</h5>
+            <p className="text-break mb-0 product-description">{product.description || 'No description available.'}</p>
           </div>
           
-          <div className="mb-3">
-            <h5>Description</h5>
-            <p className="text-break mb-2">{product.description || 'No description available.'}</p>
+          {/* Add to Cart Button - with improved positioning */}
+          <div className="mt-3 mb-2 sticky-bottom">
+            <Button
+              variant={isInCart ? "success" : "primary"}
+              className="w-100 py-2"
+              onClick={handleAddToCartClick}
+              disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
+            >
+              {isAddingToCart ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
+                  Adding...
+                </>
+              ) : isInCart ? (
+                '✓ In Cart'
+              ) : product?.stock <= 0 ? (
+                'Out of Stock'
+              ) : (
+                'Add to Cart'
+              )}
+            </Button>
           </div>
-          
-          {/* Add to Cart Button */}
-          <Row className="align-items-center mb-3 g-2">
-            <Col>
-              <Button
-                variant={isInCart ? "success" : "primary"}
-                className="w-100"
-                onClick={handleAddToCartClick}
-                disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
-              >
-                {isAddingToCart ? (
-                  <>
-                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
-                    Adding...
-                  </>
-                ) : isInCart ? (
-                  '✓ In Cart'
-                ) : product?.stock <= 0 ? (
-                  'Out of Stock'
-                ) : (
-                  'Add to Cart'
-                )}
-              </Button>
-            </Col>
-          </Row>
-          
-          {/* Reviews Section */}
-          <Row className="mt-4">
-            <Col xs={12}>
-              <Card>
-                <Card.Header className="bg-light">
-                  <h3 className="fs-4 mb-0">Reviews</h3>
-                </Card.Header>
-                <Card.Body>
-                  {/* Write Review Form */}
-                  {isAuthenticated && !hasUserReviewed && (
-                    <div className="mb-4">
-                      <h4 className="fs-5 mb-3">Write a Review</h4>
-                      <Form onSubmit={handleSubmitReview}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>Rating</Form.Label>
-                          <Form.Select 
-                            value={newRating} 
-                            onChange={(e) => setNewRating(parseInt(e.target.value))}
-                            required
-                          >
-                            <option value="0">Select a rating</option>
-                            <option value="1">1 - Poor</option>
-                            <option value="2">2 - Fair</option>
-                            <option value="3">3 - Good</option>
-                            <option value="4">4 - Very Good</option>
-                            <option value="5">5 - Excellent</option>
-                          </Form.Select>
-                        </Form.Group>
-                        
-                        <Form.Group className="mb-3">
-                          <Form.Label>Comment (optional)</Form.Label>
-                          <Form.Control 
-                            as="textarea" 
-                            rows={3} 
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Share your thoughts about this product..."
-                          />
-                        </Form.Group>
-                        
-                        {submitReviewError && (
-                          <Alert variant="danger" className="mb-3">
-                            {submitReviewError}
-                          </Alert>
-                        )}
-                        
-                        <Button 
-                          type="submit" 
-                          variant="outline-primary"
-                          disabled={isSubmittingReview}
-                        >
-                          {isSubmittingReview ? (
-                            <>
-                              <Spinner
-                                as="span"
-                                animation="border"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                                className="me-1"
-                              />
-                              Submitting...
-                            </>
-                          ) : (
-                            'Submit Review'
-                          )}
-                        </Button>
-                      </Form>
-                    </div>
-                  )}
-                  
-                  {/* Display Reviews */}
-                  <div>
-                    <h4 className="fs-5 mb-3">Customer Reviews</h4>
+        </Col>
+      </Row>
+
+      {/* Reviews Section - moved outside product details column */}
+      <Row className="mt-4">
+        <Col xs={12}>
+          <Card>
+            <Card.Header className="bg-light">
+              <h3 className="fs-4 mb-0">Reviews</h3>
+            </Card.Header>
+            <Card.Body>
+              {/* Write Review Form */}
+              {isAuthenticated && !hasUserReviewed && (
+                <div className="mb-4">
+                  <h4 className="fs-5 mb-3 fw-semibold">Write a Review</h4>
+                  <Form onSubmit={handleSubmitReview}>
+                    <Form.Group className="mb-3">
+                      <Form.Label className="fw-medium">Rating</Form.Label>
+                      <Form.Select 
+                        value={newRating} 
+                        onChange={(e) => setNewRating(parseInt(e.target.value))}
+                        required
+                      >
+                        <option value="0">Select a rating</option>
+                        <option value="1">1 - Poor</option>
+                        <option value="2">2 - Fair</option>
+                        <option value="3">3 - Good</option>
+                        <option value="4">4 - Very Good</option>
+                        <option value="5">5 - Excellent</option>
+                      </Form.Select>
+                    </Form.Group>
                     
-                    {isLoadingReviews && (
-                      <div className="text-center py-3">
-                        <Spinner animation="border" size="sm" role="status">
-                          <span className="visually-hidden">Loading reviews...</span>
-                        </Spinner>
-                        <p className="mb-0 mt-2">Loading reviews...</p>
-                      </div>
-                    )}
+                    <Form.Group className="mb-4">
+                      <Form.Label className="fw-medium">Comment (optional)</Form.Label>
+                      <Form.Control 
+                        as="textarea" 
+                        rows={3} 
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Share your thoughts about this product..."
+                      />
+                    </Form.Group>
                     
-                    {reviewError && !isLoadingReviews && (
-                      <Alert variant="danger">
-                        {reviewError}
+                    {submitReviewError && (
+                      <Alert variant="danger" className="mb-3">
+                        {submitReviewError}
                       </Alert>
                     )}
                     
-                    {!isLoadingReviews && !reviewError && reviews.length === 0 && (
-                      <p className="text-muted">
-                        No reviews yet. Be the first to review this product!
-                      </p>
-                    )}
-                    
-                    {!isLoadingReviews && !reviewError && reviews.length > 0 && (
-                      <ListGroup variant="flush">
-                        {reviews.map((review) => (
-                          <ListGroup.Item key={review.id} className="py-3">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
-                              <div className="d-flex align-items-center">
-                                <StarRating rating={review.rating} />
-                                <span className="ms-2 fw-bold">{review.user.email}</span>
-                              </div>
-                              <small className="text-muted">
-                                {formatDate(review.createdAt)}
-                              </small>
-                            </div>
-                            {review.comment && (
-                              <p className="mb-0 mt-2">{review.comment}</p>
-                            )}
-                          </ListGroup.Item>
-                        ))}
-                      </ListGroup>
-                    )}
+                    <Button 
+                      type="submit" 
+                      variant="primary"
+                      disabled={isSubmittingReview}
+                      className="px-4 py-2 rounded-pill fw-medium"
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Review'
+                      )}
+                    </Button>
+                  </Form>
+                </div>
+              )}
+              
+              {/* Display Reviews */}
+              <div>
+                <h4 className="fs-5 mb-3">Customer Reviews</h4>
+                
+                {isLoadingReviews && (
+                  <div className="text-center py-3">
+                    <Spinner animation="border" size="sm" role="status">
+                      <span className="visually-hidden">Loading reviews...</span>
+                    </Spinner>
+                    <p className="mb-0 mt-2">Loading reviews...</p>
                   </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+                )}
+                
+                {reviewError && !isLoadingReviews && (
+                  <Alert variant="danger">
+                    {reviewError}
+                  </Alert>
+                )}
+                
+                {!isLoadingReviews && !reviewError && reviews.length === 0 && (
+                  <p className="text-muted">
+                    No reviews yet. Be the first to review this product!
+                  </p>
+                )}
+                
+                {!isLoadingReviews && !reviewError && reviews.length > 0 && (
+                  <ListGroup variant="flush">
+                    {reviews.map((review) => (
+                      <ListGroup.Item key={review.id} className="py-3">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <div className="d-flex align-items-center">
+                            <StarRating rating={review.rating} />
+                            <span className="ms-2 fw-bold">{review.user.email}</span>
+                          </div>
+                          <small className="text-muted">
+                            {formatDate(review.createdAt)}
+                          </small>
+                        </div>
+                        {review.comment && (
+                          <p className="mb-0 mt-2">{review.comment}</p>
+                        )}
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
 
@@ -18367,10 +20065,11 @@ export default ProductDetailPage;
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaStore } from 'react-icons/fa';
+import api from '../utils/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -18381,7 +20080,7 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -18403,7 +20102,7 @@ const RegisterPage = () => {
     try {
       // --- Step 1: Attempt Registration ---
       console.log("Attempting registration for:", email);
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      const response = await api.post('/auth/register', {
         email: email,
         password: password,
       });
@@ -18463,6 +20162,11 @@ const RegisterPage = () => {
     }
   };
 
+  // If user is already authenticated, redirect to home
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Container fluid className="py-4">
       {/* Logo Section */}
@@ -18490,27 +20194,27 @@ const RegisterPage = () => {
               <Form onSubmit={handleRegister}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                   <Form.Text className="text-muted small">
                     Must be at least 6 characters long
@@ -18519,14 +20223,14 @@ const RegisterPage = () => {
                 
                 {/* Confirm Password input */}
                 <Form.Group className="mb-4" controlId="formBasicConfirmPassword">
-                  <Form.Label className="fw-medium">Confirm Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">Confirm Password</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="auth-input"
+                    className="py-2"
                   />
                 </Form.Group>
                 
@@ -18536,7 +20240,6 @@ const RegisterPage = () => {
                   type="submit"
                   disabled={isLoading}
                   className="w-100 py-2 rounded-pill fw-medium"
-                  size="lg"
                 >
                   {isLoading ? (
                     <>
@@ -18570,6 +20273,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { FaStore } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'; // Make sure this matches your backend
 
@@ -18615,52 +20319,73 @@ const RequestPasswordResetPage = () => {
   };
 
   return (
-    <Container className="d-flex justify-content-center align-items-center vh-100">
-      <Row>
-        <Col md={8} lg={6} xl={5}>
-          <Card className="shadow-sm p-4">
-            <Card.Body>
-              <h2 className="text-center mb-4">Reset Password</h2>
+    <Container fluid className="py-4">
+      {/* Logo Section */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} className="text-center">
+          <div className="store-logo-container mb-3">
+            <FaStore size={45} className="text-primary mb-2" />
+            <h1 className="h3 fw-semibold text-primary">HybridStore</h1>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className="justify-content-center">
+        <Col xs={12} sm={10} md={8} lg={5} xl={4}>
+          <Card className="shadow-sm border-0 auth-card">
+            <Card.Body className="p-4">
+              <h2 className="text-center mb-4 fw-semibold">Reset Password</h2>
+              
               <p className="text-center text-muted mb-4">
                 Enter your email address and we'll send you instructions to reset your password (if an account exists).
               </p>
 
               {message && (
-                <Alert variant={isError ? 'danger' : 'success'} className="mb-3">
+                <Alert variant={isError ? 'danger' : 'success'} className="mb-4">
                   {message}
                 </Alert>
               )}
 
               <Form onSubmit={handleRequestReset}>
-                <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email address</Form.Label>
+                <Form.Group className="mb-4" controlId="formBasicEmail">
+                  <Form.Label className="fw-medium text-neutral-700">Email address</Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="Enter email"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="py-2"
                   />
                 </Form.Group>
 
-                <Button variant="primary" type="submit" className="w-100" disabled={isLoading}>
+                <Button 
+                  variant="primary" 
+                  type="submit" 
+                  className="w-100 py-2 rounded-pill fw-medium" 
+                  disabled={isLoading}
+                >
                   {isLoading ? (
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Sending Request...
+                    </>
                   ) : (
                     'Request Reset Link'
                   )}
                 </Button>
               </Form>
 
-              <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+              <div className="text-center mt-4">
+                <Link to="/login" className="text-decoration-none fw-medium">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>
@@ -18680,6 +20405,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useParams, Link } from 'react-router-dom';
+import { FaStore } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -18762,21 +20488,31 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <Container fluid>
-      <Row className="justify-content-center align-items-center min-vh-100">
-        <Col sm={10} md={8} lg={6} xl={4}>
-          <Card className="shadow">
+    <Container fluid className="py-4">
+      {/* Logo Section */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} className="text-center">
+          <div className="store-logo-container mb-3">
+            <FaStore size={45} className="text-primary mb-2" />
+            <h1 className="h3 fw-semibold text-primary">HybridStore</h1>
+          </div>
+        </Col>
+      </Row>
+      
+      <Row className="justify-content-center">
+        <Col xs={12} sm={10} md={8} lg={5} xl={4}>
+          <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h3 className="text-center mb-4">Reset Your Password</h3>
+              <h2 className="text-center mb-4 fw-semibold">Reset Your Password</h2>
 
               {message && (
-                <Alert variant={isError ? 'danger' : 'success'} className="mb-3">
+                <Alert variant={isError ? 'danger' : 'success'} className="mb-4">
                   {message}
                 </Alert>
               )}
 
               {!isSuccess && !token && (
-                 <Alert variant='danger' className="mb-3">
+                 <Alert variant='danger' className="mb-4">
                     Invalid or missing password reset token link.
                  </Alert>
               )}
@@ -18784,48 +20520,54 @@ const ResetPasswordPage = () => {
               {token && (
                 <Form onSubmit={handleResetPassword}>
                   <Form.Group className="mb-3" controlId="formNewPassword">
-                    <Form.Label>New Password</Form.Label>
+                    <Form.Label className="fw-medium text-neutral-700">New Password</Form.Label>
                     <Form.Control
                       type="password"
-                      placeholder="Enter new password"
+                      placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
                       disabled={isLoading || isSuccess}
+                      className="py-2"
                     />
                     <Form.Text className="text-muted">
                       Must be at least 6 characters long.
                     </Form.Text>
                   </Form.Group>
 
-                  <Form.Group className="mb-3" controlId="formConfirmPassword">
-                    <Form.Label>Confirm New Password</Form.Label>
+                  <Form.Group className="mb-4" controlId="formConfirmPassword">
+                    <Form.Label className="fw-medium text-neutral-700">Confirm New Password</Form.Label>
                     <Form.Control
                       type="password"
-                      placeholder="Confirm new password"
+                      placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
                       minLength={6}
                       disabled={isLoading || isSuccess}
+                      className="py-2"
                     />
                   </Form.Group>
 
                   <Button 
                     variant="primary" 
                     type="submit" 
-                    className="w-100" 
+                    className="w-100 py-2 rounded-pill fw-medium" 
                     disabled={isLoading || isSuccess || !token}
                    >
                     {isLoading ? (
-                      <Spinner
-                        as="span"
-                        animation="border"
-                        size="sm"
-                        role="status"
-                        aria-hidden="true"
-                      />
+                      <>
+                        <Spinner
+                          as="span"
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          aria-hidden="true"
+                          className="me-2"
+                        />
+                        Resetting Password...
+                      </>
                     ) : (
                       'Reset Password'
                     )}
@@ -18833,8 +20575,8 @@ const ResetPasswordPage = () => {
                 </Form>
               )}
 
-              <div className="text-center mt-3">
-                <Link to="/login">Back to Login</Link>
+              <div className="text-center mt-4">
+                <Link to="/login" className="text-decoration-none fw-medium">Back to Login</Link>
               </div>
             </Card.Body>
           </Card>
@@ -18867,8 +20609,10 @@ import { FaChevronRight } from 'react-icons/fa';
 import { FaInfoCircle } from 'react-icons/fa';
 import { FaCog } from 'react-icons/fa';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import { FaShieldAlt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 interface UserProfile {
   id: number;
@@ -18940,6 +20684,9 @@ const SettingsPage = () => {
   // Add state for tracking operations in progress
   const [isSettingDefault, setIsSettingDefault] = useState<number | null>(null);
   const [isDeletingLocation, setIsDeletingLocation] = useState<number | null>(null);
+  
+  // Add these state variables if they don't exist already (they seem to be defined around line 50)
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
@@ -19319,6 +21066,79 @@ const SettingsPage = () => {
     }
   };
 
+  // Add this function near the other handler functions (around line 205)
+  const handleShowPasswordModal = () => {
+    // Reset form state
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    setShowPasswordModal(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+  };
+
+  // Update the handlePasswordChange function to use the api utility
+  const handlePasswordChange = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingPassword(true);
+    setUpdateError(null);
+    setUpdateSuccess(null);
+    
+    // Basic validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setUpdateError('All fields are required');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setUpdateError('New passwords do not match');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setUpdateError('New password must be at least 6 characters long');
+      setIsUpdatingPassword(false);
+      return;
+    }
+    
+    try {
+      // Use the api utility instead of axios directly
+      const response = await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      
+      setUpdateSuccess('Password updated successfully');
+      toast.success('Password has been changed');
+      
+      // Clear form fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        if (err.response.status === 401 && err.response.data.message === 'Incorrect current password.') {
+          setUpdateError('Current password is incorrect');
+        } else {
+          setUpdateError(err.response.data.message || 'Failed to update password');
+        }
+        console.error('Error changing password:', err.response.data);
+      } else {
+        setUpdateError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container className="py-4 text-center">
@@ -19359,6 +21179,11 @@ const SettingsPage = () => {
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>
+                <Nav.Link eventKey="security" className="py-3">
+                  <FaShieldAlt className="me-2" size={18} /> Security
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
                 <Nav.Link eventKey="preferences" className="py-3">
                   <FaCog className="me-2" size={18} /> Preferences
                 </Nav.Link>
@@ -19380,16 +21205,6 @@ const SettingsPage = () => {
                     </div>
                     <FaChevronRight className="text-muted" />
                   </div>
-                  
-                  <Link to="#" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaLock className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">Change Password</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </Link>
                   
                   <Link to="/orders" 
                     className="d-flex justify-content-between align-items-center list-group-item"
@@ -19519,7 +21334,7 @@ const SettingsPage = () => {
                             <FaEdit className="me-1" /> Edit
                           </Button>
                           <Button 
-                            variant="outline-danger"
+                            variant="danger"
                             size="sm"
                             onClick={() => handleDeleteLocation(location.id)}
                             disabled={isDeletingLocation !== null || isSettingDefault !== null}
@@ -19548,6 +21363,100 @@ const SettingsPage = () => {
                     ))}
                   </ListGroup>
                 )}
+              </Tab.Pane>
+              
+              {/* Security Tab */}
+              <Tab.Pane eventKey="security" className="p-4">
+                <h4 className="mb-4 fs-5 fw-semibold">Change Your Password</h4>
+                
+                {updateError && (
+                  <Alert variant="danger" className="mb-4">
+                    {updateError}
+                  </Alert>
+                )}
+                
+                {updateSuccess && (
+                  <Alert variant="success" className="mb-4">
+                    {updateSuccess}
+                  </Alert>
+                )}
+                
+                <Form onSubmit={handlePasswordChange}>
+                  <Row>
+                    <Col md={8} lg={6}>
+                      <Form.Group className="mb-3" controlId="formCurrentPassword">
+                        <Form.Label className="fw-medium">Current Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Enter your current password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
+                      
+                      <Form.Group className="mb-3" controlId="formNewPassword">
+                        <Form.Label className="fw-medium">New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                        />
+                        <Form.Text className="text-muted">
+                          Password must be at least 6 characters long.
+                        </Form.Text>
+                      </Form.Group>
+                      
+                      <Form.Group className="mb-4" controlId="formConfirmPassword">
+                        <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
+                      
+                      <Button
+                        variant="primary"
+                        type="submit"
+                        disabled={isUpdatingPassword}
+                        className="fw-medium py-2 rounded-pill px-4"
+                      >
+                        {isUpdatingPassword ? (
+                          <>
+                            <Spinner
+                              as="span"
+                              animation="border"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                              className="me-2"
+                            />
+                            Updating...
+                          </>
+                        ) : (
+                          'Update Password'
+                        )}
+                      </Button>
+                    </Col>
+                  </Row>
+                </Form>
+                
+                <hr className="my-4" />
+                
+                <div className="mt-4">
+                  <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
+                  <ul className="text-muted">
+                    <li>Use a combination of letters, numbers, and special characters</li>
+                    <li>Avoid using easily guessable information like birthdays</li>
+                    <li>Use different passwords for different accounts</li>
+                    <li>Change your password periodically for enhanced security</li>
+                  </ul>
+                </div>
               </Tab.Pane>
               
               {/* Preferences Tab */}
@@ -19604,7 +21513,6 @@ const SettingsPage = () => {
                 value={formName} 
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Enter your name"
-                className="auth-input"
               />
             </Form.Group>
             
@@ -19651,7 +21559,6 @@ const SettingsPage = () => {
                     value={locationForm.name}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.name}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -19672,7 +21579,6 @@ const SettingsPage = () => {
                     value={locationForm.phone}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.phone}
                   />
                   <Form.Control.Feedback type="invalid">
@@ -19691,7 +21597,6 @@ const SettingsPage = () => {
                     value={locationForm.district}
                     onChange={handleLocationFormChange}
                     required
-                    className="auth-input"
                     isInvalid={!!formErrors.district}
                   >
                     <option value="" disabled>-- Select District --</option>
@@ -19724,6 +21629,88 @@ const SettingsPage = () => {
           </Form>
         </Modal.Body>
       </Modal>
+      
+      {/* Password Change Modal */}
+      <Modal show={showPasswordModal} onHide={handleClosePasswordModal} centered>
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-semibold">Change Password</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <Form onSubmit={handlePasswordChange}>
+            {updateError && (
+              <Alert variant="danger" className="mb-3">
+                {updateError}
+              </Alert>
+            )}
+            {updateSuccess && (
+              <Alert variant="success" className="mb-3">
+                {updateSuccess}
+              </Alert>
+            )}
+            
+            <Form.Group className="mb-3" controlId="formCurrentPassword">
+              <Form.Label className="fw-medium">Current Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <Form.Group className="mb-3" controlId="formNewPassword">
+              <Form.Label className="fw-medium">New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <Form.Text className="text-muted">
+                Password must be at least 6 characters long.
+              </Form.Text>
+            </Form.Group>
+            
+            <Form.Group className="mb-4" controlId="formConfirmPassword">
+              <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+            
+            <div className="d-grid">
+              <Button 
+                variant="primary" 
+                type="submit"
+                disabled={isUpdatingPassword}
+                className="fw-medium py-2 rounded-pill"
+              >
+                {isUpdatingPassword ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };
@@ -19745,9 +21732,11 @@ import { FaStar } from 'react-icons/fa';
 import { FaStarHalfAlt } from 'react-icons/fa';
 import { FaRegStar } from 'react-icons/fa';
 import { useWishlist } from '../context/WishlistContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Define Product interface with support for both image formats
 interface ProductImage {
@@ -19769,11 +21758,9 @@ interface Product {
   reviewCount?: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3001/uploads';
-
 const WishlistPage: React.FC = () => {
   const { wishlistItems, isLoading, error, fetchWishlist, removeFromWishlist } = useWishlist();
+  const { t } = useTranslation();
 
   // Reload wishlist when the component mounts
   useEffect(() => {
@@ -19787,9 +21774,10 @@ const WishlistPage: React.FC = () => {
     
     try {
       await removeFromWishlist(productId);
-      toast.success(`${productName} removed from wishlist`);
+      toast.success(t('wishlist.removedFromWishlist'));
     } catch (error) {
       console.error("Error removing item from wishlist:", error);
+      toast.error(t('wishlist.errorRemoving', 'Error removing item from wishlist'));
     }
   };
 
@@ -19814,12 +21802,12 @@ const WishlistPage: React.FC = () => {
 
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">My Wishlist</h2>
+      <h2 className="mb-4 fw-semibold">{t('wishlist.title')}</h2>
       
       <div className="mb-4">
         <Link to="/" className="text-decoration-none">
           <Button variant="outline-secondary" size="sm" className="rounded-pill px-3 py-2">
-            <FaChevronLeft className="me-2" /> Back to Shopping
+            <FaChevronLeft className="me-2" /> {t('cart.continueShopping')}
           </Button>
         </Link>
       </div>
@@ -19827,22 +21815,28 @@ const WishlistPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center my-5">
           <Spinner animation="border" role="status" variant="primary">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('common.loading')}</span>
           </Spinner>
-          <p className="mt-3">Loading your wishlist...</p>
+          <p className="mt-3">{t('wishlist.loadingWishlist', 'Loading your wishlist...')}</p>
         </div>
       ) : error ? (
         <Alert variant="danger">{error}</Alert>
       ) : wishlistItems.length === 0 ? (
         <EmptyState
           icon={<FaRegHeart />}
-          title="Your Wishlist is Empty"
-          message="Browse our products and add items you love to your wishlist!"
-          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">Browse Products</Link>}
+          title={t('wishlist.emptyWishlist')}
+          message={t('wishlist.emptyWishlistMessage')}
+          actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">{t('wishlist.browseProducts', 'Browse Products')}</Link>}
         />
       ) : (
         <>
-          <p className="text-muted mb-4">{wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} in your wishlist</p>
+          <p className="text-muted mb-4">
+            {t('wishlist.itemCount', '{{count}} items in your wishlist', { 
+              count: wishlistItems.length,
+              defaultValue_plural: '{{count}} items in your wishlist',
+              defaultValue_one: '1 item in your wishlist'
+            })}
+          </p>
           
           <Row className="g-3 my-3">
             {wishlistItems.map((item) => (
@@ -19853,19 +21847,11 @@ const WishlistPage: React.FC = () => {
                       {((item.product.images && item.product.images.length > 0) || item.product.imageUrl) ? (
                         <Card.Img 
                           variant="top" 
-                          src={
+                          src={getImageUrl(
                             item.product.images && item.product.images.length > 0
-                              ? (item.product.images[0].url.startsWith('/uploads/') 
-                                ? `${UPLOADS_URL}${item.product.images[0].url.substring(8)}`
-                                : item.product.images[0].url.startsWith('http')
-                                  ? item.product.images[0].url
-                                  : `${API_BASE_URL}${item.product.images[0].url}`)
-                              : (item.product.imageUrl?.startsWith('/uploads/')
-                                ? `${UPLOADS_URL}${item.product.imageUrl.substring(8)}`
-                                : item.product.imageUrl?.startsWith('http')
-                                  ? item.product.imageUrl
-                                  : `${API_BASE_URL}${item.product.imageUrl || ''}`)
-                          } 
+                              ? item.product.images[0].url
+                              : item.product.imageUrl
+                          )}
                           alt={item.product.name}
                           style={{ height: '150px', objectFit: 'contain', padding: '0.75rem' }}
                           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -19892,7 +21878,7 @@ const WishlistPage: React.FC = () => {
                         className="position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow-sm"
                         style={{ width: '32px', height: '32px' }}
                         onClick={(e) => handleRemoveFromWishlist(e, item.product.id, item.product.name)}
-                        aria-label="Remove from wishlist"
+                        aria-label={t('wishlist.removeFromWishlist')}
                       >
                         <FaTrash className="text-danger" style={{ fontSize: '14px' }} />
                       </Button>
@@ -20096,9369 +22082,69 @@ export const getOrderStatusDescription = (status: string): string => {
 }; 
 ```
 
+## File: `packages\customer-frontend\src\utils\imageUrl.ts`
+
+```
+/**
+ * Utility function to construct absolute image URLs from backend paths
+ * 
+ * This handles several cases:
+ * 1. Already absolute URLs (starting with http:// or https://)
+ * 2. Relative paths from the backend (starting with /)
+ * 3. Missing or empty paths (returns a placeholder)
+ */
+
+/**
+ * Converts a relative image path to an absolute URL
+ * @param relativePath The image path received from the backend, may be relative or already absolute
+ * @returns A properly formatted absolute URL for the image
+ */
+export function getImageUrl(relativePath?: string | null): string {
+  // Get base URL from env vars (without /api) for serving static content
+  const BASE_URL = import.meta.env.VITE_API_URL || 
+                  (import.meta.env.VITE_API_BASE_URL ? 
+                   import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '') : 
+                   'http://localhost:3001');
+  
+  // Allow explicit uploads URL to override base URL for uploads
+  const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || `${BASE_URL}/uploads`;
+   
+  // Default placeholder image path
+  const PLACEHOLDER_IMAGE_PATH = '/placeholder-image.svg';
+   
+  // Handle null, undefined or empty string
+  if (!relativePath) {
+    return PLACEHOLDER_IMAGE_PATH;
+  }
+   
+  // Handle already absolute URLs
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath;
+  }
+   
+  // Handle paths that start with /uploads specifically
+  if (relativePath.startsWith('/uploads/')) {
+    // For upload paths, use the dedicated UPLOADS_URL
+    return `${UPLOADS_URL.replace(/\/uploads\/?$/, '')}${relativePath}`;
+  }
+  // Handle other relative paths starting with /
+  else if (relativePath.startsWith('/')) {
+    // Use the base URL for other paths
+    return `${BASE_URL.replace(/\/$/, '')}${relativePath}`;
+  }
+   
+  // For any other unexpected format, return the path combined with API_BASE_URL
+  // This handles cases where the path doesn't start with / but is still relative
+  return `${BASE_URL.replace(/\/$/, '')}/${relativePath}`;
+}
+
+// Export as named export
+export default getImageUrl;
+```
+
 ## File: `src\pages\CheckoutPage.tsx`
 
 ```
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-
-const CheckoutPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    // ... (previous code)
-
-    try {
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
-      // ... (previous code)
-
- 
- 
 ```
 
 ## File: `src\test\setup.ts`
