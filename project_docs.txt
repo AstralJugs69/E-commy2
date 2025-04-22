@@ -1,213 +1,242 @@
 # Project Documentation: Hybrid E-commerce Platform (Comprehensive)
-*(Generated: 2025-04-15)*
+*(Generated: 2025-05-27 - Reflects state after refactor/code-polish-v2 work)*
 
 ## 1. Current Progress
 
-Work has commenced on the `refactor/code-polish-v2` branch with the goal of addressing high-priority technical debt and UX polish items identified during code review. This phase focuses on resolving infrastructure issues and improving the overall user experience.
+Work commenced on the `feature/customer-address-management` branch (now merged or superseded) and continued on the `refactor/code-polish-v2` branch.
 
-## 1.1 Current Focus: Delivery Location Management
+### 1.1 Refactor/Polish Phase (Branch: `refactor/code-polish-v2`)
 
-### Goal: 
+**Goal:** Address technical debt, UX polish items, add i18n foundation, and prepare for deployment via Docker.
+
+**Branch:** `refactor/code-polish-v2` (branched from main)
+
+**Status:** Key refactors, fixes, and deployment setup completed. Ready for further polish or feature work.
+
+**Completed on this branch:**
+
+*   **Backend - Phone Assignment:** Fixed potential race condition by moving phone number assignment (`Available` -> `Busy`) into the atomic `POST /api/orders` transaction. Removed the separate `GET /api/orders/assign-number/:orderId` route. Added `assignedPhoneNumberId` relation to `Order` model (Migration: `20250420125359_assign_phone_in_order_tx`). (L13, L28)
+*   **Customer FE - Order Success Page:** Refined page to fetch and display the *specific* assigned verification phone number (as a `tel:` link) from order details, improving clarity. Removed generic reminder text.
+*   **FE - Image URL Handling:** Created `getImageUrl` utility functions in both Customer and Admin frontends to consistently handle image path construction (prepending API base URL for relative paths, using absolute URLs directly, providing placeholders). Updated components (`ProductCard`, `ProductDetailPage`, `CartPage`, `WishlistPage`, Admin tables/details) to use this utility. (L23)
+*   **Customer FE - Product Detail Page:** Implemented `react-bootstrap Carousel` to display multiple product images. Adjusted layout to improve visibility of Add-to-Cart button and resized "Back to Products" button.
+*   **Customer FE - Cart Page:** Fixed quantity adjustment logic. Replaced direct input with +/- buttons using `updateCartItemQuantity` context function, respecting stock limits and min quantity.
+*   **Backend - Rate Limiting:** Adjusted `express-rate-limit` settings. Shortened general/write windows to 40s with adjusted limits (50/20). Increased login attempts slightly (15 per 15min). Verified stricter limits remain for password reset/register.
+*   **Admin FE - Password Change:** Added "Profile Settings" page (`/admin/profile`) allowing logged-in admins to change their own password (requires current password).
+*   **Customer FE - Password Change:** Added "Security" tab to Settings page (`/settings`) allowing logged-in customers to change their own password (requires current password).
+*   **Customer FE - Checkout Location:** Implemented Delivery Location selection dropdown on Checkout page. Added modal (`Add New Location`) to create new locations during checkout (using `POST /api/addresses`). Updated order submission (`POST /api/orders`) to send `deliveryLocationId`. Fetches districts for dropdown via `GET /api/districts`.
+*   **Customer FE - PWA Enhancements:**
+    *   Added `PWAPrompt` component using `useRegisterSW` to handle update notifications (toast with refresh button).
+    *   Added manual "Install App" button to Layout Navbar, triggered by `beforeinstallprompt` event.
+    *   Added necessary PWA icons (`192x192`, `512x512`, `apple-touch-icon`, `favicon`) to `/public` folder. Verified manifest settings.
+*   **Admin FE - Category Image Upload:** Modified Category modal to use `<input type="file">` instead of URL input. Integrated with `/api/admin/upload` endpoint for image processing (resize, convert to WebP) and storage. Category CRUD now uses the returned image URL.
+*   **Backend - Deployment Prep (Docker/Render):**
+    *   Created multi-stage `Dockerfile` in `packages/backend` for building and running the Node/Prisma app.
+    *   Created `.dockerignore` in `packages/backend`.
+    *   Modified `packages/backend/package.json` start script to include `npx prisma migrate deploy` before `node dist/index.js`.
+    *   Configured Render Web Service build command to use `npm install --production=false`.
+    *   Configured Render Web Service start command to use the updated `npm run start`.
+    *   Configured Render Static Sites for both frontends.
+    *   Configured required Environment Variables on Render (DATABASE_URL, JWT_SECRET, VITE_API_URL, CORS_ORIGIN).
+*   **Backend - Compression:** Added `compression` middleware to `index.ts` to enable gzip/brotli response compression.
+*   **i18n Setup (Customer FE):**
+    *   Installed `i18next`, `react-i18next`, `i18next-browser-languagedetector`.
+    *   Created `i18n.ts` configuration supporting 'en', 'am', 'om'.
+    *   Created placeholder `translation.json` files in `public/locales/`.
+    *   Added language switcher UI to `Layout.tsx`.
+    *   Internationalized text within `Layout.tsx`. (Full i18n refactor of other components deferred).
+
+**Next Steps (Deferred/Potential):**
+
+*   Complete i18n refactoring across all Customer FE components/pages.
+*   Obtain and implement actual Amharic/Oromo translations.
+*   Further UI/UX Polish (Feedback consistency, focus states, mobile responsiveness tuning, microcopy).
+*   Accessibility: Perform manual checks and address minor findings.
+*   Testing: Increase test coverage (backend integration, frontend components/flows).
+*   Refactor Admin FE Auth to use Context.
+*   Implement frontend retry logic for order creation if phone number assignment fails temporarily (backend now handles assignment atomically, but might fail if *no* numbers are available).
+*   Data flow diagram generation/review.
+
+## 1.2 Completed: Customer Address Management Foundation
+
+*(Details moved from previous Current Focus)*
+
+### Goal:
 Allow authenticated customers to save, edit, delete, and set default delivery locations on their profile (Settings page) and select a saved location during checkout.
 
-### Branch: 
-`feature/customer-address-management`
+### Branch:
+Work done on `feature/customer-address-management` (merged or state incorporated into `main` before `refactor/code-polish-v2` branch). Integration into Checkout completed on `refactor/code-polish-v2`.
 
 ### Progress:
 - Refactored Prisma Schema (Address -> DeliveryLocation), Migrated.
 - Added `/api/districts` endpoint.
-- Refactored `/api/addresses` routes for DeliveryLocation CRUD.
-- Refactored `POST /api/orders` to use `deliveryLocationId`, removed old geo/shipping logic. [Date: 2025-05-15]
+- Refactored `/api/addresses` routes (now `/api/delivery-locations` likely) for DeliveryLocation CRUD.
+- Refactored `POST /api/orders` to use `deliveryLocationId`.
+- Implemented Location selection/add modal in `CheckoutPage.tsx`.
+- Implemented Location management UI in `SettingsPage.tsx`.
 
-### Plan:
-1. Update Settings Page UI: Ensure the 'Delivery Locations' tab allows adding, viewing, editing, deleting, and setting default locations via the modal.
-2. Update Checkout Page (`CheckoutPage.tsx`): Allow users to select from saved delivery locations or create a new one. Pass the selected location ID correctly when placing the order.
-3. (Optional) Display selected/default location elsewhere if needed (e.g., simple display on main profile).
+## 1.3 Completed: Multiple Product Images
 
-## 1.2 Completed: Multiple Product Images
+*(From previous docs)* The project supports multiple product images.
+- Updated DB schema (`imageUrl` -> `images` relation).
+- Updated Backend API.
+- Updated Admin FE Product Form.
+- Updated Customer FE components (ProductCard, DetailPage, Cart, Wishlist).
 
-The project is now supporting multiple product images rather than a single image URL. This enhancement allows for a more comprehensive product showcase.
+## 1.4 Completed: Initial Refactor/Review Phase
 
-### Status Update:
-- Updated the database schema to replace the `imageUrl` field with an `images` relation in the Product model.
-- Implemented backend API changes to support the new schema structure.
-- Created migration scripts to handle the transition from single to multiple images.
-- Updated Admin FE Product Form for multi-image upload/management.
-- Fixed Customer FE components (ProductCard, DetailPage, Cart, Wishlist) to correctly display images using the new `images` relation and handle image URL construction properly. [Date: 2025-04-18]
-
-### Code Review & Consistency Checks:
-- Verified database indexes on critical fields for query performance
-- Standardized API base URL usage across both frontends to prevent duplicate `/api` path segments
-- Fixed image upload endpoint in ProductManagementPage
-- Verified consistent Address model field names across backend and frontend components
-[Date: 2025-05-04]
-
-## 1.3 Completed: Refactor/Review Phase (`refactor/code-review-performance-ux` branch)
-
-### Progress:
-- Added Database Indexes to schema and migrated.
-- Standardized API calls and verified Address schema usage.
-- Optimized Backend List Queries using select/include.
-- Frontend Optimizations:
-    - Optimized `react-icons` imports for smaller bundle size.
-    - Implemented `React.lazy` and `Suspense` for Admin FE page components (excluding ZoneManagement) to improve initial load time.
-    - Applied dynamic key workaround to Leaflet map on ZoneManagement page to resolve container reuse error. [Date: 2025-05-08]
-- Performed general aesthetics pass (spacing, alignment, button/card/form consistency).
-- Refined Settings page UX (tab clarity, list item affordance, icon colors), fixed UI hydration errors. [Date: 2025-05-12]
-
-Branch merged into main. [Date: 2025-05-12]
-
-- Added user-friendly descriptions for order statuses.
-- Implemented basic rate limiting on backend auth routes.
-- Applied minor UX improvements to Order Success page (link text, section title, emphasized ID). [Date: 2025-05-19]
-- Refactored Admin Dashboard to show separate sections for Pending Call, Verified, Processing, Shipped orders.
-- Standardized action button styling across Admin Dashboard live order sections. [Date: 2025-05-26]
-
-## 1.4 Refactor/Polish Phase (Branch: refactor/code-polish-v2)
-
-### Goal:
-Address high-priority technical debt and UX polish items identified during code review.
-
-### Branch:
-`refactor/code-polish-v2` (created from main)
-
-### Current Focus:
-Fixing the phone number assignment race condition during order creation. Move assignment logic into the `POST /api/orders` transaction and remove the separate `/api/orders/assign-number/:orderId` endpoint. (Related to L13, L2.2)
+*(From previous docs - `refactor/code-review-performance-ux` branch, merged to main)*
+- Added DB Indexes.
+- Standardized API calls.
+- Optimized Backend List Queries.
+- Frontend Optimizations (`react-icons`, `React.lazy` for Admin FE).
+- Admin Zone Map fix.
+- General aesthetics pass (spacing, alignment, consistency).
+- Settings page UX refinement.
+- Order status descriptions added.
+- Basic rate limiting on backend auth.
+- Minor UX improvements (Order Success page).
+- Admin Dashboard order section refactor.
 
 ## 2. Project Summary & Vision
 
 ### 2.1. Core Concept
-This project implements a **Hybrid E-commerce Platform**, designed primarily for businesses requiring a manual verification step after an online order is placed. It combines the convenience of a modern, **mobile-first e-commerce storefront** (product discovery, cart management, online checkout) with a mandatory **customer-initiated phone call** for final order confirmation and verification.
+Hybrid E-commerce Platform for businesses needing manual phone verification after online order placement. Mobile-first customer frontend (React PWA) + Admin Panel (React).
 
 ### 2.2. Unique Workflow
-1.  Customers browse products via a **React-based Customer Frontend** (intended as a PWA).
-2.  During checkout, the customer provides necessary details and their **geolocation** is captured via the browser API.
-3.  Upon submitting the online order, the **Node.js/Express Backend API** performs several actions atomically:
-    *   Validates order data and stock availability.
-    *   Performs a **location check** using Turf.js to determine if the customer's coordinates fall within admin-defined **Service Areas**.
-    *   Saves the order details, including shipping information (as JSON), line items, total amount, location coordinates, and the location check result (`Inside Zone`, `Outside Zone`, `Not Provided`, `Check Failed`).
-    *   Decrements stock for ordered products.
-    *   *(Ideal Future Refinement: Atomically assign an available phone number and store it on the order)*.
-4.  The customer is redirected to an **Order Success Page** which instructs them to call a specific phone number for verification.
-5.  The verification phone number is dynamically retrieved via a separate API call (`GET /api/orders/assign-number/:orderId`) which finds an 'Available' number from an admin-managed pool and marks it 'Busy'. *(Note: Potential race condition exists here; planned refinement is to assign during order creation)*.
-6.  A separate **React-based Admin Panel** allows staff to:
-    *   Manage Products (CRUD, including stock, cost price, image URL, category).
-    *   Manage Categories (CRUD, including image URL).
-    *   Manage Service Zones (View list, Add new zones via interactive map drawing).
-    *   Manage Phone Numbers (Add new numbers, toggle status: Available/Busy/Offline).
-    *   Manage Orders (View list filtered by status/date, View full details including items and customer location map, Update order status).
-    *   Manage Users (View list with aggregates like order count/total spent, View user details including order history).
-    *   View Dashboard/Statistics (Counts, Revenue, Recent Orders, Sales/User timeline charts).
+1.  Customer browses/adds to cart (React PWA).
+2.  Checkout: provides delivery details (selects/adds DeliveryLocation), geolocation captured.
+3.  Order Submission (`POST /api/orders`):
+    *   Validates data, delivery location.
+    *   **Atomically:**
+        *   Finds and assigns an available `PhoneNumber` (marks as 'Busy', stores ID on Order).
+        *   Checks stock.
+        *   Performs optional location check (Turf.js) against `ServiceArea` polygons (if enabled).
+        *   Saves Order, OrderItems.
+        *   Decrements stock.
+    *   Returns Order ID.
+    *   *(If no phone number available, transaction fails, returns error)*.
+4.  Redirect to Order Success Page: Displays Order ID and the **assigned verification phone number** (fetched from order details). Instructs user to call.
+5.  Admin Panel: Manage Products, Categories (with image uploads), Delivery Locations (via map?), Phone Numbers (status), Orders (view details, map, update status), Users, Zones (map drawing), Dashboard/Stats. Manual phone verification updates order status via Admin Panel.
 
 ### 2.3. Problem Solved
-This platform caters to businesses where automated fulfillment isn't feasible or desired due to:
-*   High-value items requiring verification.
-*   Complex delivery logistics needing confirmation.
-*   Service area restrictions requiring location checks.
-*   A business model emphasizing direct customer contact for trust-building or upselling.
-*   Regulatory requirements.
-It bridges the gap between purely manual (phone/in-person) ordering and fully automated e-commerce, offering customers online convenience while retaining essential manual checks for the business.
+Bridges manual/phone orders and full e-commerce. Caters to businesses needing verification, delivery checks, or direct contact.
 
 ## 3. Goals
 
 ### 3.1. Business Goals
-*   **Increase Order Volume:** Capture online sales potential.
-*   **Improve Order Accuracy:** Reduce manual transcription errors.
-*   **Enhance Operational Control:** Centralized digital system for orders, inventory (stock tracking), customer data, service zones, and phone line availability via Admin Panel.
-*   **Manage Service Areas:** Systematically enforce delivery zone restrictions using geolocation.
-*   **Build Brand Credibility:** Professional, modern online presence.
-*   **Efficient Verification:** Streamline the process of connecting customers to available staff for verification calls.
+*   Increase Order Volume, Improve Accuracy, Enhance Control, Manage Service Areas, Build Credibility, Efficient Verification.
 
 ### 3.2. Customer Experience (UX) Goals (Mobile-First Priority)
-*   **Intuitive Browsing:** Easy product discovery (search, filtering by category/sorting).
-*   **Seamless Cart/Checkout:** Simple client-side cart (MVP+ includes backend persistence), straightforward checkout form (optional address), clear location permission request.
-*   **Clear Post-Order Flow:** Unambiguous instructions on the Order Success page, including the correct, dynamically assigned verification phone number (with `tel:` link).
-*   **Account Management:** Secure registration/login, password reset, viewable profile (email, name), editable password, viewable order history and details, wishlist functionality. *(Address Management deferred)*.
-*   **Mobile Optimization:** Layouts, navigation (Offcanvas menu), and interactions designed primarily for mobile devices.
-*   **Performance:** Fast page loads and interactions.
-*   **PWA Features (Basic):** Installable application icon, basic asset caching via Service Worker. *(Setup complete, needs final verification/refinement)*.
+*   Intuitive Browsing/Search/Filter, Seamless Cart/Checkout (with Delivery Location selection), Clear Post-Order Flow (with specific verification #), Account Management (Profile, Orders, Wishlist, Delivery Locations), Mobile Optimization, Performance, PWA Installability/Updates.
 
 ### 3.3. Admin Experience (UX) Goals
-*   **Efficient Workflows:** Streamlined processes for managing orders (live view dashboard, status updates, filtering), products (CRUD w/ modal), categories, zones (map interface), phones, and users.
-*   **Data Clarity:** Clear presentation of data in tables, cards, and detail views. Visual map display for customer location on order details and zone management. Dashboard statistics and charts for quick insights.
-*   **Ease of Management:** Simple interfaces for core administrative tasks.
+*   Efficient Workflows (CRUD, Order processing, Zone management), Data Clarity (Tables, Maps, Stats), Ease of Management.
 
 ### 3.4. Technical Goals
-*   **Reliability:** High uptime, robust error handling, atomic transactions for critical state changes (order creation, stock updates).
-*   **Security:** Secure password handling (bcrypt hashing for storage and reset tokens), JWT-based session management, input validation (Zod on backend, basic frontend), authorization checks (middleware), HTTPS (deployment requirement). Protection against common vulnerabilities (XSS, SQLi via ORM/validation).
-*   **Performance:** Responsive APIs (<500ms target), efficient database queries (Prisma ORM, indexing considered), optimized frontend builds (Vite), fast initial load times (code splitting, PWA caching).
-*   **Maintainability:** Modular code structure (monorepo, separate routes/contexts/components), TypeScript for type safety, consistent coding patterns, meaningful commit history, this documentation file, basic automated test infrastructure initiated.
-*   **Scalability:** Stateless API design where feasible, potential for database read replicas, capable underlying technologies (Node.js, PostgreSQL). Local image storage identified as a scalability limitation for production.
+*   Reliability (Atomic transactions), Security (Hashing, JWT, Validation, CORS, Rate Limiting), Performance (Responsive API, Optimized FE builds, DB Indexing, Image Optimization), Maintainability (Monorepo, TS, Docs, Tests), Scalability (Stateless API, Cloud DB option).
 
 ## 4. Architecture & Technology Stack
 
-*   **Architecture:** Monorepo managed via `npm` workspaces. Three distinct packages: `backend`, `customer-frontend`, `admin-frontend`. Communication via RESTful JSON API. Client-side state management via React Context.
-*   **Monorepo Tool:** `npm` 7+ (workspaces feature)
+*   **Architecture:** Monorepo (`npm` workspaces), 3 packages (`backend`, `customer-frontend`, `admin-frontend`), REST API, React Context (Customer FE).
+*   **Monorepo Tool:** `npm` 7+
 *   **Backend (`packages/backend`):**
-    *   **Runtime:** Node.js (LTS version assumed)
-    *   **Framework:** Express.js (v5.x)
-    *   **Language:** TypeScript (v5.x) compiled to CommonJS
-    *   **ORM:** Prisma (v6.x) with Prisma Client
-    *   **Database:** PostgreSQL (Local instance during development)
-    *   **Authentication:** `jsonwebtoken` (JWT signing/verification), `bcrypt` (hashing passwords & reset tokens)
-    *   **Validation:** `zod` (for request bodies/params)
-    *   **File Uploads:** `multer` (saves to local `public/uploads` directory)
-    *   **Geospatial:** `@turf/boolean-point-in-polygon`, `@turf/helpers`
-    *   **Middleware:** `cors`, `express.json`, Custom Auth (`isUser`, `isAdmin`)
-    *   **Dev Tools:** `nodemon`, `ts-node`
+    *   Runtime: Node.js (LTS)
+    *   Framework: Express.js
+    *   Language: TypeScript
+    *   ORM: Prisma (v6.x)
+    *   Database: PostgreSQL
+    *   Auth: `jsonwebtoken`, `bcrypt`
+    *   Validation: `zod`
+    *   File Uploads: `multer` (to local `/public/uploads`), `sharp` (for processing to WebP)
+    *   Geospatial: `@turf/boolean-point-in-polygon`, `@turf/helpers`
+    *   Middleware: `cors`, `express.json`, `compression`, `express-rate-limit`, Custom Auth (`isUser`, `isAdmin`)
+    *   Dev Tools: `nodemon`, `ts-node`
+    *   Deployment: Docker container on Render.com
 *   **Customer Frontend (`packages/customer-frontend`):**
-    *   **Framework:** React (v19) with Vite (v6.x)
-    *   **Language:** TypeScript (v5.x) with TSX
-    *   **Styling:** Bootstrap (v5.3.x), `react-bootstrap` (v2.10.x), Custom CSS Overrides (`index.css`)
-    *   **Routing:** `react-router-dom` (v6.30.x)
-    *   **State Management:** React Context API (`AuthContext`, `CartContext`, `WishlistContext`)
-    *   **API Client:** `axios`
-    *   **Notifications:** `react-hot-toast`
-    *   **Icons:** `react-icons` (specifically `Fa` icons)
-    *   **PWA:** `vite-plugin-pwa` (v1.x)
-    *   **Build Tool:** Vite
+    *   Framework: React (v19) with Vite (v6.x)
+    *   Language: TypeScript (TSX)
+    *   Styling: Bootstrap, `react-bootstrap`, Custom CSS (`index.css` - Sage Green theme)
+    *   Routing: `react-router-dom`
+    *   State Management: React Context (`AuthContext`, `CartContext`, `WishlistContext`)
+    *   API Client: `axios` (via `src/utils/api.ts`)
+    *   Notifications: `react-hot-toast`
+    *   Icons: `react-icons`
+    *   i18n: `i18next`, `react-i18next`, `i18next-browser-languagedetector`, `i18next-http-backend` (Supports en, am, om)
+    *   PWA: `vite-plugin-pwa` (Auto update, Install prompt)
+    *   Build Tool: Vite
+    *   Deployment: Static Site on Render.com
 *   **Admin Frontend (`packages/admin-frontend`):**
-    *   **Framework:** React (v19) with Vite (v6.x)
-    *   **Language:** TypeScript (v5.x) with TSX
-    *   **Styling:** Bootstrap (v5.3.x), `react-bootstrap` (v2.10.x), Custom CSS Overrides (`index.css`)
-    *   **Routing:** `react-router-dom` (v6.30.0 - aligned from v7), `react-router-bootstrap` (v0.26.x)
-    *   **State Management:** Component state (`useState`, `useEffect`)
-    *   **API Client:** `axios`
-    *   **Notifications:** `react-hot-toast`
-    *   **Icons:** `react-icons` (specifically `Fi` and `Fa` icons)
-    *   **Mapping:** `leaflet`, `react-leaflet`, `leaflet-draw`, `@types/leaflet`, `@types/leaflet-draw`
-    *   **Charting:** `chart.js`, `react-chartjs-2`, `@types/chart.js`, `date-fns`
-    *   **Build Tool:** Vite
-*   **Testing Frameworks (Setup Initiated):**
-    *   Vitest
-    *   jsdom
-    *   React Testing Library (`@testing-library/react`)
-    *   Jest DOM Matchers (`@testing-library/jest-dom`)
-*   **Development Environment:** Local PostgreSQL instance preferred over initial Docker attempt due to user setup issues. Node managed via system install/nvm.
+    *   Framework: React (v19) with Vite (v6.x)
+    *   Language: TypeScript (TSX)
+    *   Styling: Bootstrap, `react-bootstrap`, Custom CSS (`index.css` - Neon Green theme)
+    *   Routing: `react-router-dom`, `react-router-bootstrap`
+    *   State Management: Component state, (Refactored Auth to `AuthContext`)
+    *   API Client: `axios` (via `src/utils/api.ts`)
+    *   Notifications: `react-hot-toast`
+    *   Icons: `react-icons`
+    *   Mapping: `leaflet`, `react-leaflet`, `leaflet-draw`
+    *   Charting: `chart.js`, `react-chartjs-2`
+    *   Build Tool: Vite
+    *   Deployment: Static Site on Render.com
+*   **Testing Frameworks:** Vitest, jsdom, React Testing Library, Jest DOM Matchers
 
-## 5. Development Log, Key Decisions & Issues
+## 5. Development Log, Key Decisions & Issues (Reflects `refactor/code-polish-v2`)
 
-*   **Initial Planning:** Defined detailed requirements for a hybrid e-commerce model with phone verification. Established MVP scope focusing on core order flow, basic product display, and minimal admin controls.
-*   **Framework Selection:**
-    *   Initial proposal included Vue.js.
-    *   Switched to **React** for both frontends due to user preference and perceived larger ecosystem/easier troubleshooting after encountering initial tooling friction with Vue setup.
-    *   Backend choice: **Node.js/Express** selected for JavaScript ecosystem consistency and performance. Prisma chosen as ORM for type safety and ease of use with PostgreSQL.
-*   **Monorepo Tooling:** Started with `pnpm`, switched to **`npm` workspaces** due to user environment issues/preference. Required removing `pnpm-lock.yaml`, `pnpm-workspace.yaml` and configuring `workspaces` in root `package.json`, followed by reinstalling dependencies.
-*   **Styling:**
-    *   Initial attempt with **Tailwind CSS** abandoned due to configuration issues (`@tailwindcss/postcss` requirement, build errors).
-    *   Switched to **Bootstrap 5 + `react-bootstrap`** for component library approach and potentially simpler build integration.
-    *   Implemented **custom theming** via CSS variable overrides in `index.css` (Neon Green primary, Dark Gray secondary). Addressed button contrast issues.
-    *   Performed multiple **polish passes** focusing on spacing, alignment, typography, component consistency, interactive states, and mobile responsiveness using Bootstrap utilities.
-*   **Backend Development (Sprint 1 & Enhancements):**
-    *   Implemented core API endpoints following REST principles.
-    *   Integrated Prisma for database interactions.
-    *   Implemented **JWT authentication**; debugged initial 401 errors caused by **inconsistent JWT secret defaults** between signing (`authRoutes`) and verification (`authMiddleware`). Standardized secret handling using `.env` and consistent defaults. Cleaned up middleware logging.
-    *   Implemented **bcrypt password hashing** for registration and login, replacing initial plain text MVP approach. Verified impact on existing vs new users.
-    *   Implemented **hashed token password reset** flow (request, reset endpoints).
-    *   Implemented **persistent cart** API endpoints (`/api/cart`).
-    *   Implemented **wishlist** API endpoints (`/api/wishlist`).
-    *   Implemented **product review** API endpoints (`/api/reviews`, `/api/products/:id/reviews`), including updating product aggregate ratings.
-    *   Implemented **location check** using Turf.js within the `POST /api/orders` transaction. Verified logic and data saving.
-    *   Implemented **stock management** (check and decrement) within the `POST /api/orders` transaction. Added Admin stock adjustment endpoint.
-    *   Implemented **Admin CRUD** APIs for Products, Categories, Phones, Zones.
-    *   Implemented **Admin Reporting** APIs (`/stats`, `/reports/*`
+*   (Inherited logs from previous states...)
+*   **Branch `refactor/code-polish-v2` created** from main for polish/refactoring.
+*   **Fixed Phone Assignment Race Condition:** Moved assignment logic into `POST /api/orders` transaction. Added `assignedPhoneNumberId` to `Order` model. Removed separate assignment endpoint. (L13, L28)
+*   **Refined Order Success Page:** Updated Customer FE page to fetch and display the specific assigned verification number from order details. Improved clarity.
+*   **Standardized Image URL Handling:** Created `getImageUrl` utility in both FEs. Updated components (`ProductCard`, `ProductDetailPage`, `CartPage`, `WishlistPage`, admin pages) to use it. Ensures correct base URL prepending. (L23)
+*   **Improved Product Detail Page:** Added `react-bootstrap/Carousel` for multiple images. Adjusted layout (resized back button, potentially moved reviews) for better visibility of 'Add to Cart'.
+*   **Fixed Cart Quantity Controls:** Implemented +/- buttons correctly using `updateCartItemQuantity` from context, respecting stock/min limits. Removed direct input field.
+*   **Adjusted Rate Limiting:** Tuned limits in backend (`general`, `write`, `auth`) for better balance between UX and abuse prevention.
+*   **Added In-App Password Change:** Implemented forms and backend logic (`POST /api/auth/change-password`) for logged-in users (Customer & Admin) to change their password via Settings/Profile pages, requiring current password.
+*   **Implemented Checkout Location Selection:** Added dropdown and Add New modal to Customer FE Checkout page. Integrated with `DeliveryLocation` model and updated `POST /api/orders`.
+*   **Enhanced PWA:** Added manual install button, update prompt (`PWAPrompt` component), and required icons for better PWA installability and update experience on Customer FE.
+*   **Enabled Category Image Upload:** Modified Admin FE Category modal to allow file uploads (using existing `/api/admin/upload` route) instead of just URL input. Backend upload route now uses `sharp` to process images to WebP.
+*   **Containerized Backend:** Created `Dockerfile` and `.dockerignore` for the backend service.
+*   **Configured Render Deployment:** Set up PostgreSQL DB, Backend Web Service (Docker), Customer Static Site, Admin Static Site. Configured build commands, start commands (`prisma migrate deploy` included), environment variables (DB URL, JWT Secret, VITE_API_URL, CORS_ORIGIN).
+*   **Added Backend Compression:** Implemented `compression` middleware.
+*   **Setup i18n Foundation (Customer FE):** Installed necessary libraries, configured `i18n.ts`, created placeholder locale files, added language switcher UI, internationalized `Layout.tsx`. Deferred full component refactoring.
+*   **Standardized Buttons (Admin FE):** Applied consistent variants/sizes based on action type within the admin panel. Created `LinkButton` component.
+*   **Standardized Buttons (Customer FE):** Applied consistent variants/sizes based on action type within the customer app.
+*   **Standardized Forms (Admin FE):** Applied consistent styling for labels, inputs, spacing, feedback according to admin theme.
+*   **(Deferred) Standardize Forms (Customer FE):** Prompt created but execution deferred.
+*   **(Deferred) Data Flow Analysis:** Task skipped by user.
+
+## 6. Lessons Learned (Cumulative)
+
+*   L1: Validate AI Output Rigorously.
+*   L2: Explicit Instructions are Key.
+*   L3: Manual Steps are Critical (Git, npm, migrations, testing).
+*   L4: Maintain Project Context (`project_docs.txt`).
+*   L5: Prioritize Backend/Foundations (MVP).
+*   L6: Visual Feedback Loop (User validation for UI).
+*   L7: Manage Async Operations Carefully (Loading/Error states).
+*   L8: Component Design & Boundaries.
+*   L9: Frontend State Management Strategy (Context used).
+*   L10: Styling Strategy & Consistency (Bootstrap + Custom CSS).
+*   L11: API Design & Consistency.
+*   L12: Database Schema Evolution (Use migrations).
+*   L13: Backend Data Integrity & Transactions (Order/Stock/Phone).
+*   L14: Configuration & Environment Management (`.env`, Render Vars).
+*   L15: Build & Tooling Integration (Vite, TS, `npm` workspaces).
+*   L16: Debugging Strategies (DevTools, Logs, API testing).
+*   L17: Code Cleanup & Refactoring.
+*   L18: Security Fundamentals (Hashing, JWT, Validation, Rate Limiting, CORS).
+*   L19: Handling Complex Features (Geolocation, PWA, File Uploads).
+*   L20: Mobile-First / Responsive Design.
+*   L21: Data Model/API Change Impact.
+*   L22: Build/Dependency Cache Issues (Clean install, `prisma generate`).
+*   L23: Frontend/Backend URL Handling (`getImageUrl` utility).
+*   L24: Iterative UI Refinement (Button/Form Consistency).
+*   L25: Deployment Configuration (Render specifics: env vars, migrate deploy, start cmd, CORS).
+*   L26: Environment-Specific CORS (Crucial for production).
+*   L27: Feature Branch Scope (Monitor scope creep).
+*   L28: Business Logic Integrity & Transactions (Phone assignment fix).
+*   L29: Reusable Components (`LinkButton`, `getImageUrl`).
+*   L30: Explicit Prop Handling.
+*   **L31: PWA Setup:** Requires specific icons, manifest configuration, and service worker setup (`vite-plugin-pwa`). Install prompts depend on browser heuristics. Testing requires building and serving the production version.
+*   **L32: i18n Setup:** Libraries like `i18next` provide robust structure. Requires config, locale files, and refactoring components. AI translation needs careful review.
+*   **L33: Docker for Node/Prisma:** Multi-stage builds optimize image size. Include `prisma generate` in build, and `prisma migrate deploy` in runtime start command for platforms like Render free tier. Manage dependencies carefully (`devDependencies` needed for build).
+*   **L34: Deployment Platform Specifics:** Free tiers have limitations (sleep, DB deletion, no shell access) requiring workarounds (e.g., running migrations in start command). Build commands may need adjustment (`--production=false`).
