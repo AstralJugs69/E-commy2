@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel, Dropdown } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -87,6 +87,17 @@ const ProductDetailPage = () => {
   // State for other products
   const [otherProducts, setOtherProducts] = useState<Product[]>([]);
   const [isLoadingOther, setIsLoadingOther] = useState(false);
+  
+  // Rating dropdown options
+  const ratingOptions = [
+    { value: 0, label: 'Select a rating' },
+    { value: 1, label: '1 - Poor' },
+    { value: 2, label: '2 - Fair' },
+    { value: 3, label: '3 - Good' },
+    { value: 4, label: '4 - Very Good' },
+    { value: 5, label: '5 - Excellent' },
+  ];
+  const currentRatingLabel = ratingOptions.find(opt => opt.value === newRating)?.label || 'Select a rating';
   
   // Hooks
   const { productId } = useParams<{ productId: string }>();
@@ -640,18 +651,28 @@ const ProductDetailPage = () => {
                   <Form onSubmit={handleSubmitReview}>
                     <Form.Group className="mb-3">
                       <Form.Label className="fw-medium">Rating</Form.Label>
-                      <Form.Select 
-                        value={newRating} 
-                        onChange={(e) => setNewRating(parseInt(e.target.value))}
-                        required
-                      >
-                        <option value="0">Select a rating</option>
-                        <option value="1">1 - Poor</option>
-                        <option value="2">2 - Fair</option>
-                        <option value="3">3 - Good</option>
-                        <option value="4">4 - Very Good</option>
-                        <option value="5">5 - Excellent</option>
-                      </Form.Select>
+                      <Dropdown onSelect={eventKey => setNewRating(eventKey ? parseInt(eventKey) : 0)}>
+                        <Dropdown.Toggle
+                          variant="outline-secondary"
+                          id="ratingDropdown"
+                          className="w-100 d-flex justify-content-between align-items-center"
+                          size="sm"
+                        >
+                          {currentRatingLabel}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu className="w-100 animate-dropdown">
+                          {ratingOptions.map(option => (
+                            <Dropdown.Item
+                              key={option.value}
+                              eventKey={option.value.toString()}
+                              active={newRating === option.value}
+                              disabled={option.value === 0}
+                            >
+                              {option.label}
+                            </Dropdown.Item>
+                          ))}
+                        </Dropdown.Menu>
+                      </Dropdown>
                     </Form.Group>
                     
                     <Form.Group className="mb-4">

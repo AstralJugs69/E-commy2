@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
@@ -62,11 +62,47 @@ const HomePage = () => {
   // Sort state
   const [sortBy, setSortBy] = useState<string>('createdAt'); // Default sort
   const [sortOrder, setSortOrder] = useState<string>('desc'); // Default order
+  const [showSortOptions, setShowSortOptions] = useState(false);
   
+  // Create ref for the dropdown container
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
+
+  // Function to handle sort selection
+  const handleSortChange = (field: string, order: string) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setShowSortOptions(false);
+  };
+
+  // Toggle sort options dropdown
+  const toggleSortOptions = () => {
+    setShowSortOptions(prev => !prev);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortOptions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Fetch products when search term, category filter, or sort changes - reset to page 1
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when filters change
+    fetchProducts(1);
+  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   const fetchProducts = async (page = 1) => {
     setIsLoading(true);
@@ -143,12 +179,6 @@ const HomePage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
-  // Fetch products when search term, category filter, or sort changes - reset to page 1
-  useEffect(() => {
-    setCurrentPage(1); // Reset to first page when filters change
-    fetchProducts(1);
-  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -299,11 +329,12 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* Combined Search and Sort */}
-      <div className="mb-4">
-        <Row className="justify-content-center">
-          <Col xs={12} md={8} lg={7}>
-            <InputGroup className="shadow-sm rounded overflow-hidden">
+      {/* Search and Sort Controls */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} md={8} lg={7}>
+          <div className="d-flex align-items-stretch shadow-sm rounded">
+            {/* Search Input - 65% width */}
+            <div style={{ width: "65%" }}>
               <Form.Control
                 id="productSearch"
                 type="search"
@@ -311,31 +342,154 @@ const HomePage = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 aria-label="Search Products"
-                className="border-end-0"
-              />
-              <Form.Select
-                id="productSort"
                 size="sm"
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [field, order] = e.target.value.split('-');
-                  setSortBy(field);
-                  setSortOrder(order);
+                className="h-100 border-0 rounded-0"
+              />
+            </div>
+            
+            {/* Custom Sort Dropdown - 35% width */}
+            <div 
+              ref={sortDropdownRef}
+              className="position-relative" 
+              style={{ width: "35%" }}
+            >
+              <div 
+                role="button"
+                tabIndex={0}
+                onClick={toggleSortOptions}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    toggleSortOptions();
+                  }
                 }}
-                aria-label="Sort products by"
-                className="flex-grow-0 border-start-0"
-                style={{ minWidth: '130px', maxWidth: '180px' }}
+                className="h-100 d-flex align-items-center justify-content-between px-3"
+                style={{ 
+                  backgroundColor: '#f8f9fa',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  color: '#000000'
+                }}
               >
-                <option value="createdAt-desc">Newest</option>
-                <option value="price-asc">Price: Low-High</option>
-                <option value="price-desc">Price: High-Low</option>
-                <option value="name-asc">Name: A-Z</option>
-                <option value="name-desc">Name: Z-A</option>
-              </Form.Select>
-            </InputGroup>
-          </Col>
-        </Row>
-      </div>
+                <span style={{ fontSize: '0.85rem' }}>
+                  {sortBy === 'createdAt' && sortOrder === 'desc' && 'Newest'}
+                  {sortBy === 'price' && sortOrder === 'asc' && 'Price: Low-High'}
+                  {sortBy === 'price' && sortOrder === 'desc' && 'Price: High-Low'}
+                  {sortBy === 'name' && sortOrder === 'asc' && 'Name: A-Z'}
+                  {sortBy === 'name' && sortOrder === 'desc' && 'Name: Z-A'}
+                </span>
+                <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>▼</span>
+              </div>
+              
+              {showSortOptions && (
+                <div 
+                  className="position-absolute top-100 start-0 end-0 py-1 shadow-sm animate-dropdown"
+                  style={{ 
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CCCCCC',
+                    zIndex: 1050
+                  }}
+                >
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="px-3 py-1"
+                    onClick={() => handleSortChange('createdAt', 'desc')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSortChange('createdAt', 'desc');
+                      }
+                    }}
+                    style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: sortBy === 'createdAt' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'createdAt' && sortOrder === 'desc' ? 'bold' : 'normal',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Newest
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="px-3 py-1"
+                    onClick={() => handleSortChange('price', 'asc')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSortChange('price', 'asc');
+                      }
+                    }}
+                    style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: sortBy === 'price' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'asc' ? 'bold' : 'normal',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Price: Low-High
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="px-3 py-1"
+                    onClick={() => handleSortChange('price', 'desc')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSortChange('price', 'desc');
+                      }
+                    }}
+                    style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: sortBy === 'price' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'desc' ? 'bold' : 'normal',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Price: High-Low
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="px-3 py-1"
+                    onClick={() => handleSortChange('name', 'asc')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSortChange('name', 'asc');
+                      }
+                    }}
+                    style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: sortBy === 'name' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'asc' ? 'bold' : 'normal',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Name: A-Z
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="px-3 py-1"
+                    onClick={() => handleSortChange('name', 'desc')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSortChange('name', 'desc');
+                      }
+                    }}
+                    style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: sortBy === 'name' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'desc' ? 'bold' : 'normal',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Name: Z-A
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Col>
+      </Row>
       
       {/* Product Listing */}
       {isLoading && (

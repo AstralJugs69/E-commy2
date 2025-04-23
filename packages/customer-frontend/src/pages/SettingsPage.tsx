@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
-import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab } from 'react-bootstrap';
+import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab, Dropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaUserEdit } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
@@ -74,11 +74,7 @@ const SettingsPage = () => {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   
   // Location form state
-  const [locationForm, setLocationForm] = useState({
-    name: '',
-    phone: '',
-    district: ''
-  });
+  const [locationForm, setLocationForm] = useState<{ name: string; phone: string; district: string }>({ name: '', phone: '', district: '' });
   
   // Tab state
   const [activeTab, setActiveTab] = useState('account');
@@ -94,6 +90,9 @@ const SettingsPage = () => {
   // Add these state variables if they don't exist already (they seem to be defined around line 50)
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   
+  // Derived label for district dropdown
+  const currentDistrictLabel = locationForm.district || '-- Select District --';
+
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
   useEffect(() => {
@@ -998,18 +997,43 @@ const SettingsPage = () => {
               <Col>
                 <Form.Group>
                   <Form.Label className="fw-medium">District</Form.Label>
-                  <Form.Select
-                    name="district"
-                    value={locationForm.district}
-                    onChange={handleLocationFormChange}
-                    required
-                    isInvalid={!!formErrors.district}
+                  <Dropdown 
+                    className="district-dropdown"
+                    onSelect={eventKey => setLocationForm(prev => ({ ...prev, district: eventKey || '' }))}
                   >
-                    <option value="" disabled>-- Select District --</option>
-                    {districts.map((district) => (
-                      <option key={district} value={district}>{district}</option>
-                    ))}
-                  </Form.Select>
+                    <Dropdown.Toggle
+                      variant={formErrors.district ? "outline-danger" : "outline-secondary"}
+                      id="districtDropdown"
+                      className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle"
+                      disabled={isLoadingDistricts}
+                    >
+                      {currentDistrictLabel}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      style={{ maxHeight: '200px', overflowY: 'auto' }} 
+                      className="w-100 district-dropdown-menu animate-dropdown"
+                    >
+                      <Dropdown.Header>Select District</Dropdown.Header>
+                      {isLoadingDistricts ? (
+                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                      ) : districtError ? (
+                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                      ) : districts.length > 0 ? (
+                        districts.map(d => (
+                          <Dropdown.Item 
+                            key={d} 
+                            eventKey={d} 
+                            active={locationForm.district === d} 
+                            className="district-dropdown-item"
+                          >
+                            {d}
+                          </Dropdown.Item>
+                        ))
+                      ) : (
+                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
                   <Form.Control.Feedback type="invalid">
                     {formErrors.district}
                   </Form.Control.Feedback>

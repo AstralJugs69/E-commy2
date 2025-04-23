@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge } from 'react-bootstrap';
+import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge, Dropdown } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,12 @@ const CheckoutPage: React.FC = () => {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationErrorState, setLocationErrorState] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Derived label for delivery location dropdown
+  const selectedLocation = savedLocations.find(loc => loc.id.toString() === selectedLocationId);
+  const currentLocationLabel = selectedLocation
+    ? `${selectedLocation.name} (${selectedLocation.district}) - ${selectedLocation.phone}${selectedLocation.isDefault ? ' (Default)' : ''}`
+    : '-- Select Delivery Location --';
 
   // Add Location Modal state
   const [showAddLocationModal, setShowAddLocationModal] = useState(false);
@@ -382,6 +388,9 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
+  // Derived label for new location district dropdown
+  const currentDistrictLabel = newLocationData.district || '-- Select District --';
+
   return (
     <Container className="py-3">
       <h2 className="mb-4">Checkout</h2>
@@ -438,29 +447,38 @@ const CheckoutPage: React.FC = () => {
                       <Spinner animation="border" size="sm" className="me-2" />
                       <span>Loading delivery locations...</span>
                     </div>
-                  ) : savedLocations.length > 0 ? (
-                    <Form.Select 
-                      value={selectedLocationId}
-                      onChange={(e) => setSelectedLocationId(e.target.value)}
-                      required
+                  ) : (
+                    <Dropdown
+                      onSelect={(eventKey) => setSelectedLocationId(eventKey || '')}
                       className="mb-3"
                     >
-                      <option value="" disabled>-- Select Delivery Location --</option>
-                      {savedLocations.map(location => (
-                        <option key={location.id} value={location.id.toString()}>
-                          {`${location.name} (${location.district}) - ${location.phone}`}
-                          {location.isDefault ? ' (Default)' : ''}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  ) : (
-                    <Alert variant="info" className="mb-3">
-                      <div className="d-flex align-items-center mb-2">
-                        <FaMapMarkerAlt className="me-2 text-primary" size={18} />
-                        <span className="fw-medium">You don't have any saved delivery locations.</span>
-                      </div>
-                      <p className="mb-0">Please add a delivery location to continue with checkout.</p>
-                    </Alert>
+                      <Dropdown.Toggle
+                        variant="outline-secondary"
+                        id="locationDropdown"
+                        className="w-100 d-flex justify-content-between align-items-center text-truncate"
+                      >
+                        {currentLocationLabel}
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu style={{ maxHeight: '200px', overflowY: 'auto' }} className="w-100 animate-dropdown">
+                        <Dropdown.Header>Your Saved Locations</Dropdown.Header>
+                        {savedLocations.length > 0 ? (
+                          savedLocations.map(location => (
+                            <Dropdown.Item
+                              key={location.id}
+                              eventKey={location.id.toString()}
+                              active={selectedLocationId === location.id.toString()}
+                            >
+                              {`${location.name} (${location.district})`}
+                              {location.isDefault && <Badge bg="success" className="ms-2">Default</Badge>}
+                              <br/>
+                              <small className="text-muted">{location.phone}</small>
+                            </Dropdown.Item>
+                          ))
+                        ) : (
+                          <Dropdown.Item disabled>No saved locations</Dropdown.Item>
+                        )}
+                      </Dropdown.Menu>
+                    </Dropdown>
                   )}
                 </Form.Group>
                 
@@ -593,25 +611,27 @@ const CheckoutPage: React.FC = () => {
               <Col>
                 <Form.Group>
                   <Form.Label className="fw-medium">District</Form.Label>
-                  <Form.Select
-                    name="district"
-                    value={newLocationData.district}
-                    onChange={handleNewLocationChange}
-                    required
-                    isInvalid={!!formErrors.district}
-                    disabled={isLoadingDistricts}
-                  >
-                    {isLoadingDistricts ? (
-                      <option value="">Loading districts...</option>
-                    ) : (
-                      <>
-                        <option value="" disabled>-- Select District --</option>
-                        {districts.map((district) => (
-                          <option key={district} value={district}>{district}</option>
-                        ))}
-                      </>
-                    )}
-                  </Form.Select>
+                  <Dropdown className="district-dropdown" onSelect={eventKey => setNewLocationData(prev => ({ ...prev, district: eventKey || '' }))}>
+                    <Dropdown.Toggle variant={formErrors.district ? 'outline-danger' : 'outline-secondary'} id="newLocationDistrictDropdown" className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle" disabled={isLoadingDistricts}>
+                      {currentDistrictLabel}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu style={{ maxHeight: '200px', overflowY: 'auto' }} className="w-100 district-dropdown-menu animate-dropdown">
+                      <Dropdown.Header>Select District</Dropdown.Header>
+                      {isLoadingDistricts ? (
+                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                      ) : districtError ? (
+                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                      ) : districts.length > 0 ? (
+                        districts.map(d => (
+                          <Dropdown.Item key={d} eventKey={d} active={newLocationData.district === d} className="district-dropdown-item">
+                            {d}
+                          </Dropdown.Item>
+                        ))
+                      ) : (
+                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
                   <Form.Control.Feedback type="invalid">
                     {formErrors.district}
                   </Form.Control.Feedback>
