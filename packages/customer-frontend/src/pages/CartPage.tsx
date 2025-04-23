@@ -7,8 +7,10 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { getImageUrl } from '../utils/imageUrl';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const CartPage = () => {
+  const { t } = useTranslation();
   const { cartItems, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal, fetchCart, isLoading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -181,17 +183,17 @@ const CartPage = () => {
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
-        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
         <Card className="shadow-sm border-0 mb-4">
           <Card.Body className="p-5 text-center">
             <div className="empty-state">
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
-              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                Start Shopping
+                {t('cart.startShopping')}
               </Link>
             </div>
           </Card.Body>
@@ -204,9 +206,9 @@ const CartPage = () => {
   if (isLoading && cartItems.length === 0) {
     return (
       <Container className="py-4 text-center">
-        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
         <Spinner animation="border" role="status" className="my-5">
-          <span className="visually-hidden">Loading...</span>
+          <span className="visually-hidden">{t('common.loading')}</span>
         </Spinner>
       </Container>
     );
@@ -214,7 +216,7 @@ const CartPage = () => {
   
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+      <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
       
       {errorMessage && (
         <Alert variant="danger" className="mb-3" onClose={() => setErrorMessage(null)} dismissible>
@@ -229,10 +231,10 @@ const CartPage = () => {
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
-              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                Start Shopping
+                {t('cart.startShopping')}
               </Link>
             </div>
           </Card.Body>
@@ -325,36 +327,41 @@ const CartPage = () => {
             ))}
           </div>
 
-          {/* Summary and Buttons Section (Visible on all sizes) */}
-          <Card className="mb-4 shadow-sm border-0">
-            <Card.Body className="p-4">
-              <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
-              <div className="d-grid gap-3 d-md-flex justify-content-md-end">
+          {/* Cart Footer - Summary and Buttons */}
+          <div className="d-flex flex-column mt-4">
+            {/* Cart Summary */}
+            <div className="d-flex justify-content-end mb-3">
+              <h4 className="fw-semibold">{t('common.total')}: {formatCurrency(getCartTotal())}</h4>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="d-flex flex-column flex-md-row gap-2 mt-3">
                 <Button 
                   variant="outline-danger" 
-                  className="rounded-pill px-4 py-2 fw-medium" 
+                className="w-100 py-2"
                   onClick={() => clearCart()}
                   disabled={isLoading}
                 >
-                  Clear Cart
+                {t('cart.clearCart')}
                 </Button>
+              
                 <Link 
                   to="/" 
-                  className="btn btn-secondary rounded-pill px-4 py-2 fw-medium"
+                className="btn btn-outline-primary w-100 py-2"
                 >
-                  Continue Shopping
+                {t('cart.continueShopping')}
                 </Link>
+              
                 <Button 
                   variant="primary" 
-                  className="rounded-pill px-4 py-2 fw-medium" 
+                className="w-100 py-2"
                   onClick={handleCheckout}
-                  disabled={isLoading}
+                disabled={isLoading || cartIsEmpty}
                 >
-                  Proceed to Checkout
+                {t('cart.proceedToCheckout')}
                 </Button>
               </div>
-            </Card.Body>
-          </Card>
+          </div>
         </>
       )}
     </Container>

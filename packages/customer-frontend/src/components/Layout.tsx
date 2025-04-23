@@ -36,6 +36,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
   const itemCount = getItemCount();
   const wishlistCount = wishlistItems.length;
   const [showOffcanvas, setShowOffcanvas] = useState(false);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -44,6 +45,16 @@ const Layout = ({ installPrompt }: LayoutProps) => {
     'en': 'English',
     'am': 'አማርኛ',
     'om': 'Afaan Oromoo'
+  };
+
+  // Helper for language abbreviation
+  const getLangAbbr = (lang: string) => {
+    switch (lang) {
+      case 'en': return 'EN';
+      case 'am': return '\u12A0\u121B'; // አማ
+      case 'om': return 'AF';
+      default: return lang.substring(0,2).toUpperCase();
+    }
   };
 
   // Get current language display name
@@ -93,6 +104,19 @@ const Layout = ({ installPrompt }: LayoutProps) => {
     });
   };
 
+  // Add body class when offcanvas is open to help with hiding elements
+  useEffect(() => {
+    if (showOffcanvas) {
+      document.body.classList.add('offcanvas-open');
+    } else {
+      document.body.classList.remove('offcanvas-open');
+    }
+    
+    return () => {
+      document.body.classList.remove('offcanvas-open');
+    };
+  }, [showOffcanvas]);
+
   return (
     <div className="app-wrapper d-flex flex-column min-vh-100">
       <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-3 border-bottom">
@@ -103,32 +127,80 @@ const Layout = ({ installPrompt }: LayoutProps) => {
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
-            {/* Language Switcher Dropdown */}
-            <NavDropdown 
-              title={<><FaGlobe className="me-1" /> <span className="d-none d-md-inline">{getCurrentLanguageName()}</span></>}
-              id="language-dropdown"
-              align="end"
-              className="me-3"
-            >
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('en')} 
-                active={i18n.language === 'en'}
+            {/* Custom Language Switcher Button & Dropdown */}
+            <div className="dropdown me-3" style={{ position: 'relative' }} id="language-dropdown">
+              <button
+                className="dropdown-toggle btn"
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #CCCCCC',
+                  borderRadius: 16,
+                  color: '#222',
+                  fontWeight: 500,
+                  padding: '0.35rem 1.25rem 0.35rem 0.9rem',
+                  minWidth: 120,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 2px 8px rgba(51,51,51,0.07)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setShowLangDropdown((v: boolean) => !v)}
+                onBlur={() => setTimeout(() => setShowLangDropdown(false), 120)}
+                tabIndex={0}
+                aria-haspopup="listbox"
+                aria-expanded={showLangDropdown}
               >
-                English
-              </NavDropdown.Item>
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('am')} 
-                active={i18n.language === 'am'}
-              >
-                አማርኛ
-              </NavDropdown.Item>
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('om')} 
-                active={i18n.language === 'om'}
-              >
-                Afaan Oromoo
-              </NavDropdown.Item>
-            </NavDropdown>
+                <span style={{
+                  fontWeight: 700,
+                  fontSize: '0.97em',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.03em',
+                  marginRight: '0.35em',
+                  minWidth: 16,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                  lineHeight: 1.1,
+                }}>{getLangAbbr(i18n.language)}</span>
+                <span className="d-none d-md-inline">{getCurrentLanguageName()}</span>
+              </button>
+              {showLangDropdown && (
+                <ul
+                  className="dropdown-menu show"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    minWidth: '100%',
+                    width: '100%',
+                    borderRadius: 14,
+                    boxShadow: '0 6px 24px rgba(0,0,0,0.09)',
+                    marginTop: 6,
+                    zIndex: 3000,
+                    padding: '0.35rem 0.3rem',
+                  }}
+                >
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'en' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'en' ? '#fff' : '#333', background: i18n.language === 'en' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('en')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', textTransform: 'uppercase', letterSpacing: '0.03em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>EN</span>
+                      <span className="d-none d-md-inline">English</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'am' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'am' ? '#fff' : '#333', background: i18n.language === 'am' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('am')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>አማ</span>
+                      <span className="d-none d-md-inline">አማርኛ</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'om' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'om' ? '#fff' : '#333', background: i18n.language === 'om' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('om')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>AF</span>
+                      <span className="d-none d-md-inline">Afaan Oromoo</span>
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
             
             {/* Install App button */}
             {installPrompt && (
@@ -198,16 +270,17 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                 </Nav.Link>
                 
                 {/* Language Switcher in Offcanvas Menu */}
-                <div className="py-3 border-bottom px-3">
+                <div className="dropdown py-3 border-bottom px-3">
                   <div className="d-flex align-items-center mb-2">
-                    <FaGlobe className="me-2 text-primary" /> {t('common.language', 'Language')}
+                    <FaGlobe className="me-2 text-primary" /> 
+                    <span>{t('common.language')}</span>
                   </div>
-                  <div className="d-flex flex-wrap gap-2">
+                  <div className="d-flex flex-wrap gap-2 mt-1">
                     <Button 
                       variant={i18n.language === 'en' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('en')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       English
                     </Button>
@@ -215,7 +288,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       variant={i18n.language === 'am' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('am')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       አማርኛ
                     </Button>
@@ -223,7 +296,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       variant={i18n.language === 'om' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('om')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       Afaan Oromoo
                     </Button>
@@ -260,13 +333,13 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       <FaSignOutAlt className="me-2" /> {t('navigation.logout')}
                     </Button>
                   </>
-                ) : (
+                ) :
                   <>
                     <Nav.Link as={Link} to="/login" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
                       <FaUser className="me-2 text-primary" /> {t('navigation.loginRegister')}
                     </Nav.Link>
                   </>
-                )}
+                }
                 <Nav.Link as={Link} to="/about" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
                   <FaStore className="me-2 text-primary" /> {t('navigation.about')}
                 </Nav.Link>
@@ -281,76 +354,46 @@ const Layout = ({ installPrompt }: LayoutProps) => {
       </main>
       
       {/* Bottom Navigation Bar - Mobile Only */}
-      <div className="d-lg-none">
-        <Navbar fixed="bottom" bg="white" className="shadow-sm border-top">
-          <Container>
-            <Nav className="w-100 justify-content-around">
-              <Nav.Link 
-                as={Link} 
-                to="/" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaHome 
-                  size={20} 
-                  className="mb-1"
-                  style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.home')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/cart" 
-                className="d-flex flex-column align-items-center text-center py-2 position-relative"
-                style={{ color: location.pathname === '/cart' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
+      <nav className="d-lg-none fixed-bottom bg-white border-top py-2 mobile-nav">
+        <div className="d-flex justify-content-around align-items-center">
+          <Link to="/" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaHome size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.home')}</small>
+            </div>
+          </Link>
+          <Link to="/cart" className="text-center text-decoration-none position-relative">
+            <div className="d-flex flex-column align-items-center">
                 <div className="position-relative">
-                  <FaShoppingCart 
-                    size={20} 
-                    className="mb-1"
-                    style={{ color: location.pathname === '/cart' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                  />
+                <FaShoppingCart size={20} className="mb-1 text-dark" />
                   {itemCount > 0 && (
-                    <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle p-1" style={{ fontSize: '0.6rem' }}>
+                  <Badge 
+                    pill 
+                    bg="danger" 
+                    className="position-absolute top-0 start-100 translate-middle badge-sm"
+                    style={{ fontSize: "0.6rem", padding: "0.2rem 0.4rem" }}
+                  >
                       {itemCount}
                     </Badge>
                   )}
                 </div>
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.cart')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/orders" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaList 
-                  size={20} 
-                  className="mb-1"
-                  style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.orders')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/settings" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaCog 
-                  size={20} 
-                  className="mb-1" 
-                  style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.settings')}</small>
-              </Nav.Link>
-            </Nav>
-          </Container>
-        </Navbar>
+              <small className="d-block small text-dark">{t('navigation.cart')}</small>
+            </div>
+          </Link>
+          <Link to="/orders" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaList size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.orders')}</small>
+            </div>
+          </Link>
+          <Link to="/settings" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaCog size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.settings')}</small>
+            </div>
+          </Link>
       </div>
+      </nav>
     </div>
   );
 };

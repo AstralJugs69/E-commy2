@@ -7,6 +7,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 interface DeliveryLocation {
   id: number;
@@ -21,6 +22,7 @@ const CheckoutPage: React.FC = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Delivery location selection state
   const [savedLocations, setSavedLocations] = useState<DeliveryLocation[]>([]);
@@ -61,6 +63,11 @@ const CheckoutPage: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -448,37 +455,55 @@ const CheckoutPage: React.FC = () => {
                       <span>Loading delivery locations...</span>
                     </div>
                   ) : (
-                    <Dropdown
-                      onSelect={(eventKey) => setSelectedLocationId(eventKey || '')}
-                      className="mb-3"
-                    >
-                      <Dropdown.Toggle
-                        variant="outline-secondary"
-                        id="locationDropdown"
-                        className="w-100 d-flex justify-content-between align-items-center text-truncate"
-                      >
-                        {currentLocationLabel}
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu style={{ maxHeight: '200px', overflowY: 'auto' }} className="w-100 animate-dropdown">
-                        <Dropdown.Header>Your Saved Locations</Dropdown.Header>
-                        {savedLocations.length > 0 ? (
-                          savedLocations.map(location => (
-                            <Dropdown.Item
+                    <div className="mb-3">
+                      <label htmlFor="location" className="form-label">
+                        {t('checkout.location')}
+                      </label>
+                      <div className="dropdown w-100">
+                        <button
+                          className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
+                          type="button"
+                          id="locationDropdown"
+                          onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                          aria-expanded={locationDropdownOpen}
+                          data-testid="location-dropdown"
+                        >
+                          {selectedLocation || t('checkout.selectLocation')}
+                          <i className="bi bi-caret-down-fill"></i>
+                        </button>
+                        <div
+                          className={`dropdown-menu w-100 ${locationDropdownOpen ? 'show animate-dropdown' : ''}`}
+                          aria-labelledby="locationDropdown"
+                          onClick={(e) => {
+                            // Don't close dropdown when clicking on the menu itself (for scrolling)
+                            if (e.target === e.currentTarget) {
+                              e.stopPropagation();
+                            }
+                          }}
+                        >
+                          {savedLocations.map((location) => (
+                            <div
                               key={location.id}
-                              eventKey={location.id.toString()}
-                              active={selectedLocationId === location.id.toString()}
+                              className={`dropdown-item ${selectedLocationId === location.id.toString() ? 'active' : ''}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedLocationId(location.id.toString());
+                                setSelectedDistrict('');
+                                setDistrictOptions(location.district ? [location.district] : []);
+                                // Close dropdown after selection
+                                setTimeout(() => {
+                                  setLocationDropdownOpen(false);
+                                }, 150);
+                              }}
+                              data-testid={`location-option-${location.id}`}
                             >
-                              {`${location.name} (${location.district})`}
-                              {location.isDefault && <Badge bg="success" className="ms-2">Default</Badge>}
-                              <br/>
-                              <small className="text-muted">{location.phone}</small>
-                            </Dropdown.Item>
-                          ))
-                        ) : (
-                          <Dropdown.Item disabled>No saved locations</Dropdown.Item>
-                        )}
-                      </Dropdown.Menu>
-                    </Dropdown>
+                              {location.name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </Form.Group>
                 
@@ -486,6 +511,57 @@ const CheckoutPage: React.FC = () => {
                   <Alert variant="warning" className="mb-3">
                     {locationError}
                   </Alert>
+                )}
+
+                {/* District dropdown - only show if a location is selected */}
+                {selectedLocationId && (
+                  <div className="mb-3">
+                    <label htmlFor="district" className="form-label">
+                      {t('checkout.district')}
+                    </label>
+                    <div className="dropdown w-100">
+                      <button
+                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
+                        type="button"
+                        id="districtDropdown"
+                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
+                        aria-expanded={districtDropdownOpen}
+                        data-testid="district-dropdown"
+                      >
+                        {selectedDistrict || t('checkout.selectDistrict')}
+                        <i className="bi bi-caret-down-fill"></i>
+                      </button>
+                      <div
+                        className={`dropdown-menu w-100 ${districtDropdownOpen ? 'show animate-dropdown' : ''}`}
+                        aria-labelledby="districtDropdown"
+                        onClick={(e) => {
+                          // Don't close dropdown when clicking on the menu itself (for scrolling)
+                          if (e.target === e.currentTarget) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {districtOptions.map((district, index) => (
+                          <div
+                            key={index}
+                            className={`dropdown-item ${selectedDistrict === district ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedDistrict(district);
+                              // Close dropdown after selection
+                              setTimeout(() => {
+                                setDistrictDropdownOpen(false);
+                              }, 150);
+                            }}
+                            data-testid={`district-option-${index}`}
+                          >
+                            {district}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 <Button 
@@ -611,11 +687,26 @@ const CheckoutPage: React.FC = () => {
               <Col>
                 <Form.Group>
                   <Form.Label className="fw-medium">District</Form.Label>
-                  <Dropdown className="district-dropdown" onSelect={eventKey => setNewLocationData(prev => ({ ...prev, district: eventKey || '' }))}>
+                  <Dropdown className="district-dropdown" onSelect={(eventKey, event) => {
+                    if (event) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }
+                    setNewLocationData(prev => ({ ...prev, district: eventKey || '' }));
+                  }}>
                     <Dropdown.Toggle variant={formErrors.district ? 'outline-danger' : 'outline-secondary'} id="newLocationDistrictDropdown" className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle" disabled={isLoadingDistricts}>
                       {currentDistrictLabel}
                     </Dropdown.Toggle>
-                    <Dropdown.Menu style={{ maxHeight: '200px', overflowY: 'auto' }} className="w-100 district-dropdown-menu animate-dropdown">
+                    <Dropdown.Menu 
+                      style={{ width: '100%' }} 
+                      className="district-dropdown-menu animate-dropdown w-100"
+                      onClick={(e) => {
+                        // Prevent the dropdown from closing when clicking inside it for scrolling
+                        if (e.target === e.currentTarget) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
                       <Dropdown.Header>Select District</Dropdown.Header>
                       {isLoadingDistricts ? (
                         <Dropdown.Item disabled>Loading...</Dropdown.Item>
@@ -623,7 +714,28 @@ const CheckoutPage: React.FC = () => {
                         <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
                       ) : districts.length > 0 ? (
                         districts.map(d => (
-                          <Dropdown.Item key={d} eventKey={d} active={newLocationData.district === d} className="district-dropdown-item">
+                          <Dropdown.Item 
+                            key={d} 
+                            eventKey={d} 
+                            active={newLocationData.district === d} 
+                            className="district-dropdown-item"
+                            onClick={(e) => {
+                              // Prevent event bubbling to parent elements
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              // Set the form state directly
+                              setNewLocationData(prev => ({ ...prev, district: d }));
+                              
+                              // Close dropdown manually after a short delay
+                              const dropdown = document.getElementById('newLocationDistrictDropdown');
+                              if (dropdown) {
+                                setTimeout(() => {
+                                  dropdown.click();
+                                }, 150);
+                              }
+                            }}
+                          >
                             {d}
                           </Dropdown.Item>
                         ))

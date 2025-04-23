@@ -16,7 +16,8 @@
     "menu": "Menu",
     "myWishlist": "My Wishlist",
     "myOrders": "My Orders",
-    "loginRegister": "Login / Register"
+    "loginRegister": "Login / Register",
+    "backToProducts": "Back to Products"
   },
   "common": {
     "loading": "Loading...",
@@ -46,7 +47,11 @@
     "shipping": "Shipping",
     "tax": "Tax",
     "discount": "Discount",
-    "language": "Language"
+    "language": "Language",
+    "default": "Default",
+    "saveChanges": "Save Changes",
+    "new": "New!",
+    "submitting": "Submitting..."
   },
   "cart": {
     "title": "Your Shopping Cart",
@@ -70,6 +75,7 @@
   "checkout": {
     "title": "Checkout",
     "shippingAddress": "Shipping Address",
+    "shipping": "Shipping",
     "paymentMethod": "Payment Method",
     "orderSummary": "Order Summary",
     "placeOrder": "Place Order",
@@ -96,11 +102,18 @@
     "orderSuccessful": "Order placed successfully!",
     "fullName": "Full Name",
     "area": "Area",
-    "detailedAddress": "Detailed Address"
+    "detailedAddress": "Detailed Address",
+    "addFirstAddress": "Add Your First Location",
+    "setAsDefault": "Set as Default",
+    "loadingAddresses": "Loading your delivery locations...",
+    "noAddressesMessage": "You don't have any saved delivery locations yet. Add your first location to make checkout faster.",
+    "updateAddress": "Update Location",
+    "addAddress": "Add Location"
   },
   "orders": {
     "title": "My Orders",
     "noOrders": "You haven't placed any orders yet.",
+    "noOrdersMessage": "You haven't placed any orders yet. Start shopping to see your order history here.",
     "orderNumber": "Order #",
     "orderDate": "Order Date",
     "orderStatus": "Status",
@@ -139,7 +152,58 @@
     "basedOn": "based on",
     "review": "review",
     "reviews": "reviews",
-    "off": "OFF"
+    "off": "OFF",
+    "loadingDetails": "Loading product details...",
+    "notFound": "Product not found or has been removed",
+    "noDescriptionAvailable": "No description available.",
+    "image": "Image",
+    "adding": "Adding...",
+    "inCart": "✓ In Cart",
+    "addedOn": "Added on",
+    "loadingReviews": "Loading reviews...",
+    "customerReviews": "Customer Reviews",
+    "comment": "Comment (optional)",
+    "placeholder": "Share your thoughts about this product...",
+    "selectARating": "Select a rating",
+    "youMightAlsoLike": "You Might Also Like",
+    "noSimilarProductsFound": "No similar products found.",
+    "loadingRecommendedProducts": "Loading recommended products...",
+    "ratingOptions": {
+      "poor": "Poor",
+      "fair": "Fair",
+      "good": "Good",
+      "veryGood": "Very Good",
+      "excellent": "Excellent"
+    },
+    "detailPage": {
+      "title": "Product Details",
+      "overview": "Overview",
+      "additionalInfo": "Additional Information",
+      "shipping": "Shipping & Returns",
+      "details": "Details",
+      "highlightedFeatures": "Highlighted Features",
+      "productCode": "Product Code",
+      "modelNumber": "Model Number",
+      "category": "Category",
+      "tags": "Tags",
+      "quantityAvailable": "Quantity Available",
+      "soldBy": "Sold By",
+      "viewStore": "View Store",
+      "productDescription": "Product Description",
+      "included": "What's Included",
+      "warranty": "Warranty",
+      "shipping": "Shipping",
+      "returns": "Returns",
+      "productSpecifications": "Product Specifications",
+      "productReviews": "Product Reviews",
+      "ratingBreakdown": "Rating Breakdown",
+      "writeYourReview": "Write Your Review",
+      "shareYourOpinion": "Share your opinion about this product",
+      "frequentlyBoughtTogether": "Frequently Bought Together",
+      "addAllToCart": "Add All to Cart",
+      "totalPrice": "Total Price",
+      "viewCartAndCheckout": "View Cart & Checkout"
+    }
   },
   "auth": {
     "loginTitle": "Login to Your Account",
@@ -166,11 +230,21 @@
     "loginSuccess": "Logged in successfully!",
     "registerSuccess": "Registered successfully!",
     "resetLinkSent": "Password reset link sent to your email!",
-    "passwordResetSuccess": "Password reset successfully!"
+    "passwordResetSuccess": "Password reset successfully!",
+    "enterCurrentPassword": "Enter your current password",
+    "enterNewPassword": "Enter new password",
+    "confirmNewPassword": "Confirm new password",
+    "passwordSecurityTips": "Password Security Tips",
+    "passwordTip1": "Use a combination of letters, numbers, and special characters",
+    "passwordTip2": "Avoid using easily guessable information like birthdays",
+    "passwordTip3": "Use different passwords for different accounts",
+    "passwordTip4": "Change your password periodically for enhanced security"
   },
   "account": {
     "title": "Account Settings",
     "profileSettings": "Profile Settings",
+    "profile": "Profile",
+    "security": "Security",
     "addresses": "Addresses",
     "paymentMethods": "Payment Methods",
     "orderHistory": "Order History",
@@ -204,7 +278,17 @@
     "addressAdded": "Address added successfully!",
     "addressUpdated": "Address updated successfully!",
     "addressDeleted": "Address deleted successfully!",
-    "defaultAddressSet": "Default address set successfully!"
+    "defaultAddressSet": "Default address set successfully!",
+    "preferences": "Preferences",
+    "deliveryLocations": "Delivery Locations",
+    "changePassword": "Change Password",
+    "emailCannotBeChanged": "Email cannot be changed.",
+    "fullName": "Full Name",
+    "passwordSecurityTips": "Password Security Tips",
+    "passwordMustBe8Chars": "Password must be at least 8 characters long",
+    "addYourFirstLocation": "Add Your First Location",
+    "noSavedDeliveryLocations": "You don't have any saved delivery locations yet. Add your first location to make your next checkout faster.",
+    "editProfile": "Edit Profile"
   },
   "wishlist": {
     "title": "My Wishlist",
@@ -259,16 +343,40 @@
     "openingHours": "Opening Hours",
     "contactInfo": "Contact Information",
     "getDirections": "Get Directions",
-    "distance": "Distance"
+    "distance": "Distance",
+    "locationName": "Location Name"
+  },
+  "profile": {
+    "account": "Account",
+    "yourProfile": "Your Profile",
+    "editProfile": "Edit Profile"
   },
   "about": {
-    "ourStory": "Our Story",
-    "ourMission": "Our Mission",
-    "ourTeam": "Our Team",
+    "title": "About Us",
+    "storeHistory": "Our Story",
+    "mission": "Our Mission",
+    "team": "Our Team",
     "contactUs": "Contact Us",
-    "careers": "Careers",
-    "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service",
-    "howItWorks": "How It Works"
+    "aboutHybridStore": "About HybridStore"
+  },
+  "homePage": {
+    "title": "Our Products",
+    "categories": "Categories",
+    "allCategories": "All Categories",
+    "loadingCategories": "Loading categories...",
+    "noProductsAvailable": "No products available at the moment.",
+    "loadingProducts": "Loading products...",
+    "productFound_one": "Found 1 product",
+    "productFound_other": "Found {{count}} products",
+    "matching": "matching",
+    "searchPlaceholder": "Search products by name...",
+    "sortOptions": {
+      "title": "Sort",
+      "newestFirst": "Newest First",
+      "priceLowToHigh": "Price: Low to High",
+      "priceHighToLow": "Price: High to Low",
+      "nameAToZ": "Name: A to Z",
+      "nameZToA": "Name: Z to A"
+    }
   }
 } 

@@ -804,6 +804,70 @@ th {
 .dropdown-menu {
   position: absolute;
   max-width: 90vw;
+  z-index: 1050 !important;
+}
+
+/* Ensure proper positioning and visibility of all dropdown menus */
+.dropdown-menu.show {
+  display: block !important;
+  z-index: 1050 !important;
+  margin-top: 1px !important;
+}
+
+/* Hide dropdowns when offcanvas is open */
+body.offcanvas-open .dropdown-menu.show {
+  z-index: 900 !important; /* Lower z-index when offcanvas is open */
+}
+
+/* Custom dropdown styling - improved with scrolling and selection support */
+.district-dropdown .dropdown-toggle,
+.dropdown .dropdown-toggle {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.district-dropdown .dropdown-menu,
+.district-dropdown-menu {
+  max-height: 250px !important;
+  overflow-y: auto !important;
+  width: 100%;
+  z-index: 1050 !important;
+  padding: 8px 0;
+}
+
+/* Make dropdown items clearly selectable */
+.district-dropdown .dropdown-item,
+.district-dropdown-menu .dropdown-item {
+  padding: 8px 16px !important;
+  margin: 2px 0 !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  position: relative !important;
+  z-index: 1051 !important; /* Higher z-index to be above the scrolling container */
+}
+
+/* Hover state for dropdown items */
+.district-dropdown .dropdown-item:hover,
+.district-dropdown-menu .dropdown-item:hover {
+  background-color: var(--bs-primary-bg-subtle) !important;
+}
+
+/* Active state for dropdown items */
+.district-dropdown .dropdown-item.active,
+.district-dropdown-menu .dropdown-item.active {
+  background-color: var(--bs-primary) !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+/* Fix scrolling on mobile devices */
+@media (max-width: 768px) {
+  .district-dropdown-menu {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
 }
 
 /* Mobile sort dropdown specific styling */
@@ -1068,6 +1132,13 @@ th {
 /* Settings Page Styles */
 .settings-card .nav-tabs {
   border-bottom: 1px solid var(--neutral-200);
+  display: flex;
+  width: 100%;
+}
+
+.settings-card .nav-tabs .nav-item {
+  flex: 1;
+  text-align: center;
 }
 
 .settings-card .nav-tabs .nav-link {
@@ -1075,9 +1146,13 @@ th {
   border: none;
   border-bottom: 2px solid transparent;
   font-weight: var(--font-weight-medium);
-  padding: 1rem 1.25rem;
+  padding: 1rem 0.5rem;
   transition: all 0.2s ease;
   position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-card .nav-tabs .nav-link:not(.active):hover {
@@ -1325,302 +1400,179 @@ th {
   color: #000000 !important; /* Make icons black on hover */
 }
 
-/* Custom Dropdown Styling */
-.dropdown-toggle {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-    border: 1px solid #CCCCCC !important;
-    border-radius: var(--input-border-radius) !important; /* Use existing radius */
-    padding: 0.5rem 0.75rem !important; /* Match form-control padding */
-    text-align: left;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* Mobile navigation fix for bottom alignment */
+.mobile-nav {
+  box-shadow: 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1030;
+  background-color: #FFFFFF !important;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 60px;
 }
 
-.dropdown-toggle:hover, .dropdown-toggle:focus {
-    background-color: #f8f9fa !important; /* Subtle hover */
-    border-color: #BBBBBB !important;
+/* Fix z-index for offcanvas menu to appear above dropdowns */
+.offcanvas-menu {
+  z-index: 9999 !important; /* Higher than dropdown z-index */
 }
 
-/* Remove default caret */
-.dropdown-toggle::after {
-    display: none !important; /* Force hide default caret */
+.offcanvas {
+  z-index: 9999 !important; /* Ensure offcanvas is above everything */
 }
 
-/* Add custom caret (optional - using text for simplicity) */
-.dropdown-toggle::before {
-    content: '▼'; /* Simple text caret */
-    font-size: 0.6em; /* Slightly smaller */
-    margin-left: 0.5em;
-    color: #777777;
-    vertical-align: middle; /* Align vertically */
-    display: inline-block; /* Ensure it behaves well */
+.offcanvas-backdrop {
+  z-index: 9990 !important; /* Just below offcanvas but above dropdowns */
 }
 
+/* Add bottom padding to main content to prevent overlap with mobile nav */
+@media (max-width: 992px) {
+  main.flex-grow-1 {
+    padding-bottom: 80px !important;
+  }
+}
+
+/* Hide product links menu in mobile view */
+@media (max-width: 992px) {
+  .product-actions {
+    display: none !important;
+  }
+}
+
+.district-dropdown .dropdown-menu,
+.district-dropdown-menu {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scroll-behavior: smooth !important;
+  scrollbar-width: thin !important;
+  max-height: 200px !important;
+  -webkit-overflow-scrolling: touch !important; /* For iOS smooth scrolling */
+}
+
+/* Make dropdown items not interfere with scrolling */
+.district-dropdown .dropdown-item,
+.district-dropdown-menu .dropdown-item {
+  cursor: pointer !important;
+  user-select: none !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 2px !important; /* Add some space between items */
+  clear: both !important;
+  text-align: inherit !important;
+  white-space: nowrap !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  transition: background-color 0.15s ease-in-out !important;
+  outline: 0 !important;
+  position: relative !important; /* Enable position context for pseudo-elements */
+  z-index: 1 !important; /* Ensure item is above scrolling container */
+}
+
+.district-dropdown .dropdown-item:hover, 
+.district-dropdown .dropdown-item:focus,
+.district-dropdown-menu .dropdown-item:hover,
+.district-dropdown-menu .dropdown-item:focus {
+  background-color: #f5f5f5 !important;
+  color: #000000 !important;
+  outline: 0 !important;
+}
+
+.district-dropdown .dropdown-item.active, 
+.district-dropdown .dropdown-item:active,
+.district-dropdown-menu .dropdown-item.active,
+.district-dropdown-menu .dropdown-item:active {
+  background-color: #333333 !important;
+  color: #FFFFFF !important;
+  outline: 0 !important;
+  font-weight: bold !important;
+}
+
+/* Custom Dropdown Enhancements */
 .dropdown-menu {
-    border: 1px solid #CCCCCC !important;
-    border-radius: var(--input-border-radius) !important;
-    background-color: #FFFFFF !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
-    padding: 0.25rem 0 !important;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 1050;
+  width: 100%;
+  padding: 0.5rem 0;
 }
 
 .dropdown-item {
-    color: #000000 !important;
-    padding: 0.5rem 1rem !important;
-    background-color: transparent !important;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-.dropdown-item:hover, .dropdown-item:focus {
-    background-color: #EEEEEE !important;
-    color: #000000 !important;
+.dropdown-item:hover {
+  background-color: var(--neutral-100);
 }
 
-.dropdown-item.active, .dropdown-item:active {
-    background-color: var(--bs-primary) !important; /* #333333 */
-    color: #FFFFFF !important;
+.dropdown-item.active, 
+.dropdown-item:active {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
 }
 
-/* Product Image Carousel Styles */
-.product-carousel {
-  background-color: var(--neutral-50);
-  border-radius: var(--card-border-radius);
-  overflow: hidden;
-  box-shadow: none;
-  margin-bottom: 1rem;
-  height: 350px; /* Match new height from component */
-  position: relative;
+.dropdown-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-height: 38px;
 }
 
-/* Carousel navigation controls */
-.product-carousel .carousel-control-prev,
-.product-carousel .carousel-control-next {
-  width: 8%; /* Reduced from 10% to take up less space */
-  opacity: 0.7;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 0;
-  z-index: 5;
+.dropdown-toggle::after {
+  margin-left: 1rem;
 }
 
-.product-carousel .carousel-control-prev:hover,
-.product-carousel .carousel-control-next:hover {
-  opacity: 0.9;
-  background: rgba(0, 0, 0, 0.2);
+/* District dropdown specific styles */
+.district-dropdown-menu {
+  max-height: 200px;
+  overflow-y: auto;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  position: absolute;
+  will-change: transform;
 }
 
-/* Carousel indicators */
-.product-carousel .carousel-indicators {
-  margin-bottom: 0.25rem; /* Reduced margin */
-  z-index: 5;
+.district-dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer !important;
 }
 
-.product-carousel .carousel-indicators button {
-  width: 8px; /* Smaller indicators */
-  height: 8px; 
-  border-radius: 50%;
-  background-color: rgba(51, 51, 51, 0.5);
-  margin: 0 3px; /* Reduced margin */
-}
-
-.product-carousel .carousel-indicators button.active {
-  background-color: #333333;
-}
-
-/* Responsive height adjustments */
-@media (max-width: 768px) {
-  .product-carousel {
-    height: 280px; /* Reduced from 300px */
+/* Mobile enhancements for dropdowns */
+@media (max-width: 767.98px) {
+  .dropdown-menu {
+    max-height: 160px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .dropdown-item {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
   }
 }
 
-@media (max-width: 576px) {
-  .product-carousel {
-    height: 220px; /* Reduced from 250px */
+/* Animation for dropdown */
+.animate-dropdown {
+  animation: dropdownFade 0.2s ease-out;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
-}
-
-/* Additional spacing adjustments for product detail page */
-.product-detail-section h5 {
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-}
-
-@media (max-width: 768px) {
-  /* Ensure content is more compact on mobile */
-  .product-detail-container {
-    padding-left: 10px;
-    padding-right: 10px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-}
-
-/* Bottom Navigation Animation */
-.navbar-nav .nav-link svg {
-  transition: transform 0.2s ease;
-}
-
-.navbar-nav .nav-link:hover svg {
-  transform: translateY(-2px);
-}
-
-/* Offcanvas Menu */
-.offcanvas-menu .nav-link {
-  transition: all 0.2s ease;
-}
-
-.offcanvas-menu .nav-link:hover {
-  background-color: rgba(51, 51, 51, 0.05);
-  color: #333333 !important;
-}
-
-.offcanvas-menu .nav-link:hover svg {
-  transform: translateX(3px);
-  transition: transform 0.2s ease;
-}
-
-.badge-sm {
-  font-size: 0.6rem;
-  padding: 0.2rem 0.4rem;
-}
-
-/* InputGroup Dropdown Integration Fixes */
-.input-group > .dropdown {
-  display: flex; /* Helps with alignment */
-}
-
-.input-group > .dropdown > .dropdown-toggle {
-  position: relative; /* Ensure z-index context */
-  z-index: 2; /* Keep toggle visually above input */
-  border: 1px solid #CCCCCC !important; /* Use theme subtle border */
-  background-color: #FFFFFF !important; /* Ensure white background */
-  color: #000000 !important; /* Black text */
-  box-shadow: none !important; /* Remove default button shadow */
-  border-left: none !important; /* Remove left border (input group handles it) */
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; /* Add transitions */
-}
-
-/* Ensure hover/focus uses subtle background, keeps border */
-.input-group > .dropdown > .dropdown-toggle:hover,
-.input-group > .dropdown > .dropdown-toggle:focus {
-  background-color: #f8f9fa !important; /* Subtle gray hover */
-  border-color: #CCCCCC !important; /* Keep border color consistent */
-  box-shadow: none !important;
-  z-index: 3; /* Ensure hover is visually on top */
-}
-
-/* Custom caret styling */
-.input-group > .dropdown > .dropdown-toggle::before {
-  content: '▼';
-  font-size: 0.6em;
-  margin-left: 0.5em;
-  color: #777777;
-  vertical-align: middle;
-  display: inline-block;
-}
-
-/* Hide default Bootstrap caret */
-.input-group > .dropdown > .dropdown-toggle::after {
-  display: none !important;
-}
-
-/* Dropdown Menu adjustments */
-.input-group > .dropdown > .dropdown-menu {
-  z-index: 1021; /* Ensure menu is above other elements */
-}
-
-/* Custom Sort Dropdown Styling */
-.custom-sort-dropdown button {
-  background-color: #f8f9fa !important;
-  color: #333333 !important;
-  transition: background-color 0.15s ease-in-out;
-}
-
-.custom-sort-dropdown button:hover {
-  background-color: #e9ecef !important;
-}
-
-.custom-dropdown-menu {
-  z-index: 1050 !important;
-  padding: 0.25rem 0;
-  border-radius: 0.25rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.custom-dropdown-menu button {
-  background-color: transparent;
-  border: none;
-  transition: background-color 0.15s ease-in-out;
-}
-
-.custom-dropdown-menu button:hover {
-  background-color: #f8f9fa !important;
-}
-
-/* Homepage Search and Sort Dropdown Styling */
-.sort-dropdown {
-  width: 35%;
-  min-width: 120px;
-}
-
-.sort-dropdown .dropdown-toggle {
-  background-color: #f8f9fa !important;
-  color: #333333 !important;
-  border: none !important;
-  padding: 0.4rem 0.75rem !important;
-  height: 100%;
-  width: 100%;
-  text-align: center;
-  box-shadow: none !important;
-  font-size: 0.85rem;
-}
-
-.sort-dropdown .dropdown-toggle:hover,
-.sort-dropdown .dropdown-toggle:focus {
-  background-color: #e9ecef !important;
-}
-
-.sort-dropdown .dropdown-toggle::after {
-  margin-left: 0.5rem;
-  vertical-align: middle;
-  font-size: 0.7rem;
-}
-
-.sort-dropdown .dropdown-menu {
-  min-width: 100%;
-  width: auto;
-  padding: 0.25rem 0;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.sort-dropdown .dropdown-item {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
-}
-
-.sort-dropdown .dropdown-item.active,
-.sort-dropdown .dropdown-item:active {
-  background-color: #333333;
-  color: #ffffff;
-}
-
-/* Modal Dropdown Item Fixes */
-.modal .dropdown-item:hover,
-.modal .dropdown-item:focus {
-    background-color: #EEEEEE !important; /* Light gray hover/focus background */
-    color: #000000 !important;           /* Black text */
-}
-
-.modal .dropdown-item.active,
-.modal .dropdown-item:active {
-    background-color: #333333 !important; /* Dark gray active background */
-    color: #FFFFFF !important;           /* White text */
-}
-
-/* Ensure default text color within modal dropdowns */
-.modal .dropdown-item {
-   color: #000000 !important;
-   background-color: transparent !important;
 }

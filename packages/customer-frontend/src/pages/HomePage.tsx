@@ -12,6 +12,7 @@ import { FaRegHeart } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
 import { getImageUrl } from '../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 interface ProductImage {
   id: number;
@@ -48,6 +49,7 @@ interface PaginatedProductsResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,24 +81,31 @@ const HomePage = () => {
     setShowSortOptions(false);
   };
 
-  // Toggle sort options dropdown
-  const toggleSortOptions = () => {
-    setShowSortOptions(prev => !prev);
-  };
+  // Open/close sort options dropdown
+  const openSortOptions = () => setShowSortOptions(true);
+  const closeSortOptions = () => setShowSortOptions(false);
+  const toggleSortOptions = () => setShowSortOptions((prev) => !prev);
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: globalThis.MouseEvent) => {
+    if (!showSortOptions) return;
+    function handleClick(event: MouseEvent) {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
-        setShowSortOptions(false);
+        closeSortOptions();
       }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeSortOptions();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEscape);
     };
-  }, []);
+  }, [showSortOptions]);
 
   // Fetch products when search term, category filter, or sort changes - reset to page 1
   useEffect(() => {
@@ -212,10 +221,10 @@ const HomePage = () => {
     
     if (isWishlisted(product.id)) {
       removeFromWishlist(product.id);
-      toast.success(`${product.name} removed from wishlist`);
+      toast.success(t('wishlist.removedFromWishlist').replace('!', `: ${product.name}`));
     } else {
       addToWishlist(product.id);
-      toast.success(`${product.name} added to wishlist`);
+      toast.success(t('wishlist.addedToWishlist').replace('!', `: ${product.name}`));
     }
   };
 
@@ -280,15 +289,15 @@ const HomePage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-3 d-none d-sm-block">Our Products</h2>
+      <h2 className="mb-3 d-none d-sm-block">{t('homePage.title')}</h2>
       
       {/* Category Filter */}
       <div className="mb-4">
-        <h5 className="mb-3 d-none d-sm-block">Categories</h5>
+        <h5 className="mb-3 d-none d-sm-block">{t('homePage.categories')}</h5>
         {isLoadingCategories ? (
           <div className="text-center py-4">
             <Spinner animation="border" size="sm" />
-            <p className="mt-2">Loading categories...</p>
+            <p className="mt-2">{t('homePage.loadingCategories')}</p>
           </div>
         ) : (
           <div className="category-scroll-container mb-3">
@@ -300,11 +309,11 @@ const HomePage = () => {
               >
                 <img 
                   src="/placeholder-image.svg" 
-                  alt="All Categories" 
+                  alt={t('homePage.allCategories')} 
                   className="category-image" 
                   onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
                 />
-                <p className="category-name text-truncate w-100">All Categories</p>
+                <p className="category-name text-truncate w-100">{t('homePage.allCategories')}</p>
               </div>
             </div>
             
@@ -332,16 +341,16 @@ const HomePage = () => {
       {/* Search and Sort Controls */}
       <Row className="justify-content-center mb-4">
         <Col xs={12} md={8} lg={7}>
-          <div className="d-flex align-items-stretch shadow-sm rounded">
+          <div className="d-flex align-items-stretch shadow-sm rounded search-sort-container">
             {/* Search Input - 65% width */}
-            <div style={{ width: "65%" }}>
+            <div className="search-sort-input" style={{ width: "65%" }}>
               <Form.Control
                 id="productSearch"
                 type="search"
-                placeholder="Search products by name..."
+                placeholder={t('homePage.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Search Products"
+                aria-label={t('search.searchProducts')}
                 size="sm"
                 className="h-100 border-0 rounded-0"
               />
@@ -350,8 +359,8 @@ const HomePage = () => {
             {/* Custom Sort Dropdown - 35% width */}
             <div 
               ref={sortDropdownRef}
-              className="position-relative" 
-              style={{ width: "35%" }}
+              className="position-relative sort-dropdown-wrapper" 
+              style={{ width: "35%", position: 'relative', zIndex: 1050 }}
             >
               <div 
                 role="button"
@@ -362,127 +371,159 @@ const HomePage = () => {
                     toggleSortOptions();
                   }
                 }}
-                className="h-100 d-flex align-items-center justify-content-between px-3"
+                className="h-100 d-flex align-items-center justify-content-between px-3 sort-toggle"
                 style={{ 
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: '#FFFFFF',
                   cursor: 'pointer',
                   userSelect: 'none',
                   color: '#000000'
                 }}
               >
                 <span style={{ fontSize: '0.85rem' }}>
-                  {sortBy === 'createdAt' && sortOrder === 'desc' && 'Newest'}
-                  {sortBy === 'price' && sortOrder === 'asc' && 'Price: Low-High'}
-                  {sortBy === 'price' && sortOrder === 'desc' && 'Price: High-Low'}
-                  {sortBy === 'name' && sortOrder === 'asc' && 'Name: A-Z'}
-                  {sortBy === 'name' && sortOrder === 'desc' && 'Name: Z-A'}
+                  {sortBy === 'createdAt' && sortOrder === 'desc' && t('homePage.sortOptions.newestFirst')}
+                  {sortBy === 'price' && sortOrder === 'asc' && t('homePage.sortOptions.priceLowToHigh')}
+                  {sortBy === 'price' && sortOrder === 'desc' && t('homePage.sortOptions.priceHighToLow')}
+                  {sortBy === 'name' && sortOrder === 'asc' && t('homePage.sortOptions.nameAToZ')}
+                  {sortBy === 'name' && sortOrder === 'desc' && t('homePage.sortOptions.nameZToA')}
                 </span>
                 <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>▼</span>
               </div>
               
               {showSortOptions && (
                 <div 
-                  className="position-absolute top-100 start-0 end-0 py-1 shadow-sm animate-dropdown"
+                  className="position-absolute top-100 start-0 end-0 py-1 shadow-sm dropdown-menu show animate-dropdown"
                   style={{ 
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #CCCCCC',
-                    zIndex: 1050
+                    zIndex: 1050,
+                    width: '100%',
+                    left: 0,
+                    right: 0,
+                    display: 'block',
+                    marginTop: '1px',
+                    borderRadius: '0 0 4px 4px'
+                  }}
+                  onClick={(e) => {
+                    // Don't close dropdown when clicking on the menu itself (for scrolling)
+                    if (e.target === e.currentTarget) {
+                      e.stopPropagation();
+                    }
                   }}
                 >
                   <div 
                     role="button" 
                     tabIndex={0}
-                    className="px-3 py-1"
-                    onClick={() => handleSortChange('createdAt', 'desc')}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'createdAt' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'createdAt' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('createdAt', 'desc');
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleSortChange('createdAt', 'desc');
                       }
                     }}
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: sortBy === 'createdAt' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
-                      fontWeight: sortBy === 'createdAt' && sortOrder === 'desc' ? 'bold' : 'normal',
-                      fontSize: '0.85rem'
-                    }}
                   >
-                    Newest
+                    {t('homePage.sortOptions.newestFirst')}
                   </div>
                   <div 
                     role="button" 
                     tabIndex={0}
-                    className="px-3 py-1"
-                    onClick={() => handleSortChange('price', 'asc')}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'price' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'asc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('price', 'asc');
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleSortChange('price', 'asc');
                       }
                     }}
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: sortBy === 'price' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
-                      fontWeight: sortBy === 'price' && sortOrder === 'asc' ? 'bold' : 'normal',
-                      fontSize: '0.85rem'
-                    }}
                   >
-                    Price: Low-High
+                    {t('homePage.sortOptions.priceLowToHigh')}
                   </div>
                   <div 
                     role="button" 
                     tabIndex={0}
-                    className="px-3 py-1"
-                    onClick={() => handleSortChange('price', 'desc')}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'price' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('price', 'desc');
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleSortChange('price', 'desc');
                       }
                     }}
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: sortBy === 'price' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
-                      fontWeight: sortBy === 'price' && sortOrder === 'desc' ? 'bold' : 'normal',
-                      fontSize: '0.85rem'
-                    }}
                   >
-                    Price: High-Low
+                    {t('homePage.sortOptions.priceHighToLow')}
                   </div>
                   <div 
                     role="button" 
                     tabIndex={0}
-                    className="px-3 py-1"
-                    onClick={() => handleSortChange('name', 'asc')}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'name' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'asc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('name', 'asc');
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleSortChange('name', 'asc');
                       }
                     }}
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: sortBy === 'name' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
-                      fontWeight: sortBy === 'name' && sortOrder === 'asc' ? 'bold' : 'normal',
-                      fontSize: '0.85rem'
-                    }}
                   >
-                    Name: A-Z
+                    {t('homePage.sortOptions.nameAToZ')}
                   </div>
                   <div 
                     role="button" 
                     tabIndex={0}
-                    className="px-3 py-1"
-                    onClick={() => handleSortChange('name', 'desc')}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'name' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('name', 'desc');
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleSortChange('name', 'desc');
                       }
                     }}
-                    style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: sortBy === 'name' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
-                      fontWeight: sortBy === 'name' && sortOrder === 'desc' ? 'bold' : 'normal',
-                      fontSize: '0.85rem'
-                    }}
                   >
-                    Name: Z-A
+                    {t('homePage.sortOptions.nameZToA')}
                   </div>
                 </div>
               )}
@@ -495,7 +536,7 @@ const HomePage = () => {
       {isLoading && (
         <div className="text-center my-5">
           <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading products...</span>
+            <span className="visually-hidden">{t('homePage.loadingProducts')}</span>
           </Spinner>
         </div>
       )}
@@ -511,16 +552,16 @@ const HomePage = () => {
           {totalProducts > 0 && (
             <p className="text-muted mb-3">
               {totalProducts === 1 
-                ? 'Found 1 product'
-                : `Found ${totalProducts} products`}
-              {searchTerm && ` matching "${searchTerm}"`}
+                ? t('homePage.productFound_one')
+                : t('homePage.productFound_other', { count: totalProducts })}
+              {searchTerm && ` ${t('homePage.matching')} "${searchTerm}"`}
             </p>
           )}
           
           <Row className="g-3 my-3">
             {products.length === 0 ? (
               <Col>
-                <p>No products available at the moment.</p>
+                <p>{t('homePage.noProductsAvailable')}</p>
               </Col>
             ) : (
               products.map((product) => (
@@ -561,7 +602,7 @@ const HomePage = () => {
                           className="position-absolute top-0 end-0 m-2 rounded-circle p-1"
                           style={{ width: '30px', height: '30px' }}
                           onClick={(e) => handleToggleWishlist(e, product)}
-                          aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                          aria-label={isWishlisted(product.id) ? t('product.removeFromWishlist') : t('product.addToWishlist')}
                         >
                           {isWishlisted(product.id) ? (
                             <FaHeart className="text-danger" />
