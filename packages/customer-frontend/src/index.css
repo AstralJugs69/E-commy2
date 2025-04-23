@@ -529,19 +529,34 @@ th {
 
 /* Navbars - Customer specific styling */
 .navbar {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  min-height: auto !important;
+  height: 45px !important; /* Set fixed height */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .navbar-brand {
-  font-weight: var(--font-weight-bold);
-  color: #333333;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  margin-right: 0.5rem !important;
 }
 
-.navbar-nav .nav-link {
-  font-weight: var(--font-weight-medium);
-  transition: color 0.2s ease;
+.navbar-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.navbar .btn, 
+.navbar .dropdown-toggle {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  line-height: 1 !important;
+}
+
+.navbar-toggler {
+  padding: 0.2rem !important;
+  font-size: 0.85rem !important;
 }
 
 /* Main Content Area */
@@ -755,7 +770,7 @@ th {
     padding-bottom: 10px; /* Space for scrollbar */
     -webkit-overflow-scrolling: touch; /* Smoother scroll on iOS */
     scrollbar-width: none; /* Hide scrollbar standard */
-    margin-bottom: 1rem;
+    margin-top: 0.5rem !important;
 }
 
 .category-scroll-container::-webkit-scrollbar {
@@ -1424,6 +1439,77 @@ body.offcanvas-open .dropdown-menu.show {
 
 .offcanvas-backdrop {
   z-index: 9990 !important; /* Just below offcanvas but above dropdowns */
+}
+
+/* Slim navbar styles */
+.navbar {
+  min-height: auto !important;
+  height: 45px !important; /* Set fixed height */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.navbar-brand {
+  font-size: 1.1rem;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  margin-right: 0.5rem !important;
+}
+
+.navbar-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.navbar .btn, 
+.navbar .dropdown-toggle {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  line-height: 1 !important;
+}
+
+.navbar-toggler {
+  padding: 0.2rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Adjust top padding for main content */
+main.flex-grow-1 {
+  padding-top: 48px !important; /* Just enough to clear the navbar */
+  margin-top: 0 !important;
+}
+
+/* Responsive navbar adjustments */
+@media (max-width: 576px) {
+  /* Compact navbar on small screens */
+  .navbar-brand {
+    font-size: 1.2rem;
+    max-width: 40%;
+  }
+  
+  /* Ensure better spacing for the top navigation bar elements */
+  .navbar .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Make download button more compact */
+  .dropdown-toggle.btn {
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  /* Better navbar container alignment */
+  .navbar-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  
+  /* Navbar toggle button adjustment */
+  .navbar-toggler {
+    padding: 0.25rem !important;
+    margin-left: 0.25rem !important;
+  }
 }
 
 /* Add bottom padding to main content to prevent overlap with mobile nav */
