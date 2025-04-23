@@ -119,16 +119,17 @@ const Layout = ({ installPrompt }: LayoutProps) => {
 
   return (
     <div className="app-wrapper d-flex flex-column min-vh-100">
-      <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-3 border-bottom">
-        <Container>
-          <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover">
-            <FaStore className="me-2 text-primary" size={24} />
-            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>{t('app.name').includes('Store') ? 'Store' : ''}
+      <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-1 border-bottom">
+        <Container className="navbar-container">
+          <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover mb-0">
+            <FaStore className="me-1 text-primary" size={20} />
+            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>
+            <span className="d-none d-sm-inline">{t('app.name').includes('Store') ? 'Store' : ''}</span>
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
             {/* Custom Language Switcher Button & Dropdown */}
-            <div className="dropdown me-3" style={{ position: 'relative' }} id="language-dropdown">
+            <div className="dropdown me-2" style={{ position: 'relative' }} id="language-dropdown">
               <button
                 className="dropdown-toggle btn"
                 style={{
@@ -137,14 +138,15 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                   borderRadius: 16,
                   color: '#222',
                   fontWeight: 500,
-                  padding: '0.35rem 1.25rem 0.35rem 0.9rem',
-                  minWidth: 120,
+                  padding: '0.25rem 0.5rem',
+                  minWidth: 'auto',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.25rem',
                   boxShadow: '0 2px 8px rgba(51,51,51,0.07)',
                   outline: 'none',
                   cursor: 'pointer',
+                  fontSize: '0.85rem',
                 }}
                 onClick={() => setShowLangDropdown((v: boolean) => !v)}
                 onBlur={() => setTimeout(() => setShowLangDropdown(false), 120)}
@@ -208,11 +210,12 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                 variant="outline-primary"
                 size="sm"
                 onClick={handleInstallClick}
-                className="d-flex align-items-center gap-1 me-3 rounded-pill px-3 py-1"
+                className="d-flex align-items-center me-2 rounded-pill py-0 px-2"
                 title={t('common.installApp')}
+                style={{ minWidth: 'auto', fontSize: '0.85rem' }}
               >
-                <FaDownload />
-                <span className="d-none d-md-inline">{t('common.installApp')}</span>
+                <FaDownload size={14} />
+                <span className="d-none d-md-inline ms-1">{t('common.installApp')}</span>
               </Button>
             )}
             
@@ -349,7 +352,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
         </Container>
       </Navbar>
       
-      <main className="flex-grow-1 pt-5 mt-4 pb-5 pb-lg-0">
+      <main className="flex-grow-1 pt-5 mt-5 pb-5 pb-lg-0">
         <Outlet />
       </main>
       
