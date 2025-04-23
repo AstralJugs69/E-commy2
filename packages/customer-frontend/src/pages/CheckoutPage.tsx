@@ -468,7 +468,7 @@ const CheckoutPage: React.FC = () => {
                           aria-expanded={locationDropdownOpen}
                           data-testid="location-dropdown"
                         >
-                          {selectedLocation || t('checkout.selectLocation')}
+                          {currentLocationLabel || t('checkout.selectLocation')}
                           <i className="bi bi-caret-down-fill"></i>
                         </button>
                         <div
