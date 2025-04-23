@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel, Dropdown } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,7 @@ import { FaHeart } from 'react-icons/fa';
 import { FaRegHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
 import { getImageUrl } from '../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 // Define interface for product data matching backend response
 interface ProductImage {
@@ -62,6 +63,8 @@ interface PaginatedProductsResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const ProductDetailPage = () => {
+  const { t } = useTranslation();
+  
   // State for product
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +90,17 @@ const ProductDetailPage = () => {
   // State for other products
   const [otherProducts, setOtherProducts] = useState<Product[]>([]);
   const [isLoadingOther, setIsLoadingOther] = useState(false);
+  
+  // Rating dropdown options
+  const ratingOptions = [
+    { value: 0, label: t('product.selectARating') },
+    { value: 1, label: `1 - ${t('product.ratingOptions.poor')}` },
+    { value: 2, label: `2 - ${t('product.ratingOptions.fair')}` },
+    { value: 3, label: `3 - ${t('product.ratingOptions.good')}` },
+    { value: 4, label: `4 - ${t('product.ratingOptions.veryGood')}` },
+    { value: 5, label: `5 - ${t('product.ratingOptions.excellent')}` }
+  ];
+  const currentRatingLabel = ratingOptions.find(opt => opt.value === newRating)?.label || t('product.selectARating');
   
   // Hooks
   const { productId } = useParams<{ productId: string }>();
@@ -382,7 +396,7 @@ const ProductDetailPage = () => {
     return (
       <Container className="py-5 text-center">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading product details...</span>
+          <span className="visually-hidden">{t('product.loadingDetails')}</span>
         </Spinner>
       </Container>
     );
@@ -396,7 +410,7 @@ const ProductDetailPage = () => {
           {error}
         </Alert>
         <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-          Back to Products
+          {t('navigation.backToProducts')}
         </Button>
       </Container>
     );
@@ -407,10 +421,10 @@ const ProductDetailPage = () => {
     return (
       <Container className="py-3">
         <Alert variant="warning">
-          Product not found or has been removed.
+          {t('product.notFound')}
         </Alert>
         <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-          Back to Products
+          {t('navigation.backToProducts')}
         </Button>
       </Container>
     );
@@ -444,7 +458,7 @@ const ProductDetailPage = () => {
       <Row className="mb-2">
         <Col>
           <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-            &larr; Back to Products
+            &larr; {t('navigation.backToProducts')}
           </Button>
         </Col>
       </Row>
@@ -487,7 +501,7 @@ const ProductDetailPage = () => {
                       <img
                         className="d-block"
                         src={getImageUrl(image.url)}
-                        alt={`${product.name} - Image ${index + 1}`}
+                        alt={`${product.name} - ${t('product.image')} ${index + 1}`}
                         style={{ 
                           objectFit: 'contain',
                           maxHeight: '330px',
@@ -533,9 +547,42 @@ const ProductDetailPage = () => {
                 bg="info" 
                 className="position-absolute top-0 start-0 m-2 z-1"
               >
-                New!
+                {t('common.new')}
               </Badge>
             )}
+          </div>
+          
+          <div className="mb-1">
+            <p className="text-muted small mb-0">{t('product.addedOn')} {formatDate(product.createdAt)}</p>
+          </div>
+          
+          {/* Description with reduced margin */}
+          <div className="mb-2">
+            <h5 className="mb-1">{t('product.description')}</h5>
+            <p className="text-break mb-0 product-description">{product.description || t('product.noDescriptionAvailable')}</p>
+          </div>
+          
+          {/* Add to Cart Button - with improved positioning */}
+          <div className="mt-3 mb-2 sticky-bottom">
+            <Button
+              variant={isInCart ? "success" : "primary"}
+              className="w-100 py-2"
+              onClick={handleAddToCartClick}
+              disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
+            >
+              {isAddingToCart ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
+                  {t('product.adding')}
+                </>
+              ) : isInCart ? (
+                t('product.inCart')
+              ) : product?.stock <= 0 ? (
+                t('product.outOfStock')
+              ) : (
+                t('product.addToCart')
+              )}
+            </Button>
           </div>
         </Col>
         
@@ -590,172 +637,149 @@ const ProductDetailPage = () => {
             )}
           </div>
           
-          <div className="mb-1">
-            <p className="text-muted small mb-0">Added on {formatDate(product.createdAt)}</p>
-          </div>
-          
-          {/* Description with reduced margin */}
-          <div className="mb-2">
-            <h5 className="mb-1">Description</h5>
-            <p className="text-break mb-0 product-description">{product.description || 'No description available.'}</p>
-          </div>
-          
-          {/* Add to Cart Button - with improved positioning */}
-          <div className="mt-3 mb-2 sticky-bottom">
-            <Button
-              variant={isInCart ? "success" : "primary"}
-              className="w-100 py-2"
-              onClick={handleAddToCartClick}
-              disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
-            >
-              {isAddingToCart ? (
-                <>
-                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
-                  Adding...
-                </>
-              ) : isInCart ? (
-                '✓ In Cart'
-              ) : product?.stock <= 0 ? (
-                'Out of Stock'
-              ) : (
-                'Add to Cart'
-              )}
-            </Button>
-          </div>
-        </Col>
-      </Row>
-
-      {/* Reviews Section - moved outside product details column */}
-      <Row className="mt-4">
-        <Col xs={12}>
-          <Card>
-            <Card.Header className="bg-light">
-              <h3 className="fs-4 mb-0">Reviews</h3>
-            </Card.Header>
-            <Card.Body>
-              {/* Write Review Form */}
-              {isAuthenticated && !hasUserReviewed && (
-                <div className="mb-4">
-                  <h4 className="fs-5 mb-3 fw-semibold">Write a Review</h4>
-                  <Form onSubmit={handleSubmitReview}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-medium">Rating</Form.Label>
-                      <Form.Select 
-                        value={newRating} 
-                        onChange={(e) => setNewRating(parseInt(e.target.value))}
-                        required
-                      >
-                        <option value="0">Select a rating</option>
-                        <option value="1">1 - Poor</option>
-                        <option value="2">2 - Fair</option>
-                        <option value="3">3 - Good</option>
-                        <option value="4">4 - Very Good</option>
-                        <option value="5">5 - Excellent</option>
-                      </Form.Select>
-                    </Form.Group>
+          {/* Reviews Section - moved outside product details column */}
+          <Row className="mt-4">
+            <Col xs={12}>
+              <Card>
+                <Card.Header className="bg-light">
+                  <h3 className="fs-4 mb-0">{t('product.reviews')}</h3>
+                </Card.Header>
+                <Card.Body>
+                  {/* Write Review Form */}
+                  {isAuthenticated && !hasUserReviewed && (
+                    <div className="mb-4">
+                      <h4 className="fs-5 mb-3 fw-semibold">{t('product.writeReview')}</h4>
+                      <Form onSubmit={handleSubmitReview}>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-medium">{t('product.rating')}</Form.Label>
+                          <Dropdown onSelect={eventKey => setNewRating(eventKey ? parseInt(eventKey) : 0)}>
+                            <Dropdown.Toggle
+                              variant="outline-secondary"
+                              id="ratingDropdown"
+                              className="w-100 d-flex justify-content-between align-items-center"
+                              size="sm"
+                            >
+                              {currentRatingLabel}
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu className="w-100 animate-dropdown">
+                              {ratingOptions.map(option => (
+                                <Dropdown.Item
+                                  key={option.value}
+                                  eventKey={option.value.toString()}
+                                  active={newRating === option.value}
+                                  disabled={option.value === 0}
+                                >
+                                  {option.label}
+                                </Dropdown.Item>
+                              ))}
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </Form.Group>
+                        
+                        <Form.Group className="mb-4">
+                          <Form.Label className="fw-medium">{t('product.comment')}</Form.Label>
+                          <Form.Control 
+                            as="textarea" 
+                            rows={3} 
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder={t('product.placeholder')}
+                          />
+                        </Form.Group>
+                        
+                        {submitReviewError && (
+                          <Alert variant="danger" className="mb-3">
+                            {submitReviewError}
+                          </Alert>
+                        )}
+                        
+                        <Button 
+                          type="submit" 
+                          variant="primary"
+                          disabled={isSubmittingReview}
+                          className="px-4 py-2 rounded-pill fw-medium"
+                        >
+                          {isSubmittingReview ? (
+                            <>
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                                className="me-2"
+                              />
+                              {t('common.submitting')}
+                            </>
+                          ) : (
+                            t('product.submitReview')
+                          )}
+                        </Button>
+                      </Form>
+                    </div>
+                  )}
+                  
+                  {/* Display Reviews */}
+                  <div>
+                    <h4 className="fs-5 mb-3">{t('product.customerReviews')}</h4>
                     
-                    <Form.Group className="mb-4">
-                      <Form.Label className="fw-medium">Comment (optional)</Form.Label>
-                      <Form.Control 
-                        as="textarea" 
-                        rows={3} 
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Share your thoughts about this product..."
-                      />
-                    </Form.Group>
+                    {isLoadingReviews && (
+                      <div className="text-center py-3">
+                        <Spinner animation="border" size="sm" role="status">
+                          <span className="visually-hidden">{t('product.loadingReviews')}</span>
+                        </Spinner>
+                        <p className="mb-0 mt-2">{t('product.loadingReviews')}</p>
+                      </div>
+                    )}
                     
-                    {submitReviewError && (
-                      <Alert variant="danger" className="mb-3">
-                        {submitReviewError}
+                    {reviewError && !isLoadingReviews && (
+                      <Alert variant="danger">
+                        {reviewError}
                       </Alert>
                     )}
                     
-                    <Button 
-                      type="submit" 
-                      variant="primary"
-                      disabled={isSubmittingReview}
-                      className="px-4 py-2 rounded-pill fw-medium"
-                    >
-                      {isSubmittingReview ? (
-                        <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                            className="me-2"
-                          />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit Review'
-                      )}
-                    </Button>
-                  </Form>
-                </div>
-              )}
-              
-              {/* Display Reviews */}
-              <div>
-                <h4 className="fs-5 mb-3">Customer Reviews</h4>
-                
-                {isLoadingReviews && (
-                  <div className="text-center py-3">
-                    <Spinner animation="border" size="sm" role="status">
-                      <span className="visually-hidden">Loading reviews...</span>
-                    </Spinner>
-                    <p className="mb-0 mt-2">Loading reviews...</p>
+                    {!isLoadingReviews && !reviewError && reviews.length === 0 && (
+                      <p className="text-muted">
+                        {t('product.noReviews')}
+                      </p>
+                    )}
+                    
+                    {!isLoadingReviews && !reviewError && reviews.length > 0 && (
+                      <ListGroup variant="flush">
+                        {reviews.map((review) => (
+                          <ListGroup.Item key={review.id} className="py-3">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <div className="d-flex align-items-center">
+                                <StarRating rating={review.rating} />
+                                <span className="ms-2 fw-bold">{review.user.email}</span>
+                              </div>
+                              <small className="text-muted">
+                                {formatDate(review.createdAt)}
+                              </small>
+                            </div>
+                            {review.comment && (
+                              <p className="mb-0 mt-2">{review.comment}</p>
+                            )}
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    )}
                   </div>
-                )}
-                
-                {reviewError && !isLoadingReviews && (
-                  <Alert variant="danger">
-                    {reviewError}
-                  </Alert>
-                )}
-                
-                {!isLoadingReviews && !reviewError && reviews.length === 0 && (
-                  <p className="text-muted">
-                    No reviews yet. Be the first to review this product!
-                  </p>
-                )}
-                
-                {!isLoadingReviews && !reviewError && reviews.length > 0 && (
-                  <ListGroup variant="flush">
-                    {reviews.map((review) => (
-                      <ListGroup.Item key={review.id} className="py-3">
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                          <div className="d-flex align-items-center">
-                            <StarRating rating={review.rating} />
-                            <span className="ms-2 fw-bold">{review.user.email}</span>
-                          </div>
-                          <small className="text-muted">
-                            {formatDate(review.createdAt)}
-                          </small>
-                        </div>
-                        {review.comment && (
-                          <p className="mb-0 mt-2">{review.comment}</p>
-                        )}
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
         </Col>
       </Row>
 
       {/* You Might Also Like Section */}
       <Row className="mt-5">
         <Col xs={12}>
-          <h3 className="mb-3">You Might Also Like</h3>
+          <h3 className="mb-3">{t('product.youMightAlsoLike')}</h3>
           {isLoadingOther ? (
             <div className="text-center py-3">
               <Spinner animation="border" size="sm" role="status">
-                <span className="visually-hidden">Loading recommended products...</span>
+                <span className="visually-hidden">{t('product.loadingRecommendedProducts')}</span>
               </Spinner>
             </div>
           ) : otherProducts.length > 0 ? (
@@ -769,7 +793,7 @@ const ProductDetailPage = () => {
               ))}
             </Row>
           ) : (
-            <p className="text-muted">No similar products found.</p>
+            <p className="text-muted">{t('product.noSimilarProductsFound')}</p>
           )}
         </Col>
       </Row>

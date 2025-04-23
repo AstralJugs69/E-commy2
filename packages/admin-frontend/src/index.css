@@ -9,36 +9,37 @@
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #39FF14; /* Neon Green */
-  --primary-rgb: 57, 255, 20;
-  --primary-dark: #32E012; /* Slightly darker */
-  --primary-light: #7CFF5E;
-  --primary-bg-subtle: #E9FFDF;
-  --primary-text-on: #000000; /* Black text for contrast on neon green */
+  --primary: #333333; /* Single Dark Gray */
+  --primary-rgb: 51, 51, 51;
+  --primary-hover: #333333; /* Same as default */
+  --primary-active: #333333; /* Same as default */
+  --primary-bg-subtle: #EEEEEE; /* Lighter subtle gray */
+  --primary-text-on: #FFFFFF; /* White text for contrast on buttons */
+  --primary-dark: #333333; /* Consistent Dark Primary Accent */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #343A40; /* Dark Gray */
-  --secondary-color-rgb: 52, 58, 64;
-  --secondary-hover: #23272B;
-  --secondary-active: #1D2124;
-  --secondary-text-on: #FFFFFF; /* White text on dark gray */
+  --secondary-color: #FFFFFF; /* White for outline style */
+  --secondary-color-rgb: 255, 255, 255;
+  --secondary-hover: #FFFFFF; /* Same as default */
+  --secondary-active: #FFFFFF; /* Same as default */
+  --secondary-text-on: #333333; /* Dark text on secondary buttons */
   
-  --light-bg: #F8FAFC; /* Neutral 50 */
-  --subtle-border: #E2E8F0; /* Neutral 200 */
-  --text-muted: #64748B; /* Neutral 500 */
-  --text-dark: #1E293B; /* Neutral 800 */
+  --light-bg: #FFFFFF; /* Pure White Background */
+  --subtle-border: #CCCCCC; /* Single Light Gray for borders */
+  --text-muted: #777777; /* Medium Gray Muted Text */
+  --text-dark: #000000; /* Pure Black Primary Text */
   
-  /* Neutral Colors */
-  --neutral-50: #F8FAFC;
-  --neutral-100: #F1F5F9;
-  --neutral-200: #E2E8F0;
-  --neutral-300: #CBD5E1;
-  --neutral-400: #94A3B8;
-  --neutral-500: #64748B;
-  --neutral-600: #475569;
-  --neutral-700: #334155;
-  --neutral-800: #1E293B;
-  --neutral-900: #0F172A;
+  /* Neutral Colors - Keep admin sidebar dark */
+  --neutral-50: #FFFFFF; /* White */
+  --neutral-100: #F1F1F1; /* Very Light */
+  --neutral-200: #E2E2E2; /* Light */
+  --neutral-300: #DDDDDD; /* Medium Light */
+  --neutral-400: #BBBBBB; /* Medium */
+  --neutral-500: #999999; /* Medium Gray */
+  --neutral-600: #777777; /* Same as text-muted */
+  --neutral-700: #555555; /* Medium Dark */
+  --neutral-800: #111111; /* Very Dark - For admin sidebar */
+  --neutral-900: #000000; /* Pure Black */
   
   /* Accent Color */
   --accent: #8B5CF6;
@@ -54,12 +55,12 @@
   --info: #3B82F6;
 
   /* Bootstrap variable overrides */
-  --bs-primary: var(--primary);
-  --bs-primary-rgb: var(--primary-rgb);
-  --bs-secondary: var(--secondary-color);
-  --bs-secondary-rgb: var(--secondary-color-rgb);
-  --bs-link-color-rgb: var(--primary-rgb);
-  --bs-link-hover-color-rgb: var(--primary-rgb);
+  --bs-primary: #333333;
+  --bs-primary-rgb: 51, 51, 51;
+  --bs-secondary: #FFFFFF;
+  --bs-secondary-rgb: 255, 255, 255;
+  --bs-link-color-rgb: 51, 51, 51;
+  --bs-link-hover-color-rgb: 51, 51, 51;
 
   /* Font Settings */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -69,16 +70,9 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   
-  /* Spacing */
-  --spacer-1: 0.25rem;
-  --spacer-2: 0.5rem;
-  --spacer-3: 1rem;
-  --spacer-4: 1.5rem;
-  --spacer-5: 3rem;
-  
   /* Component Specific */
   --card-border-radius: 0.5rem;
-  --card-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --card-box-shadow: none;
   --button-border-radius: 0.375rem;
   --input-border-radius: 0.375rem;
 }
@@ -87,13 +81,13 @@
 body {
   font-family: var(--font-family-base);
   background-color: var(--light-bg);
-  color: var(--neutral-800);
+  color: var(--text-dark);
   line-height: 1.6;
 }
 
 /* Typography Overrides */
 h1, h2, h3, h4, h5, h6, p, table, form, .card {
-  color: var(--neutral-900);
+  color: var(--text-dark);
   margin-bottom: 1.25rem;
   font-weight: var(--font-weight-semibold);
 }
@@ -115,20 +109,20 @@ h6 { font-size: 1rem; }
 
 /* Link Styles */
 a {
-  color: var(--primary);
-  text-decoration: none;
+  color: var(--bs-primary);
+  text-decoration: underline;
   transition: color 0.2s ease;
 }
 a:hover {
-  color: var(--primary-dark);
-  text-decoration: underline;
+  color: var(--bs-primary);
+  text-decoration: none;
 }
 
 /* Interactive Element Focus Styles */
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.3);
-  border-radius: var(--input-border-radius);
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--bs-primary) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important; /* Override Bootstrap shadows */
 }
 
 /* Table Headers */
@@ -148,40 +142,32 @@ th {
 
 .btn-primary {
   --bs-btn-color: var(--primary-text-on);
-  --bs-btn-bg: var(--primary);
-  --bs-btn-border-color: var(--primary);
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
   --bs-btn-hover-color: var(--primary-text-on);
-  --bs-btn-hover-bg: var(--primary-dark);
-  --bs-btn-hover-border-color: var(--primary-dark);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
   --bs-btn-active-color: var(--primary-text-on);
-  --bs-btn-active-bg: var(--primary-dark);
-  --bs-btn-active-border-color: var(--primary-dark);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
   --bs-btn-disabled-color: var(--primary-text-on);
-  --bs-btn-disabled-bg: var(--primary);
-  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 .btn-secondary {
-  --bs-btn-color: var(--secondary-text-on);
-  --bs-btn-bg: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-hover-bg: var(--secondary-hover);
-  --bs-btn-hover-border-color: var(--secondary-hover);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-active-bg: var(--secondary-active);
-  --bs-btn-active-border-color: var(--secondary-active);
-}
-
-.btn-outline-secondary {
-  --bs-btn-color: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-hover-bg: var(--secondary-color);
-  --bs-btn-hover-border-color: var(--secondary-color);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-active-bg: var(--secondary-color);
-  --bs-btn-active-border-color: var(--secondary-color);
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 .btn-success {
@@ -245,10 +231,11 @@ th {
 
 /* Cards */
 .card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--subtle-border);
   border-radius: var(--card-border-radius);
-  border-color: var(--neutral-200);
-  box-shadow: var(--card-box-shadow);
-  overflow: hidden;
+  box-shadow: none;
+  margin-bottom: 1.5rem;
 }
 
 /* Dashboard Stat Cards */
@@ -473,7 +460,8 @@ th {
 }
 
 .sidebar {
-  background-color: var(--neutral-800);
+  background-color: #111111;
+  color: #FFFFFF;
 }
 
 .sidebar .nav-link {
@@ -526,4 +514,60 @@ th {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Custom Dropdown Styling */
+.dropdown-toggle {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 1px solid #CCCCCC !important;
+    border-radius: var(--input-border-radius) !important; /* Use existing radius */
+    padding: 0.5rem 0.75rem !important; /* Match form-control padding */
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdown-toggle:hover, .dropdown-toggle:focus {
+    background-color: #f8f9fa !important; /* Subtle hover */
+    border-color: #BBBBBB !important;
+}
+
+/* Remove default caret */
+.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Add custom caret (optional - using text for simplicity) */
+.dropdown-toggle::before {
+    content: '▼'; /* Simple text caret */
+    font-size: 0.7em;
+    margin-left: 0.5em;
+    color: #777777;
+}
+
+.dropdown-menu {
+    border: 1px solid #CCCCCC !important;
+    border-radius: var(--input-border-radius) !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    padding: 0.25rem 0 !important;
+}
+
+.dropdown-item {
+    color: #000000 !important;
+    padding: 0.5rem 1rem !important;
+    background-color: transparent !important;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: #EEEEEE !important;
+    color: #000000 !important;
+}
+
+.dropdown-item.active, .dropdown-item:active {
+    background-color: var(--bs-primary) !important; /* #333333 */
+    color: #FFFFFF !important;
 }

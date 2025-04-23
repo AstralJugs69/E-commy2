@@ -1,0 +1,75 @@
+# E-commy Project Scratchpad
+
+## Current Task Status
+[X] Implement monochrome color palette across both frontend packages
+- Updated customer-frontend/src/index.css with new monochrome color scheme
+- Updated admin-frontend/src/index.css with matching monochrome color scheme
+- Fixed lint warnings for line-clamp property by adding standard property
+
+[X] Refine monochrome theme for better contrast and fix inconsistencies
+- Updated primary color from #555555 to #444444 in both frontends for better contrast
+- Fixed settings tab styles in customer frontend
+- Improved profile action list hover styles in customer frontend
+- Verified admin sidebar background uses correct neutral-800 value (#222222)
+
+[X] Implement high-contrast "full solid" monochrome theme and add custom dropdown styles
+- Updated color variables to simpler high-contrast palette in both frontends
+- Changed base colors to pure white (#FFFFFF) background and pure black (#000000) text
+- Changed primary to single dark gray (#333333) with no hover variation
+- Updated secondary to white (#FFFFFF) with outline styles for buttons
+- Added consistent focus styles with 2px outlines
+- Added custom dropdown styling to both frontends
+- Ensured admin sidebar background is dark (#111111)
+
+[X] Fix visual glitches in Customer Frontend
+- Fixed dropdown caret appearance to avoid conflicts with Bootstrap defaults
+- Improved header icon visibility with better contrast and hover states
+- Ensured proper vertical alignment of custom caret
+
+[X] Fix PWA "Install App" Button Visibility
+- Updated .btn-outline-primary styles to use CSS variables consistently
+- Added !important to color and border-color properties to override specificity issues
+- Set explicit background-color: transparent to ensure proper contrast
+- Aligned hover and active states with monochrome theme standards
+
+[X] Create custom product sorting dropdown in HomePage
+- Implemented completely vanilla dropdown solution with React state management
+- Used useState to control dropdown visibility without relying on Bootstrap JavaScript
+- Added proper useRef for handling click-outside events to close the dropdown
+- Used inline styles to avoid CSS conflicts with Bootstrap
+- Maintained 65/35 width ratio between search input and sorting dropdown
+- Applied proper styling for active items with background color and bold text
+- Added clear visual indicators with dropdown arrow and proper spacing
+
+## Implementation Details
+- Converted Sage Green (Customer Frontend) and Neon Green (Admin Frontend) to unified monochrome palette
+- Maintained consistent color variables across both frontends
+- Preserved semantic colors (success, warning, danger, info) as instructed
+- Set card backgrounds to white (#FFFFFF) with light gray borders
+- Updated text colors to appropriate monochrome values
+- Enhanced contrast in interactive elements
+- Fixed inconsistencies in hover states for tabs and list items
+- Simplified the color scheme for a clean, high-contrast UI
+- Implemented custom dropdown styles for a consistent look across React-Bootstrap components
+- Ensured admin sidebar stands out with a very dark (#111111) background
+- Added proper visibility for header icons with clear hover states
+- Ensured PWA "Install App" button has proper contrast and visibility
+- Created vanilla React dropdown component for product sorting avoiding Bootstrap JavaScript dependencies
+
+## Lessons
+- When editing CSS, always check for vendor prefix compatibility (e.g., -webkit-line-clamp should be paired with standard line-clamp)
+- Remember to use environment variables for API URLs rather than hardcoding localhost references
+- Proper approach for API calls:
+  1. Import the pre-configured api instance: `import api from '../utils/api'`
+  2. Use api.[method] instead of axios.[method] with hardcoded URLs
+  3. Remove individual API_URL/API_BASE_URL constants defined in components
+  4. Use relative paths in api calls (e.g., '/orders' instead of 'http://localhost:3001/api/orders')
+- When implementing a color scheme, ensure interactive elements have sufficient contrast and consistent styling
+- High-contrast themes require careful attention to focus states for accessibility
+- For consistent UI, it's important to override Bootstrap's default dropdown styles
+- When adding custom styling to Bootstrap components, use `!important` where necessary to override Bootstrap's defaults
+- Pay special attention to SVG icon colors as they may inherit from parent elements in unexpected ways
+- Using CSS variables instead of hardcoded colors ensures consistency across the theme
+- For custom dropdowns, sometimes a pure vanilla React implementation is more reliable than third-party libraries
+- When UI components don't work as expected, try using direct React state management
+- Inline styles can be useful for avoiding CSS conflicts when Bootstrap styling is interfering with components

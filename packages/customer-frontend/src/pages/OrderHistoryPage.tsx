@@ -7,6 +7,7 @@ import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 interface UserOrder {
   id: number; 
@@ -18,6 +19,7 @@ interface UserOrder {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const OrderHistoryPage = () => {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true); // For order list loading
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ const OrderHistoryPage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-4">My Orders</h2>
+      <h2 className="mb-4">{t('orders.title')}</h2>
 
       {error && ( // Show error if occurred after loading
         <Alert variant="danger" className="my-3">
@@ -109,9 +111,9 @@ const OrderHistoryPage = () => {
           {orders.length === 0 ? (
             <EmptyState
               icon={<FaList />}
-              title="No Orders Yet"
-              message="You haven't placed any orders yet. Start shopping to see your order history here."
-              actionButton={<Link to="/" className="btn btn-primary px-4">Start Shopping</Link>}
+              title={t('orders.noOrders')}
+              message={t('orders.noOrdersMessage', 'You haven\'t placed any orders yet. Start shopping to see your order history here.')}
+              actionButton={<Link to="/" className="btn btn-primary px-4">{t('cart.startShopping')}</Link>}
             />
           ) : (
             <>
