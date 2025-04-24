@@ -228,7 +228,7 @@ const OrderSuccessPage = () => {
               <p className="mb-2">
                 <strong>Status:</strong> <span className="badge bg-success px-2 py-1 ms-1">{order.status}</span>
               </p>
-              <p className="mb-2"><strong>Total Amount:</strong> €{order.totalAmount.toFixed(2)}</p>
+              <p className="mb-2"><strong>Total Amount:</strong> €{(order.totalAmount || 0).toFixed(2)}</p>
             </div>
           </div>
         </Card.Body>
@@ -276,8 +276,8 @@ const OrderSuccessPage = () => {
                     <tr key={item.id}>
                       <td>{item.productName || `Product #${item.productId}`}</td>
                       <td className="text-center">{item.quantity}</td>
-                      <td className="text-end">€{item.price.toFixed(2)}</td>
-                      <td className="text-end">€{(item.price * item.quantity).toFixed(2)}</td>
+                      <td className="text-end">€{(item.price || 0).toFixed(2)}</td>
+                      <td className="text-end">€{((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                     </tr>
                   ))
                 ) : (
@@ -289,7 +289,7 @@ const OrderSuccessPage = () => {
               <tfoot className="table-light fw-bold">
                 <tr>
                   <td colSpan={3} className="text-end">Total:</td>
-                  <td className="text-end">€{order.totalAmount.toFixed(2)}</td>
+                  <td className="text-end">€{(order.totalAmount || 0).toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
