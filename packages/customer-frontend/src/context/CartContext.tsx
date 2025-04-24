@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import api from '../utils/api';
 
 // Define types for cart items and product
 interface ProductImage {
@@ -40,9 +41,6 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Use environment variable for API URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -75,9 +73,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Fetching cart from server');
       
       // Fetch all cart items for this user
-      const response = await axios.get(`${API_BASE_URL}/cart`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/cart');
       
       console.log('Cart data received:', response.data);
       
@@ -167,10 +163,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // For new items, we'll let the server validate stock
-      const response = await axios.post(
-        `${API_BASE_URL}/cart/item`,
-        { productId, quantity },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        '/cart/item',
+        { productId, quantity }
       );
       
       console.log('Add to cart response:', response.data);
@@ -250,10 +245,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Use the update endpoint to set the quantity directly instead of incrementing
-      const response = await axios.post(
-        `${API_BASE_URL}/cart/update/${productId}`,
-        { quantity },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        `/cart/update/${productId}`,
+        { quantity }
       );
       
       console.log('Cart update response:', response.data);
@@ -326,9 +320,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Removing item from cart:', productId);
       
       // Call the API to remove the item
-      await axios.delete(`${API_BASE_URL}/cart/item/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/cart/item/${productId}`);
       
       // Update local state immediately for responsiveness
       setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
@@ -371,9 +363,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Clearing cart');
       
       // Call the API to clear the cart
-      await axios.delete(`${API_BASE_URL}/cart`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete('/cart');
       
       // Update local state
       setCartItems([]);

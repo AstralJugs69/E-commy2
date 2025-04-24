@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useAuth } from './AuthContext';
+import api from '../utils/api'; // Import centralized API utility
 
 // Define types
 interface ProductImage {
@@ -43,8 +43,6 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -71,24 +69,20 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     setError(null);
     
     try {
-      const response = await axios.get(`${API_BASE_URL}/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/wishlist');
       
       // Ensure response.data is an array
-      if (Array.isArray(response.data)) {
-        setWishlistItems(response.data);
-      } else {
-        console.error('Expected array for wishlist data, got:', response.data);
-        setWishlistItems([]);
-      }
-    } catch (err) {
+      setWishlistItems(Array.isArray(response.data) ? response.data : []);
+    } catch (err: any) {
       console.error("Error fetching wishlist:", err);
       setError("Failed to load wishlist items.");
       
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
+      if (err.response?.status === 401) {
         toast.error("Your session has expired. Please log in again.");
       }
+      
+      // Set empty array to prevent mapping errors
+      setWishlistItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -105,25 +99,21 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     setError(null);
     
     try {
-      await axios.post(
-        `${API_BASE_URL}/wishlist`,
-        { productId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/wishlist', { productId });
       
       await fetchWishlist();
       toast.success("Item added to wishlist!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error adding to wishlist:", err);
       let errorMsg = "Failed to add item to wishlist.";
       
-      if (axios.isAxiosError(err) && err.response) {
         // If the item is already in the wishlist, don't show an error
-        if (err.response.status === 409) {
+      if (err.response?.status === 409) {
           toast.success("Item is already in your wishlist!");
           return;
         }
         
+      if (err.response) {
         errorMsg = err.response.data.message || errorMsg;
       }
       
@@ -145,18 +135,16 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     setError(null);
     
     try {
-      await axios.delete(`${API_BASE_URL}/wishlist/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/wishlist/${productId}`);
       
       // Update local state immediately for better UX
       setWishlistItems(prevItems => prevItems.filter(item => item.productId !== productId));
       toast.success("Item removed from wishlist.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error removing from wishlist:", err);
       let errorMsg = "Failed to remove item from wishlist.";
       
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         errorMsg = err.response.data.message || errorMsg;
       }
       

@@ -16,8 +16,6 @@ interface UserOrder {
   createdAt: string; // ISO String
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 const OrderHistoryPage = () => {
   const { t } = useTranslation();
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -48,11 +46,7 @@ const OrderHistoryPage = () => {
       setError(null);
 
       try {
-        const response = await axios.get<UserOrder[]>(`${API_BASE_URL}/orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await api.get<UserOrder[]>('/orders');
         
         // Ensure we have an array
         if (Array.isArray(response.data)) {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaShoppingBag } from 'react-icons/fa';
@@ -10,6 +9,7 @@ import { FaPhone } from 'react-icons/fa';
 import { FaMapMarkerAlt } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
+import api from '../utils/api'; // Import centralized API utility
 
 interface OrderItem {
   id: number;
@@ -36,8 +36,6 @@ interface AdminOrder {
   createdAt: string; // ISO 8601 date string
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 // Define allowed order statuses (must match backend)
 const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -54,13 +52,6 @@ const OrderManagementPage = () => {
     setIsLoading(true);
     setError(null);
 
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const params = new URLSearchParams();
       
@@ -73,21 +64,20 @@ const OrderManagementPage = () => {
         params.append('dateFilter', dateFilter);
       }
       const queryString = params.toString();
-      const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
+      const apiUrl = `/admin/orders${queryString ? `?${queryString}` : ''}`;
 
-      const response = await axios.get(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.get(apiUrl);
       
       // Check if response.data is an array or has an 'orders' property
       const ordersArray = Array.isArray(response.data) 
         ? response.data 
-        : response.data.orders || [];
+        : response.data?.orders || [];
       
+      // Ensure we always have an array
       if (!Array.isArray(ordersArray)) {
-        throw new Error('Invalid response format: expected an array of orders');
+        console.error("Invalid response format: expected an array of orders");
+        setOrders([]);
+        return;
       }
       
       const processedOrders = ordersArray.map(order => ({
@@ -98,18 +88,19 @@ const OrderManagementPage = () => {
       }));
       
       setOrders(processedOrders);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401) {
+    } catch (err: any) {
+      if (err.response?.status === 401) {
           setError('Your session has expired. Please log in again.');
-        } else {
-          setError(err.response.data.message || 'Failed to fetch orders.');
-        }
+      } else if (err.response) {
+        setError(err.response.data?.message || 'Failed to fetch orders.');
         console.error('Error fetching orders:', err.response.data);
       } else {
         setError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      
+      // Initialize with empty array to prevent mapping errors
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -123,34 +114,17 @@ const OrderManagementPage = () => {
     setIsUpdating(true);
     setError(null);
     
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsUpdating(false);
-      return;
-    }
-    
     setUpdatingOrderIds(prev => [...prev, orderId]);
     
     try {
-      await axios.put(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
       
       await fetchOrders();
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401) {
+    } catch (err: any) {
+      if (err.response?.status === 401) {
           setError('Your session has expired. Please log in again.');
-        } else {
-          setError(err.response.data.message || `Failed to update order ${orderId} status.`);
-        }
+      } else if (err.response) {
+        setError(err.response.data?.message || `Failed to update order ${orderId} status.`);
         console.error('Error updating order status:', err.response.data);
       } else {
         setError('Network error. Please check your connection.');
@@ -235,137 +209,102 @@ const OrderManagementPage = () => {
         </Col>
       </Row>
       
-      {statusFilters.length > 0 && (
-        <div className="mb-3">
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            <span className="text-muted me-2">Active filters:</span>
-            {statusFilters.map(status => (
-              <Badge 
-                key={status} 
-                bg={getStatusBadgeVariant(status)} 
-                className="py-2 px-3 d-flex align-items-center"
-              >
-                {status}
-                <Button 
-                  variant="link" 
-                  className="p-0 ms-2 text-white" 
-                  onClick={() => toggleStatusFilter(status)}
-                  aria-label={`Remove ${status} filter`}
-                >
-                  <FaTimes size={12} />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+      {error && (
+        <Alert variant="danger" className="mb-4">
+          {error}
+        </Alert>
       )}
-      
-      {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       
       {isLoading ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" className="mb-3" />
-          <p className="mt-2 text-muted">Loading orders...</p>
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-3">Loading orders...</p>
         </div>
-      ) : (
-        <>
-          {orders.length === 0 ? (
-            <div className="empty-state">
-              <FaShoppingBag className="empty-state-icon" />
-              <p className="empty-state-text">No Orders Found</p>
-              <p className="mb-4 text-muted">
+      ) : orders.length === 0 ? (
+        <Alert variant="info">
+          <div className="d-flex align-items-center">
+            <FaShoppingBag className="me-3" size={24} />
+            <div>
+              <h5 className="mb-1">No Orders Found</h5>
+              <p className="mb-0">
                 {statusFilters.length > 0
-                  ? `No orders match the selected status filters.` 
-                  : "You don't have any customer orders yet."}
+                  ? "No orders match your selected filters. Try adjusting your filters or viewing all orders."
+                  : "There are no orders in the system yet."}
               </p>
-              {statusFilters.length > 0 && (
-                <Button 
-                  variant="primary" 
-                  onClick={clearStatusFilters}
-                  className="px-4 d-flex align-items-center gap-2 mx-auto"
-                >
-                  Clear Filters
-                </Button>
-              )}
             </div>
+          </div>
+        </Alert>
           ) : (
-            <div className="table-responsive">
-              <Table hover responsive className="align-middle shadow-sm">
+        // Only render the table if we have orders
+        <Table responsive striped bordered hover>
                 <thead>
                   <tr>
-                    <th style={{ width: '80px' }}>ID</th>
+              <th>Order #</th>
+              <th>Date</th>
                     <th>Customer</th>
-                    <th>Items</th>
-                    <th className="text-end">Total</th>
+              <th>Contact</th>
+              <th>Amount</th>
                     <th>Status</th>
-                    <th>Date</th>
-                    <th style={{ width: '180px' }}>Actions</th>
+              <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => (
+            {orders && orders.map(order => (
                     <tr key={order.id}>
                       <td>
-                        <Link to={`/admin/orders/${order.id}`} className="fw-bold text-decoration-none d-flex align-items-center">
-                          <FaInfoCircle className="text-primary me-1" /> {order.id}
+                  <Link to={`/admin/orders/${order.id}`} className="fw-bold text-decoration-none">
+                    {order.id}
                         </Link>
                       </td>
-                      <td>
-                        <div className="fw-medium">{order.shippingDetails?.fullName || '(No Name)'}</div>
-                        {order.shippingDetails?.phone && (
-                          <div className="text-muted small d-flex align-items-center">
-                            <FaPhone className="me-1" size={12} /> {order.shippingDetails.phone}
-                          </div>
-                        )}
+                <td>{formatDateTime(order.createdAt)}</td>
+                <td>
+                  {order.shippingDetails?.fullName || "N/A"}
                         {order.shippingDetails?.address && (
-                          <div className="text-muted small d-flex align-items-center">
-                            <FaMapMarkerAlt className="me-1" size={12} /> 
-                            {`${order.shippingDetails.address}, ${order.shippingDetails.city || ''}`}
+                    <div className="small text-muted d-flex align-items-center">
+                      <FaMapMarkerAlt className="me-1" size={10} />
+                      {order.shippingDetails.city}, {order.shippingDetails.country}
                           </div>
                         )}
                       </td>
                       <td>
-                        {order.items.map(item => (
-                          <div key={item.id} className="small">
-                            <span className="fw-medium">{item.quantity}x</span> {item.productName}
-                          </div>
-                        ))}
+                  {order.shippingDetails?.phone || "N/A"}
                       </td>
-                      <td className="text-end fw-medium">{formatCurrency(order.totalAmount)}</td>
+                <td>{formatCurrency(order.totalAmount)}</td>
                       <td>
-                        <Badge bg={getStatusBadgeVariant(order.status)} className="px-2 py-1">
+                  <Badge 
+                    bg={getStatusBadgeVariant(order.status)}
+                    className="px-2 py-1"
+                  >
                           {order.status}
                         </Badge>
                       </td>
                       <td>
-                        <div className="small d-flex align-items-center">
-                          <FaCalendarAlt className="me-1" size={12} /> 
-                          {formatDateTime(order.createdAt)}
-                        </div>
-                      </td>
-                      <td>
+                  <div className="d-flex gap-2">
                         <Form.Select
                           size="sm"
                           value={order.status}
                           onChange={(e) => handleStatusChange(order.id, e.target.value)}
                           disabled={updatingOrderIds.includes(order.id)}
-                          aria-label={`Change status for order ${order.id}`}
-                          className="shadow-sm border"
+                      style={{ width: '140px' }}
+                      className="me-2"
                         >
-                          {allowedOrderStatuses.map(statusOption => (
-                            <option key={statusOption} value={statusOption}>
-                              {statusOption}
-                            </option>
+                      {allowedOrderStatuses.map(status => (
+                        <option key={status} value={status}>{status}</option>
                           ))}
                         </Form.Select>
+                    
+                    <Link 
+                      to={`/admin/orders/${order.id}`}
+                      className="btn btn-outline-primary btn-sm"
+                    >
+                      <FaInfoCircle className="me-1" /> Details
+                    </Link>
+                  </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
-            </div>
-          )}
-        </>
       )}
     </Container>
   );

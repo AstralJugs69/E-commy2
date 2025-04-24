@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
 import { Container, Card, Row, Col, Table, Spinner, Alert, Badge, Button } from 'react-bootstrap';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant } from '../utils/formatters';
+import api from '../utils/api';
 
 // Interfaces for the API response data
 interface UserOrderDetail {
@@ -19,8 +19,6 @@ interface AdminUserDetail {
   orders: UserOrderDetail[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 const UserDetailPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const [user, setUser] = useState<AdminUserDetail | null>(null);
@@ -33,22 +31,10 @@ const UserDetailPage: React.FC = () => {
       setError(null);
 
       try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-          setError('Authentication required. Please log in again.');
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await axios.get(`${API_BASE_URL}/admin/users/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
+        const response = await api.get(`/admin/users/${userId}`);
         setUser(response.data);
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
+      } catch (err: any) {
+        if (err.response) {
           if (err.response.status === 401) {
             setError('Your session has expired. Please log in again.');
           } else if (err.response.status === 404) {

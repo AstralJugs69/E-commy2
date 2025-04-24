@@ -57,7 +57,7 @@ const PhoneManagementPage = () => {
     
     setIsAdding(true);
     setAddError(null);
-
+    
     try {
       // Call API to add phone number using the centralized api instance
       await api.post('/admin/phonenumbers', { numberString: newPhoneNumber });
@@ -67,29 +67,29 @@ const PhoneManagementPage = () => {
       fetchPhoneNumbers(); // Refresh list
       handleCloseAddModal(); // Close modal
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        // Handle unauthorized error
-        console.error('Authentication error:', err.response.data);
-        handleAuthError();
-        setAddError('Authentication failed. Please log in again.');
-      } else if (err.response?.status === 409) {
-        // Conflict - phone number already exists
-        setAddError('This phone number already exists');
-        toast.error('Phone number already exists');
-      } else if (err.response?.status === 400) {
-        // Validation error
-        setAddError(err.response.data.message || 'Invalid phone number format');
-        toast.error('Invalid phone number format');
-      } else if (err.response) {
-        // Other API errors
-        setAddError(err.response.data.message || 'Failed to add phone number');
-        toast.error('Failed to add phone number');
-        console.error('Error adding phone number:', err.response.data);
-      } else {
-        // Network errors
-        setAddError('Network error. Please check your connection and try again.');
-        toast.error('Network error');
-        console.error('Network error:', err);
+        if (err.response?.status === 401) {
+          // Handle unauthorized error
+          console.error('Authentication error:', err.response.data);
+          handleAuthError();
+          setAddError('Authentication failed. Please log in again.');
+        } else if (err.response?.status === 409) {
+          // Conflict - phone number already exists
+          setAddError('This phone number already exists');
+          toast.error('Phone number already exists');
+        } else if (err.response?.status === 400) {
+          // Validation error
+          setAddError(err.response.data.message || 'Invalid phone number format');
+          toast.error('Invalid phone number format');
+        } else if (err.response) {
+          // Other API errors
+          setAddError(err.response.data.message || 'Failed to add phone number');
+          toast.error('Failed to add phone number');
+          console.error('Error adding phone number:', err.response.data);
+        } else {
+          // Network errors
+          setAddError('Network error. Please check your connection and try again.');
+          toast.error('Network error');
+          console.error('Network error:', err);
       }
     } finally {
       setIsAdding(false);
@@ -105,19 +105,19 @@ const PhoneManagementPage = () => {
       // Ensure we always have an array, even if the API returns null/undefined
       setPhoneNumbers(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        // Handle unauthorized error specifically
+        if (err.response?.status === 401) {
+          // Handle unauthorized error specifically
         console.error('Authentication error:', err.response?.data);
-        handleAuthError();
-      } else if (err.response) {
-        // Other API errors
-        setError(err.response.data.message || 'Failed to fetch phone numbers');
-        console.error('Error fetching phone numbers:', err.response.data);
-      } else {
-        // Network errors
-        setError('Network error. Please check your connection and try again.');
-        console.error('Network error:', err);
-      }
+          handleAuthError();
+        } else if (err.response) {
+          // Other API errors
+          setError(err.response.data.message || 'Failed to fetch phone numbers');
+          console.error('Error fetching phone numbers:', err.response.data);
+        } else {
+          // Network errors
+          setError('Network error. Please check your connection and try again.');
+          console.error('Network error:', err);
+        }
       // Initialize with empty array to prevent mapping errors
       setPhoneNumbers([]);
     } finally {
@@ -147,18 +147,18 @@ const PhoneManagementPage = () => {
       // Refresh the phone numbers list
       fetchPhoneNumbers();
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        // Handle unauthorized error specifically
+        if (err.response?.status === 401) {
+          // Handle unauthorized error specifically
         console.error('Authentication error:', err.response?.data);
-        handleAuthError();
-      } else if (err.response) {
-        // Other API errors
-        setError(err.response.data.message || 'Failed to update phone status');
-        console.error('Error updating phone status:', err.response.data);
-      } else {
-        // Network errors
-        setError('Network error. Please check your connection and try again.');
-        console.error('Network error:', err);
+          handleAuthError();
+        } else if (err.response) {
+          // Other API errors
+          setError(err.response.data.message || 'Failed to update phone status');
+          console.error('Error updating phone status:', err.response.data);
+        } else {
+          // Network errors
+          setError('Network error. Please check your connection and try again.');
+          console.error('Network error:', err);
       }
     }
   };
@@ -265,33 +265,33 @@ const PhoneManagementPage = () => {
         </Alert>
       ) : (
         <Table striped bordered hover responsive>
-          <thead>
-            <tr>
+            <thead>
+              <tr>
               <th>ID</th>
               <th>Phone Number</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
             {phoneNumbers && phoneNumbers.map((phone) => (
-              <tr key={phone.id}>
+                  <tr key={phone.id}>
                 <td>{phone.id}</td>
-                <td>{phone.numberString}</td>
-                <td>
-                  <Badge bg={getStatusBadgeVariant(phone.status)}>
-                    {phone.status}
-                  </Badge>
-                </td>
-                <td>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
+                    <td>{phone.numberString}</td>
+                    <td>
+                      <Badge bg={getStatusBadgeVariant(phone.status)}>
+                        {phone.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm" 
                     className="me-2"
-                    onClick={() => handleStatusToggle(phone.id, phone.status)}
-                  >
-                    Set to {getNextStatusText(phone.status)}
-                  </Button>
+                        onClick={() => handleStatusToggle(phone.id, phone.status)}
+                      >
+                        Set to {getNextStatusText(phone.status)}
+                      </Button>
                   <Button
                     variant="outline-danger"
                     size="sm"
@@ -299,13 +299,13 @@ const PhoneManagementPage = () => {
                   >
                     Delete
                   </Button>
-                </td>
-              </tr>
+                    </td>
+                  </tr>
             ))}
-          </tbody>
-        </Table>
+            </tbody>
+          </Table>
       )}
-
+      
       {/* Add Phone Modal */}
       <Modal show={showAddModal} onHide={handleCloseAddModal}>
         <Modal.Header closeButton>

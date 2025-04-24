@@ -13,6 +13,10 @@ import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
 import { getImageUrl } from '../utils/imageUrl';
 import { useTranslation } from 'react-i18next';
+import api from '../utils/api';
+import { Heart, HeartFill, Search } from 'react-bootstrap-icons';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/formatters';
 
 interface ProductImage {
   id: number;
@@ -74,6 +78,9 @@ const HomePage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
 
+  const { isAuthenticated } = useAuth();
+  const limit = 8; // Products per page
+
   // Function to handle sort selection
   const handleSortChange = (field: string, order: string) => {
     setSortBy(field);
@@ -118,30 +125,24 @@ const HomePage = () => {
     setError(null);
 
     try {
-      // Construct query parameters
-      const params = new URLSearchParams();
-      if (searchTerm.trim() !== '') {
-        params.append('search', searchTerm.trim());
-      }
-      if (selectedCategoryId) {
-        params.append('categoryId', selectedCategoryId);
-      }
-      if (sortBy) {
-        params.append('sortBy', sortBy);
-      }
-      if (sortOrder) {
-        params.append('sortOrder', sortOrder);
-      }
-      
-      // Add pagination parameters
-      params.append('page', page.toString());
-      params.append('limit', '12'); // Default limit
-      
-      const queryString = params.toString();
-      const apiUrl = `${API_BASE_URL}/products${queryString ? `?${queryString}` : ''}`;
+      const params: Record<string, string | number> = {
+        page: page,
+        limit: limit,
+        sortBy: sortBy,
+        sortOrder: sortOrder
+      };
 
-      console.log(`Fetching products from ${apiUrl}`);
-      const response = await axios.get<PaginatedProductsResponse>(apiUrl);
+      // Apply search filter
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      // Apply category filter
+      if (selectedCategoryId) {
+        params.categoryId = selectedCategoryId;
+      }
+
+      const response = await api.get<PaginatedProductsResponse>('/products', { params });
       
       // Ensure we have valid data before updating state
       if (response.data && response.data.products) {
@@ -195,7 +196,7 @@ const HomePage = () => {
       setIsLoadingCategories(true);
             
       try {
-        const response = await axios.get(`${API_BASE_URL}/categories`);
+        const response = await api.get<Category[]>('/categories');
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setCategories(response.data);

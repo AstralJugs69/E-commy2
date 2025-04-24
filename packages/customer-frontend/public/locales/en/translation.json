@@ -84,6 +84,7 @@
     "savedAddresses": "Saved Addresses",
     "noSavedAddresses": "You don't have any saved addresses.",
     "deliveryLocation": "Delivery Location",
+    "location": "Select Delivery Location",
     "locationName": "Location Name",
     "phoneNumber": "Phone Number",
     "district": "District",

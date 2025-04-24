@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import { Container, Table, Form, Button, Alert, Spinner, Row, Col, Card } from 'react-bootstrap';
 import L, { LatLngExpression, Layer } from 'leaflet';
 import { MapContainer, TileLayer, GeoJSON, FeatureGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw';
+import api from '../utils/api'; // Import centralized API utility
 
 // Map loading fallback component
 const MapLoadingFallback = () => (
@@ -19,8 +19,6 @@ interface ServiceZone {
   name: string;
   geoJsonPolygon: string; // The raw GeoJSON string
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Custom EditControl component to replace react-leaflet-draw
 interface EditControlProps {
@@ -129,33 +127,24 @@ const ZoneManagementPage = () => {
     setIsLoadingList(true);
     setListError(null);
 
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setListError('Authentication required. Please log in again.');
-      setIsLoadingList(false);
-      return;
-    }
-
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/serviceareas`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.get('/admin/serviceareas');
       
-      setZones(response.data);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401) {
+      // Ensure zones is always an array
+      setZones(Array.isArray(response.data) ? response.data : []);
+    } catch (err: any) {
+      if (err.response?.status === 401) {
           setListError('Your session has expired. Please log in again.');
-        } else {
-          setListError(err.response.data.message || 'Failed to fetch service zones.');
-        }
+      } else if (err.response) {
+        setListError(err.response.data?.message || 'Failed to fetch service zones.');
         console.error('Error fetching zones:', err.response.data);
       } else {
         setListError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      
+      // Initialize with empty array to prevent mapping errors
+      setZones([]);
     } finally {
       setIsLoadingList(false);
     }
@@ -207,26 +196,11 @@ const ZoneManagementPage = () => {
     setIsCreating(true);
     setCreateError(null);
     
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setCreateError('Authentication required. Please log in again.');
-      setIsCreating(false);
-      return;
-    }
-    
     try {
-      await axios.post(
-        `${API_BASE_URL}/admin/serviceareas`, 
-        { 
+      await api.post('/admin/serviceareas', { 
           name: newZoneName, 
           geoJsonPolygon: JSON.stringify(editableLayerGeoJson)
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      });
       
       // Success - clear form and refresh the list
       setNewZoneName('');
@@ -234,15 +208,13 @@ const ZoneManagementPage = () => {
       editableFG.current?.clearLayers();
       fetchZones();
       
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 400) {
-          setCreateError('Validation failed: ' + (err.response.data.message || 'Please check your input.'));
-        } else if (err.response.status === 409) {
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        setCreateError('Validation failed: ' + (err.response.data?.message || 'Please check your input.'));
+      } else if (err.response?.status === 409) {
           setCreateError('A zone with this name already exists.');
-        } else {
-          setCreateError(err.response.data.message || 'Failed to create service zone.');
-        }
+      } else if (err.response) {
+        setCreateError(err.response.data?.message || 'Failed to create service zone.');
         console.error('Error creating zone:', err.response.data);
       } else {
         setCreateError('Network error. Please check your connection.');
@@ -400,8 +372,8 @@ const ZoneManagementPage = () => {
                       />
                     </FeatureGroup>
                     
-                    {/* Render existing zones */}
-                    {zones.map((zone) => {
+                    {/* Render existing zones with proper null check */}
+                    {zones && zones.map((zone) => {
                       try {
                         const geoJsonData = JSON.parse(zone.geoJsonPolygon);
                         // Basic validation

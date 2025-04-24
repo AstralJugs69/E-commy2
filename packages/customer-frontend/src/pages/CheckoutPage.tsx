@@ -513,57 +513,6 @@ const CheckoutPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {/* District dropdown - only show if a location is selected */}
-                {selectedLocationId && (
-                  <div className="mb-3">
-                    <label htmlFor="district" className="form-label">
-                      {t('checkout.district')}
-                    </label>
-                    <div className="dropdown w-100">
-                      <button
-                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
-                        type="button"
-                        id="districtDropdown"
-                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
-                        aria-expanded={districtDropdownOpen}
-                        data-testid="district-dropdown"
-                      >
-                        {selectedDistrict || t('checkout.selectDistrict')}
-                        <i className="bi bi-caret-down-fill"></i>
-                      </button>
-                      <div
-                        className={`dropdown-menu w-100 ${districtDropdownOpen ? 'show animate-dropdown' : ''}`}
-                        aria-labelledby="districtDropdown"
-                        onClick={(e) => {
-                          // Don't close dropdown when clicking on the menu itself (for scrolling)
-                          if (e.target === e.currentTarget) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      >
-                        {districtOptions.map((district, index) => (
-                          <div
-                            key={index}
-                            className={`dropdown-item ${selectedDistrict === district ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedDistrict(district);
-                              // Close dropdown after selection
-                              setTimeout(() => {
-                                setDistrictDropdownOpen(false);
-                              }, 150);
-                            }}
-                            data-testid={`district-option-${index}`}
-                          >
-                            {district}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <Button 
                   type="submit"
                   variant={isRetrying ? "warning" : "primary"}
