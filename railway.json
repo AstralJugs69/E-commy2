@@ -1,0 +1,62 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "echo 'Please define start command for services'",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "domains": [
+       // You might need to adjust this if Railway requires explicit domains here later
+  ],
+   "services": {
+      "backend": {
+           "build": {
+              "buildCommand": "cd packages/backend && npm run build", // Build within the backend package
+              "watchPatterns": ["packages/backend/**/*", "prisma/**/*"]
+            },
+          "deploy": {
+            "startCommand": "npm run start --workspace=backend", // Run the backend start script
+            "healthcheckPath": "/api/auth/validate-token", // Basic health check path
+            "healthcheckTimeout": 120,
+            "healthcheckInterval": 30,
+            "sleepApplication": true // Enable sleeping for free tier
+            },
+            "env": {
+            // ENV Vars are better set in Railway dashboard, but define keys here if preferred
+           }
+      },
+       "customer-frontend": {
+            "build": {
+              "buildCommand": "cd packages/customer-frontend && npm run build", // Build within the frontend package
+               "watchPatterns": ["packages/customer-frontend/**/*"]
+            },
+            "deploy": {
+                "startCommand": "echo 'Static site, no start command needed'", // No specific start command for static builds handled by Railway
+               "healthcheckPath": "/",
+                "healthcheckTimeout": 120,
+               "healthcheckInterval": 30
+            },
+           "env": {
+               // Must include VITE_ vars needed at build time
+           }
+        },
+       "admin-frontend": {
+           "build": {
+              "buildCommand": "cd packages/admin-frontend && npm run build", // Build within the frontend package
+              "watchPatterns": ["packages/admin-frontend/**/*"]
+            },
+           "deploy": {
+                "startCommand": "echo 'Static site, no start command needed'",
+                 "healthcheckPath": "/",
+                 "healthcheckTimeout": 120,
+                 "healthcheckInterval": 30
+           },
+            "env": {
+               // Must include VITE_ vars needed at build time
+          }
+      }
+  }
+} 
