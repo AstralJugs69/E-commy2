@@ -17,7 +17,7 @@
               "watchPatterns": ["packages/backend/**/*", "prisma/**/*"]
             },
           "deploy": {
-            "startCommand": "npm run start --workspace=backend",
+            "startCommand": "cd packages/backend && npx prisma migrate deploy && node dist/index.js",
             "healthcheckPath": "/api/auth/validate-token",
             "healthcheckTimeout": 120,
             "healthcheckInterval": 30,
