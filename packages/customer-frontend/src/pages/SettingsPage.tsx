@@ -24,8 +24,6 @@ interface DeliveryLocation {
   userId: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 const SettingsPage = () => {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -96,11 +94,8 @@ const SettingsPage = () => {
       setError(null);
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        // Use api utility instead of axios directly
+        const response = await api.get('/auth/me');
         
         setProfile(response.data);
         setFormName(response.data.name || '');
@@ -148,11 +143,8 @@ const SettingsPage = () => {
     setLocationError(null);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Use api utility instead of axios directly
+      const response = await api.get('/addresses');
       
       setDeliveryLocations(response.data);
     } catch (err) {
@@ -174,7 +166,8 @@ const SettingsPage = () => {
     setDistrictError(null);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/districts`);
+      // Use api utility instead of axios directly
+      const response = await api.get('/districts');
       setDistricts(response.data);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
@@ -229,16 +222,8 @@ const SettingsPage = () => {
     }
 
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/users/me`,
-        updateData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Use api utility instead of axios directly
+      const response = await api.put('/users/me', updateData);
 
       // Update profile with the response data
       setProfile(response.data);
@@ -302,75 +287,64 @@ const SettingsPage = () => {
   
   const handleSaveLocation = async (e: FormEvent) => {
     e.preventDefault();
+    setIsSavingLocation(true);
+    setModalError(null);
+    setFormErrors({});
     
-    if (!token) {
-      toast.error("You're not logged in. Please login and try again.");
-      return;
+    // Form validation
+    const errors: {[key: string]: string} = {};
+    
+    if (!locationForm.name.trim()) {
+      errors.name = 'Location name is required';
     }
     
-    // Basic validation
-    const errors: {[key: string]: string} = {};
-    if (!locationForm.name.trim()) errors.name = "Location name is required";
-    if (!locationForm.phone.trim()) errors.phone = "Phone number is required";
-    if (!locationForm.district.trim()) errors.district = "District is required";
+    if (!locationForm.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    } else if (!/^\d{9,15}$/.test(locationForm.phone.replace(/\D/g, ''))) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    if (!locationForm.district.trim()) {
+      errors.district = 'Please select a district';
+    }
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      setIsSavingLocation(false);
       return;
     }
     
-    setIsSavingLocation(true);
-    setModalError(null);
+    if (!token) {
+      toast.error("You're not logged in. Please login and try again.");
+      setIsSavingLocation(false);
+      return;
+    }
     
     try {
-      let response;
-      
+      // If editing an existing location
       if (editingLocation) {
-        // Update existing location
-        response = await axios.put(
-          `${API_BASE_URL}/addresses/${editingLocation.id}`,
-          locationForm,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        // Use api utility instead of axios directly
+        await api.put(`/addresses/${editingLocation.id}`, locationForm);
         toast.success("Delivery location updated successfully!");
       } else {
-        // Create new location
-        response = await axios.post(
-          `${API_BASE_URL}/addresses`,
-          locationForm,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        toast.success("Delivery location added successfully!");
+        // Creating a new location
+        // Use api utility instead of axios directly
+        await api.post('/addresses', locationForm);
+        toast.success("New delivery location added successfully!");
       }
       
-      // Refresh locations
-      const locationsResponse = await axios.get(`${API_BASE_URL}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
+      // Refresh the locations list
+      // Use api utility instead of axios directly
+      const locationsResponse = await api.get('/addresses');
       setDeliveryLocations(locationsResponse.data);
-      setShowLocationModal(false);
+      
+      // Close the modal and reset form
+      handleCloseLocationModal();
+      
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-        // Check if the error response contains field-specific validation errors
-        if (err.response.data.errors && typeof err.response.data.errors === 'object') {
-          setFormErrors(err.response.data.errors);
-        } else {
-          setModalError(err.response.data.message || 'Failed to save delivery location.');
-        }
-        console.error('Error saving delivery location:', err.response.data);
+        setModalError(err.response.data.message || 'Failed to save delivery location.');
+        console.error('Error saving location:', err.response.data);
       } else {
         setModalError('Network error. Please check your connection.');
         console.error('Network error:', err);
@@ -381,23 +355,20 @@ const SettingsPage = () => {
   };
   
   const handleDeleteLocation = async (locationId: number) => {
-    if (!window.confirm('Are you sure you want to delete this delivery location?')) {
+    if (!token) {
+      toast.error("You're not logged in. Please login and try again.");
       return;
     }
     
-    if (!token) {
-      toast.error("You're not logged in. Please login and try again.");
+    if (!window.confirm('Are you sure you want to delete this delivery location?')) {
       return;
     }
     
     setIsDeletingLocation(locationId);
     
     try {
-      await axios.delete(`${API_BASE_URL}/addresses/${locationId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Use api utility instead of axios directly
+      await api.delete(`/addresses/${locationId}`);
       
       // Remove from state
       setDeliveryLocations((prevLocations) => 
@@ -427,16 +398,8 @@ const SettingsPage = () => {
     setIsSettingDefault(locationId);
     
     try {
-      await axios.post(
-        `${API_BASE_URL}/addresses/${locationId}/set-default`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Use api utility instead of axios directly
+      await api.post(`/addresses/${locationId}/set-default`, {});
       
       // Update local state
       setDeliveryLocations((prevLocations) => 
