@@ -148,7 +148,7 @@ const ProductManagementPage: React.FC = () => {
     }
 
     try {
-      await api.delete(`/api/admin/products/${productId}`);
+      await api.delete(`/admin/products/${productId}`);
       
       // Refresh product list
       fetchProducts();
