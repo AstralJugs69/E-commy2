@@ -638,6 +638,9 @@ export default tseslint.config(
     "bootstrap": "^5.3.5",
     "chart.js": "^4.4.8",
     "date-fns": "^4.1.0",
+    "i18next": "^23.10.0",
+    "i18next-browser-languagedetector": "^7.2.0",
+    "i18next-http-backend": "^2.5.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "react": "^19.0.0",
@@ -645,6 +648,7 @@ export default tseslint.config(
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-i18next": "^14.0.8",
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
     "react-router-bootstrap": "^0.26.3",
@@ -654,8 +658,11 @@ export default tseslint.config(
     "@eslint/js": "^9.21.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/i18next": "^13.0.0",
+    "@types/i18next-browser-languagedetector": "^3.0.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/react-i18next": "^8.1.0",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@vitejs/plugin-react-swc": "^3.8.0",
     "eslint": "^9.21.0",
@@ -931,6 +938,62 @@ function App() {
 export default App; 
 ```
 
+## File: `packages\admin-frontend\src\i18n.ts`
+
+```
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import Backend from 'i18next-http-backend'; // Use http backend to load files
+
+i18n
+  // Load translation using http -> see /public/locales
+  .use(Backend)
+  // Detect user language
+  .use(LanguageDetector)
+  // Pass the i18n instance to react-i18next.
+  .use(initReactI18next)
+  // Init i18next
+  .init({
+    // Debugging: Set to true to see logs
+    debug: process.env.NODE_ENV === 'development', 
+    
+    // Default language
+    fallbackLng: 'en', 
+    
+    // Supported languages
+    supportedLngs: ['en', 'am', 'om'], 
+
+    // Namespace configuration (optional for now, default is 'translation')
+    // ns: ['translation'],
+    // defaultNS: 'translation',
+
+    interpolation: {
+      escapeValue: false, // React already safes from xss
+    },
+    
+    // Backend options (loading from /public/locales)
+    backend: {
+      loadPath: '/locales/{{lng}}/{{ns}}.json', // Path to translation files
+    },
+    
+    // Language detector options
+    detection: {
+      // Order and from where user language should be detected
+      order: ['localStorage', 'navigator', 'htmlTag', 'path', 'subdomain'],
+      // Cache user language choice in localStorage
+      caches: ['localStorage'], 
+    },
+
+    // React-i18next specific options
+    react: {
+      useSuspense: true, // Recommended with React.lazy/Suspense
+    }
+  });
+
+export default i18n; 
+```
+
 ## File: `packages\admin-frontend\src\index.css`
 
 ```
@@ -945,36 +1008,37 @@ export default App;
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #39FF14; /* Neon Green */
-  --primary-rgb: 57, 255, 20;
-  --primary-dark: #32E012; /* Slightly darker */
-  --primary-light: #7CFF5E;
-  --primary-bg-subtle: #E9FFDF;
-  --primary-text-on: #000000; /* Black text for contrast on neon green */
+  --primary: #333333; /* Single Dark Gray */
+  --primary-rgb: 51, 51, 51;
+  --primary-hover: #333333; /* Same as default */
+  --primary-active: #333333; /* Same as default */
+  --primary-bg-subtle: #EEEEEE; /* Lighter subtle gray */
+  --primary-text-on: #FFFFFF; /* White text for contrast on buttons */
+  --primary-dark: #333333; /* Consistent Dark Primary Accent */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #343A40; /* Dark Gray */
-  --secondary-color-rgb: 52, 58, 64;
-  --secondary-hover: #23272B;
-  --secondary-active: #1D2124;
-  --secondary-text-on: #FFFFFF; /* White text on dark gray */
+  --secondary-color: #FFFFFF; /* White for outline style */
+  --secondary-color-rgb: 255, 255, 255;
+  --secondary-hover: #FFFFFF; /* Same as default */
+  --secondary-active: #FFFFFF; /* Same as default */
+  --secondary-text-on: #333333; /* Dark text on secondary buttons */
   
-  --light-bg: #F8FAFC; /* Neutral 50 */
-  --subtle-border: #E2E8F0; /* Neutral 200 */
-  --text-muted: #64748B; /* Neutral 500 */
-  --text-dark: #1E293B; /* Neutral 800 */
+  --light-bg: #FFFFFF; /* Pure White Background */
+  --subtle-border: #CCCCCC; /* Single Light Gray for borders */
+  --text-muted: #777777; /* Medium Gray Muted Text */
+  --text-dark: #000000; /* Pure Black Primary Text */
   
-  /* Neutral Colors */
-  --neutral-50: #F8FAFC;
-  --neutral-100: #F1F5F9;
-  --neutral-200: #E2E8F0;
-  --neutral-300: #CBD5E1;
-  --neutral-400: #94A3B8;
-  --neutral-500: #64748B;
-  --neutral-600: #475569;
-  --neutral-700: #334155;
-  --neutral-800: #1E293B;
-  --neutral-900: #0F172A;
+  /* Neutral Colors - Keep admin sidebar dark */
+  --neutral-50: #FFFFFF; /* White */
+  --neutral-100: #F1F1F1; /* Very Light */
+  --neutral-200: #E2E2E2; /* Light */
+  --neutral-300: #DDDDDD; /* Medium Light */
+  --neutral-400: #BBBBBB; /* Medium */
+  --neutral-500: #999999; /* Medium Gray */
+  --neutral-600: #777777; /* Same as text-muted */
+  --neutral-700: #555555; /* Medium Dark */
+  --neutral-800: #111111; /* Very Dark - For admin sidebar */
+  --neutral-900: #000000; /* Pure Black */
   
   /* Accent Color */
   --accent: #8B5CF6;
@@ -990,12 +1054,12 @@ export default App;
   --info: #3B82F6;
 
   /* Bootstrap variable overrides */
-  --bs-primary: var(--primary);
-  --bs-primary-rgb: var(--primary-rgb);
-  --bs-secondary: var(--secondary-color);
-  --bs-secondary-rgb: var(--secondary-color-rgb);
-  --bs-link-color-rgb: var(--primary-rgb);
-  --bs-link-hover-color-rgb: var(--primary-rgb);
+  --bs-primary: #333333;
+  --bs-primary-rgb: 51, 51, 51;
+  --bs-secondary: #FFFFFF;
+  --bs-secondary-rgb: 255, 255, 255;
+  --bs-link-color-rgb: 51, 51, 51;
+  --bs-link-hover-color-rgb: 51, 51, 51;
 
   /* Font Settings */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -1005,16 +1069,9 @@ export default App;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   
-  /* Spacing */
-  --spacer-1: 0.25rem;
-  --spacer-2: 0.5rem;
-  --spacer-3: 1rem;
-  --spacer-4: 1.5rem;
-  --spacer-5: 3rem;
-  
   /* Component Specific */
   --card-border-radius: 0.5rem;
-  --card-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --card-box-shadow: none;
   --button-border-radius: 0.375rem;
   --input-border-radius: 0.375rem;
 }
@@ -1023,13 +1080,13 @@ export default App;
 body {
   font-family: var(--font-family-base);
   background-color: var(--light-bg);
-  color: var(--neutral-800);
+  color: var(--text-dark);
   line-height: 1.6;
 }
 
 /* Typography Overrides */
 h1, h2, h3, h4, h5, h6, p, table, form, .card {
-  color: var(--neutral-900);
+  color: var(--text-dark);
   margin-bottom: 1.25rem;
   font-weight: var(--font-weight-semibold);
 }
@@ -1051,20 +1108,20 @@ h6 { font-size: 1rem; }
 
 /* Link Styles */
 a {
-  color: var(--primary);
-  text-decoration: none;
+  color: var(--bs-primary);
+  text-decoration: underline;
   transition: color 0.2s ease;
 }
 a:hover {
-  color: var(--primary-dark);
-  text-decoration: underline;
+  color: var(--bs-primary);
+  text-decoration: none;
 }
 
 /* Interactive Element Focus Styles */
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.3);
-  border-radius: var(--input-border-radius);
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--bs-primary) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important; /* Override Bootstrap shadows */
 }
 
 /* Table Headers */
@@ -1084,40 +1141,32 @@ th {
 
 .btn-primary {
   --bs-btn-color: var(--primary-text-on);
-  --bs-btn-bg: var(--primary);
-  --bs-btn-border-color: var(--primary);
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
   --bs-btn-hover-color: var(--primary-text-on);
-  --bs-btn-hover-bg: var(--primary-dark);
-  --bs-btn-hover-border-color: var(--primary-dark);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
   --bs-btn-active-color: var(--primary-text-on);
-  --bs-btn-active-bg: var(--primary-dark);
-  --bs-btn-active-border-color: var(--primary-dark);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
   --bs-btn-disabled-color: var(--primary-text-on);
-  --bs-btn-disabled-bg: var(--primary);
-  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 .btn-secondary {
-  --bs-btn-color: var(--secondary-text-on);
-  --bs-btn-bg: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-hover-bg: var(--secondary-hover);
-  --bs-btn-hover-border-color: var(--secondary-hover);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-active-bg: var(--secondary-active);
-  --bs-btn-active-border-color: var(--secondary-active);
-}
-
-.btn-outline-secondary {
-  --bs-btn-color: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-hover-bg: var(--secondary-color);
-  --bs-btn-hover-border-color: var(--secondary-color);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-active-bg: var(--secondary-color);
-  --bs-btn-active-border-color: var(--secondary-color);
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 .btn-success {
@@ -1181,10 +1230,11 @@ th {
 
 /* Cards */
 .card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--subtle-border);
   border-radius: var(--card-border-radius);
-  border-color: var(--neutral-200);
-  box-shadow: var(--card-box-shadow);
-  overflow: hidden;
+  box-shadow: none;
+  margin-bottom: 1.5rem;
 }
 
 /* Dashboard Stat Cards */
@@ -1409,7 +1459,8 @@ th {
 }
 
 .sidebar {
-  background-color: var(--neutral-800);
+  background-color: #111111;
+  color: #FFFFFF;
 }
 
 .sidebar .nav-link {
@@ -1462,6 +1513,62 @@ th {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Custom Dropdown Styling */
+.dropdown-toggle {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 1px solid #CCCCCC !important;
+    border-radius: var(--input-border-radius) !important; /* Use existing radius */
+    padding: 0.5rem 0.75rem !important; /* Match form-control padding */
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdown-toggle:hover, .dropdown-toggle:focus {
+    background-color: #f8f9fa !important; /* Subtle hover */
+    border-color: #BBBBBB !important;
+}
+
+/* Remove default caret */
+.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Add custom caret (optional - using text for simplicity) */
+.dropdown-toggle::before {
+    content: '▼'; /* Simple text caret */
+    font-size: 0.7em;
+    margin-left: 0.5em;
+    color: #777777;
+}
+
+.dropdown-menu {
+    border: 1px solid #CCCCCC !important;
+    border-radius: var(--input-border-radius) !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    padding: 0.25rem 0 !important;
+}
+
+.dropdown-item {
+    color: #000000 !important;
+    padding: 0.5rem 1rem !important;
+    background-color: transparent !important;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: #EEEEEE !important;
+    color: #000000 !important;
+}
+
+.dropdown-item.active, .dropdown-item:active {
+    background-color: var(--bs-primary) !important; /* #333333 */
+    color: #FFFFFF !important;
 }
 ```
 
@@ -13664,37 +13771,36 @@ export default i18n;
 /* Define Color Palette Variables */
 :root {
   /* Primary Colors */
-  --primary: #9DB17C; /* Sage Green */
-  --primary-rgb: 157, 177, 124;
-  --primary-hover: #8AA06B; /* Slightly Darker */
-  --primary-active: #7C905B; /* Even Darker */
-  --primary-light: #B8C8A2; /* Lighter Sage */
-  --primary-bg-subtle: #F0F3EC; /* Very light green/cream */
+  --primary: #333333; /* Single Dark Gray */
+  --primary-rgb: 51, 51, 51;
+  --primary-hover: #333333; /* Same as default */
+  --primary-active: #333333; /* Same as default */
+  --primary-bg-subtle: #EEEEEE; /* Lighter subtle gray */
   --primary-text-on: #FFFFFF; /* White text for buttons */
-  --primary-dark: #7C905B; /* For price text and other places using primary-dark */
+  --primary-dark: #333333; /* Consistent dark primary */
   
   /* Secondary/Accent Colors (Enhanced) */
-  --secondary-color: #343A40; /* Dark Gray */
-  --secondary-rgb: 52, 58, 64;
-  --secondary-hover: #23272B; /* Neutral 600 */
-  --secondary-active: #1D2124; /* Neutral 700 */
-  --secondary-text-on: #FFFFFF; /* White text on dark background */
-  --light-bg: #FAF0E6; /* Cream/Linen background */
-  --subtle-border: #E2E8F0; /* Neutral 200 */
-  --text-muted: #A1887F; /* Muted brown/gray */
-  --text-dark: #5D4037; /* Dark Brown for primary text */
+  --secondary-color: #FFFFFF; /* White for outline style */
+  --secondary-rgb: 255, 255, 255;
+  --secondary-hover: #FFFFFF; /* Same as default */
+  --secondary-active: #FFFFFF; /* Same as default */
+  --secondary-text-on: #333333; /* Dark Text on Secondary */
+  --light-bg: #FFFFFF; /* Pure White Background */
+  --subtle-border: #CCCCCC; /* Single Light Gray for borders */
+  --text-muted: #777777; /* Medium Gray Muted Text */
+  --text-dark: #000000; /* Pure Black Primary Text */
   
-  /* Neutral Colors */
-  --neutral-50: #FAF0E6;
-  --neutral-100: #F5EBE0;
-  --neutral-200: #E6DAD1;
-  --neutral-300: #D8C9BD;
-  --neutral-400: #C4B1A3;
-  --neutral-500: #A1887F;
-  --neutral-600: #8D6E63;
-  --neutral-700: #795548;
-  --neutral-800: #6D4C41;
-  --neutral-900: #5D4037;
+  /* Neutral Colors - Updated for monochrome consistency */
+  --neutral-50: #FFFFFF;  /* White */
+  --neutral-100: #F1F1F1; /* Very Light */
+  --neutral-200: #E2E2E2; /* Light */
+  --neutral-300: #DDDDDD; /* Medium Light */
+  --neutral-400: #BBBBBB; /* Medium */
+  --neutral-500: #999999; /* Medium Gray */
+  --neutral-600: #777777; /* Same as text-muted */
+  --neutral-700: #555555; /* Medium Dark */
+  --neutral-800: #333333; /* Dark - same as primary */
+  --neutral-900: #000000; /* Pure Black */
   
   /* Accent Color */
   --accent: #8B5CF6;
@@ -13718,12 +13824,12 @@ export default i18n;
   --info-active: #1D4ED8;
 
   /* Bootstrap Variables */
-  --bs-primary: var(--primary);
-  --bs-primary-rgb: var(--primary-rgb);
-  --bs-secondary: var(--secondary-color);
-  --bs-secondary-rgb: var(--secondary-rgb);
-  --bs-link-color-rgb: var(--primary-rgb);
-  --bs-link-hover-color-rgb: var(--primary-rgb); /* Handled via filter below */
+  --bs-primary: #333333;
+  --bs-primary-rgb: 51, 51, 51;
+  --bs-secondary: #FFFFFF;
+  --bs-secondary-rgb: 255, 255, 255;
+  --bs-link-color-rgb: 51, 51, 51;
+  --bs-link-hover-color-rgb: 51, 51, 51;
 
   /* Font Settings */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -13748,7 +13854,7 @@ export default i18n;
   
   /* Component Specific */
   --card-border-radius: 0.5rem;
-  --card-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --card-box-shadow: none;
   --input-border-radius: 0.375rem;
 }
 
@@ -13762,7 +13868,7 @@ body {
 
 /* Typography Overrides */
 h1, h2, h3, h4, h5, h6, p, table, form, .card {
-  color: var(--neutral-900);
+  color: var(--text-dark);
   margin-bottom: 1.25rem;
   font-weight: var(--font-weight-semibold);
 }
@@ -13792,20 +13898,20 @@ h6 { font-size: 1rem; line-height: 1.5; }
 
 /* Link Styles */
 a {
-  color: var(--primary);
-  text-decoration: none;
+  color: var(--bs-primary);
+  text-decoration: underline;
   transition: color 0.2s ease;
 }
 a:hover {
-  color: var(--primary-hover);
+  color: var(--bs-primary);
   text-decoration: none;
 }
 
 /* Interactive Element Focus Styles */
-a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.4);
-  border-radius: var(--input-border-radius);
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--bs-primary) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important; /* Override Bootstrap shadows */
 }
 
 /* Table Headers */
@@ -13820,7 +13926,7 @@ th {
   font-weight: var(--button-font-weight);
   border-radius: var(--button-border-radius);
   padding: var(--button-padding-y) var(--button-padding-x);
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.1s ease-in-out;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
   --bs-btn-focus-shadow-rgb: none;
 }
 
@@ -13833,14 +13939,14 @@ th {
 }
 
 .btn-primary {
-  --bs-btn-bg: var(--primary);
-  --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: var(--primary-hover);
-  --bs-btn-hover-border-color: var(--primary-hover);
-  --bs-btn-active-bg: var(--primary-active);
-  --bs-btn-active-border-color: var(--primary-active);
-  --bs-btn-disabled-bg: var(--primary);
-  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
   --bs-btn-color: var(--primary-text-on);
   --bs-btn-hover-color: var(--primary-text-on);
   --bs-btn-active-color: var(--primary-text-on);
@@ -13848,42 +13954,41 @@ th {
 }
 
 .btn-secondary {
-  --bs-btn-bg: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-bg: var(--secondary-hover);
-  --bs-btn-hover-border-color: var(--secondary-hover);
-  --bs-btn-active-bg: var(--secondary-active);
-  --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-color: var(--secondary-text-on);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-disabled-color: var(--secondary-text-on);
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: var(--primary-text-on);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-color: var(--primary-text-on);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 .btn-outline-primary {
-  --bs-btn-color: var(--primary);
-  --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: var(--primary);
-  --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-color: var(--bs-primary) !important;
+  --bs-btn-border-color: var(--bs-primary) !important;
+  --bs-btn-bg: transparent;
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
   --bs-btn-hover-color: var(--primary-text-on);
-  --bs-btn-active-bg: var(--primary-active);
-  --bs-btn-active-border-color: var(--primary-active);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
   --bs-btn-active-color: var(--primary-text-on);
-  --bs-btn-disabled-color: var(--primary);
-  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
-.btn-outline-secondary {
-  --bs-btn-color: var(--secondary-color);
-  --bs-btn-border-color: var(--secondary-color);
-  --bs-btn-hover-bg: var(--secondary-color);
-  --bs-btn-hover-border-color: var(--secondary-color);
-  --bs-btn-hover-color: var(--secondary-text-on);
-  --bs-btn-active-bg: var(--secondary-active);
-  --bs-btn-active-border-color: var(--secondary-active);
-  --bs-btn-active-color: var(--secondary-text-on);
-  --bs-btn-disabled-color: var(--secondary-color);
-  --bs-btn-disabled-border-color: var(--secondary-color);
+.btn-link {
+  color: #444444;
+}
+
+.btn-link:hover {
+  color: #333333;
 }
 
 .btn-success {
@@ -13928,10 +14033,6 @@ th {
   --bs-btn-active-border-color: var(--info-active);
 }
 
-.btn-link {
-  color: var(--primary);
-}
-
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
@@ -13944,11 +14045,10 @@ th {
 
 /* Cards */
 .card {
-  border-radius: var(--card-border-radius);
+  background-color: #FFFFFF;
   border: 1px solid var(--subtle-border);
-  box-shadow: var(--card-box-shadow);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: var(--card-border-radius);
+  box-shadow: none;
 }
 
 .card:hover {
@@ -13957,14 +14057,14 @@ th {
 }
 
 .card-header {
-  background-color: rgba(var(--primary-rgb), 0.05);
-  border-bottom: 1px solid var(--subtle-border);
+  background-color: #F8F9FA;
+  border-bottom: 1px solid #EEEEEE;
   padding: 1rem 1.25rem;
 }
 
 .card-footer {
-  background-color: rgba(var(--primary-rgb), 0.03);
-  border-top: 1px solid var(--subtle-border);
+  background-color: #F8F9FA;
+  border-top: 1px solid #EEEEEE;
   padding: 1rem 1.25rem;
 }
 
@@ -13975,15 +14075,17 @@ th {
 /* Product Cards - Special styling for the store */
 .product-card {
   height: 100%;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid #CCCCCC;
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  border: 1px solid var(--neutral-200);
+  border-radius: 12px;
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .product-img-container {
@@ -14004,7 +14106,7 @@ th {
 .product-price {
   font-weight: var(--font-weight-semibold);
   font-size: 1.1rem;
-  color: var(--primary);
+  color: #444444;
   margin-bottom: 0.75rem;
 }
 
@@ -14014,6 +14116,7 @@ th {
   min-height: 2.5rem; /* Ensure consistent height for titles */
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -14036,18 +14139,18 @@ th {
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: rgba(var(--primary-rgb), 0.5);
-  box-shadow: 0 0 0 0.25rem rgba(var(--primary-rgb), 0.15);
+  border-color: rgba(68, 68, 68, 0.5);
+  box-shadow: 0 0 0 0.25rem rgba(68, 68, 68, 0.15);
 }
 
 .form-label {
   font-weight: var(--font-weight-medium);
   margin-bottom: 0.5rem;
-  color: var(--neutral-700);
+  color: #333333;
 }
 
 .form-text {
-  color: var(--neutral-600);
+  color: #777777;
 }
 
 /* Consistent form group spacing */
@@ -14064,9 +14167,9 @@ th {
 }
 
 .alert-primary {
-  background-color: var(--primary-bg-subtle);
-  border-color: var(--primary-light);
-  color: var(--primary-dark);
+  background-color: #EEEEEE;
+  border-color: #CCCCCC;
+  color: #333333;
 }
 
 .alert-success {
@@ -14089,8 +14192,8 @@ th {
 
 /* Backgrounds */
 .bg-primary {
-  background-color: var(--primary) !important;
-  color: var(--primary-text-on) !important;
+  background-color: #333333 !important;
+  color: #FFFFFF !important;
 }
 
 .bg-secondary {
@@ -14136,8 +14239,8 @@ th {
 }
 
 .badge.bg-primary {
-  background-color: var(--primary) !important;
-  color: var(--primary-text-on) !important;
+  background-color: #333333 !important;
+  color: #FFFFFF !important;
 }
 
 .badge.bg-secondary {
@@ -14164,43 +14267,58 @@ th {
 
 /* Tables */
 .table {
-  --bs-table-hover-bg: rgba(var(--primary-rgb), 0.05);
+  --bs-table-hover-bg: rgba(68, 68, 68, 0.05);
 }
 
 .table thead th {
-  background-color: var(--neutral-50);
-  color: var(--neutral-700);
+  background-color: #F8F9FA;
+  color: #555555;
   font-weight: 600;
   border-bottom-width: 1px;
   padding: 0.75rem 1rem;
 }
 
 .table tfoot th, .table tfoot td {
-  background-color: var(--neutral-100);
+  background-color: #F1F1F1;
   font-weight: 600;
 }
 
 .tfoot-total {
   font-size: 1.1em;
   font-weight: 700;
-  color: var(--primary-dark);
+  color: #333333;
 }
 
 /* Navbars - Customer specific styling */
 .navbar {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  min-height: auto !important;
+  height: 45px !important; /* Set fixed height */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .navbar-brand {
-  font-weight: var(--font-weight-bold);
-  color: var(--primary);
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  margin-right: 0.5rem !important;
 }
 
-.navbar-nav .nav-link {
-  font-weight: var(--font-weight-medium);
-  transition: color 0.2s ease;
+.navbar-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.navbar .btn, 
+.navbar .dropdown-toggle {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  line-height: 1 !important;
+}
+
+.navbar-toggler {
+  padding: 0.2rem !important;
+  font-size: 0.85rem !important;
 }
 
 /* Main Content Area */
@@ -14210,7 +14328,7 @@ th {
 
 /* Footer */
 .footer {
-  background-color: var(--neutral-800);
+  background-color: #222222;
   color: white;
   padding: 3rem 0;
   margin-top: 3rem;
@@ -14250,7 +14368,7 @@ th {
 }
 
 .category-item.border-primary {
-    box-shadow: 0 0 0 2px var(--primary);
+    box-shadow: 0 0 0 2px #333333;
 }
 
 .category-image {
@@ -14258,8 +14376,8 @@ th {
     height: 50px;
     border-radius: 50%;
     object-fit: cover;
-    border: 1px solid var(--neutral-200);
-    background-color: var(--neutral-100);
+    border: 1px solid #E2E2E2;
+    background-color: #F1F1F1;
 }
 
 .category-name {
@@ -14317,9 +14435,26 @@ th {
   to { opacity: 1; }
 }
 
+/* Dropdown Animations */
+.animate-dropdown {
+  animation: dropdownFadeIn 0.2s ease-out forwards;
+}
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* End Dropdown Animations */
+
 /* Banner and Hero Sections */
 .hero-banner {
-  background-color: var(--primary-bg-subtle);
+  background-color: #EEEEEE;
   padding: 3rem 0;
   margin-bottom: 2rem;
 }
@@ -14330,19 +14465,19 @@ th {
 }
 
 .hero-subtitle {
-  color: var(--neutral-600);
+  color: #777777;
   margin-bottom: 1.5rem;
 }
 
 /* Price formatting */
 .price {
-  color: var(--primary-dark);
+  color: #333333;
   font-weight: var(--font-weight-semibold);
 }
 
 .original-price {
   text-decoration: line-through;
-  color: var(--neutral-500);
+  color: #777777;
   margin-right: 0.5rem;
 }
 
@@ -14397,7 +14532,7 @@ th {
     padding-bottom: 10px; /* Space for scrollbar */
     -webkit-overflow-scrolling: touch; /* Smoother scroll on iOS */
     scrollbar-width: none; /* Hide scrollbar standard */
-    margin-bottom: 1rem;
+    margin-top: 0.5rem !important;
 }
 
 .category-scroll-container::-webkit-scrollbar {
@@ -14412,7 +14547,7 @@ th {
 
 .category-item-wrapper.active .category-item {
     /* Style for selected category */
-    border: 2px solid var(--primary);
+    border: 2px solid #333333;
     border-radius: 1rem;
     background-color: var(--neutral-50);
     overflow: hidden;
@@ -14446,6 +14581,70 @@ th {
 .dropdown-menu {
   position: absolute;
   max-width: 90vw;
+  z-index: 1050 !important;
+}
+
+/* Ensure proper positioning and visibility of all dropdown menus */
+.dropdown-menu.show {
+  display: block !important;
+  z-index: 1050 !important;
+  margin-top: 1px !important;
+}
+
+/* Hide dropdowns when offcanvas is open */
+body.offcanvas-open .dropdown-menu.show {
+  z-index: 900 !important; /* Lower z-index when offcanvas is open */
+}
+
+/* Custom dropdown styling - improved with scrolling and selection support */
+.district-dropdown .dropdown-toggle,
+.dropdown .dropdown-toggle {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.district-dropdown .dropdown-menu,
+.district-dropdown-menu {
+  max-height: 250px !important;
+  overflow-y: auto !important;
+  width: 100%;
+  z-index: 1050 !important;
+  padding: 8px 0;
+}
+
+/* Make dropdown items clearly selectable */
+.district-dropdown .dropdown-item,
+.district-dropdown-menu .dropdown-item {
+  padding: 8px 16px !important;
+  margin: 2px 0 !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  position: relative !important;
+  z-index: 1051 !important; /* Higher z-index to be above the scrolling container */
+}
+
+/* Hover state for dropdown items */
+.district-dropdown .dropdown-item:hover,
+.district-dropdown-menu .dropdown-item:hover {
+  background-color: var(--bs-primary-bg-subtle) !important;
+}
+
+/* Active state for dropdown items */
+.district-dropdown .dropdown-item.active,
+.district-dropdown-menu .dropdown-item.active {
+  background-color: var(--bs-primary) !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+/* Fix scrolling on mobile devices */
+@media (max-width: 768px) {
+  .district-dropdown-menu {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
 }
 
 /* Mobile sort dropdown specific styling */
@@ -14553,21 +14752,27 @@ th {
 }
 
 .profile-action-list .list-group-item:hover {
-  background-color: var(--neutral-50);
+  background-color: #EEEEEE;
+  transform: translateX(4px);
+  border-left-color: #CCCCCC;
 }
 
-.profile-action-list .list-group-item.active {
-  background-color: var(--primary-bg-subtle);
-  color: var(--primary-dark);
-  border-color: var(--neutral-200);
+.profile-action-list .list-group-item .text-muted {
+  transition: color 0.2s ease;
 }
 
-.profile-action-list .action-icon {
-  color: var(--primary);
-  font-size: 1rem;
-  margin-right: 0.75rem;
-  width: 20px;
-  text-align: center;
+.profile-action-list .list-group-item:hover .text-muted {
+  color: #333333 !important;
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.profile-action-list .list-group-item .text-secondary {
+  transition: color 0.2s ease;
+}
+
+.profile-action-list .list-group-item:hover .text-secondary {
+  color: #333333 !important;
 }
 
 .address-card {
@@ -14603,8 +14808,8 @@ th {
 
 .auth-input:focus {
   background-color: white;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 0.25rem rgba(var(--primary-rgb), 0.15);
+  border-color: #333333;
+  box-shadow: 0 0 0 0.25rem rgba(51, 51, 51, 0.15);
 }
 
 @media (max-width: 576px) {
@@ -14687,8 +14892,8 @@ th {
 }
 
 .address-input:focus {
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+  border-color: #333333;
+  box-shadow: 0 0 0 0.2rem rgba(51, 51, 51, 0.25);
 }
 
 /* Rounded Pill enhancement */
@@ -14704,6 +14909,13 @@ th {
 /* Settings Page Styles */
 .settings-card .nav-tabs {
   border-bottom: 1px solid var(--neutral-200);
+  display: flex;
+  width: 100%;
+}
+
+.settings-card .nav-tabs .nav-item {
+  flex: 1;
+  text-align: center;
 }
 
 .settings-card .nav-tabs .nav-link {
@@ -14711,21 +14923,25 @@ th {
   border: none;
   border-bottom: 2px solid transparent;
   font-weight: var(--font-weight-medium);
-  padding: 1rem 1.25rem;
+  padding: 1rem 0.5rem;
   transition: all 0.2s ease;
   position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-card .nav-tabs .nav-link:not(.active):hover {
-  color: var(--neutral-700);
-  border-bottom: 2px solid var(--neutral-300);
-  background-color: var(--neutral-50);
+  color: #333333;
+  border-bottom: 2px solid #DDDDDD;
+  background-color: #EEEEEE;
 }
 
 .settings-card .nav-tabs .nav-link.active {
-  color: var(--primary-dark);
+  color: #333333;
   font-weight: var(--font-weight-semibold);
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 2px solid #333333;
   background-color: white;
 }
 
@@ -14736,7 +14952,7 @@ th {
   left: 0;
   right: 0;
   height: 2px;
-  background-color: var(--primary);
+  background-color: #333333;
 }
 
 .settings-card .tab-content .list-group-item {
@@ -14767,13 +14983,13 @@ th {
 }
 
 .profile-action-list .list-group-item:hover {
-  background-color: var(--neutral-100);
+  background-color: #EEEEEE;
   transform: translateX(4px);
-  border-left-color: var(--primary-light);
+  border-left-color: #CCCCCC;
 }
 
 .profile-action-list .list-group-item:hover .text-muted {
-  color: var(--primary) !important;
+  color: #333333 !important;
   transform: translateX(2px);
   transition: all 0.2s ease;
 }
@@ -14783,7 +14999,7 @@ th {
 }
 
 .profile-action-list .list-group-item:hover .text-secondary {
-  color: var(--primary) !important;
+  color: #333333 !important;
 }
 
 .address-list .list-group-item {
@@ -14807,13 +15023,17 @@ th {
 
 /* Updated Product Card Styling */
 .product-card {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid #CCCCCC;
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  border-radius: 12px;
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .product-image-wrapper {
@@ -14844,11 +15064,13 @@ th {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .product-name:hover {
-  color: var(--primary);
+  color: #333333;
 }
 
 /* Quantity control styling */
@@ -14872,14 +15094,14 @@ th {
 }
 
 .empty-state-icon svg {
-  color: var(--primary);
+  color: #333333;
   opacity: 0.8;
   transition: transform 0.3s ease;
 }
 
 .empty-state-icon:hover {
   transform: scale(1.05);
-  background-color: rgba(var(--primary-rgb), 0.15);
+  background-color: rgba(51, 51, 51, 0.15);
 }
 
 .empty-state-icon:hover svg {
@@ -14938,111 +15160,268 @@ th {
 /* Navigation Elements */
 .nav-icon-container {
   transition: all 0.2s ease;
-  background-color: rgba(var(--primary-rgb), 0.1);
+  background-color: rgba(51, 51, 51, 0.1);
 }
 
 .nav-icon-container:hover {
-  background-color: rgba(var(--primary-rgb), 0.2);
+  background-color: #EEEEEE !important; /* Light gray background on hover */
   transform: translateY(-2px);
 }
 
-.offcanvas-menu .nav-link {
-  transition: all 0.2s ease;
+.nav-icon-container svg {
+  color: #555555 !important; /* Use a visible medium-dark gray */
+  transition: color 0.2s ease;
 }
 
-.offcanvas-menu .nav-link:hover {
-  background-color: rgba(var(--primary-rgb), 0.05);
-  color: var(--primary) !important;
+.nav-icon-container:hover svg {
+  color: #000000 !important; /* Make icons black on hover */
 }
 
-.offcanvas-menu .nav-link:hover svg {
-  transform: translateX(3px);
-  transition: transform 0.2s ease;
+/* Mobile navigation fix for bottom alignment */
+.mobile-nav {
+  box-shadow: 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1030;
+  background-color: #FFFFFF !important;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 60px;
 }
 
-.badge-sm {
-  font-size: 0.6rem;
-  padding: 0.2rem 0.4rem;
+/* Fix z-index for offcanvas menu to appear above dropdowns */
+.offcanvas-menu {
+  z-index: 9999 !important; /* Higher than dropdown z-index */
 }
 
-/* Bottom Navigation Animation */
-.navbar-nav .nav-link svg {
-  transition: transform 0.2s ease;
+.offcanvas {
+  z-index: 9999 !important; /* Ensure offcanvas is above everything */
 }
 
-.navbar-nav .nav-link:hover svg {
-  transform: translateY(-2px);
+.offcanvas-backdrop {
+  z-index: 9990 !important; /* Just below offcanvas but above dropdowns */
 }
 
-/* Product Image Carousel Styles */
-.product-carousel {
-  background-color: var(--neutral-50);
-  border-radius: var(--card-border-radius);
-  overflow: hidden;
-  box-shadow: var(--card-box-shadow);
-  margin-bottom: 1rem;
-  height: 350px; /* Match new height from component */
-  position: relative;
+/* Slim navbar styles */
+.navbar {
+  min-height: auto !important;
+  height: 45px !important; /* Set fixed height */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
-/* Carousel navigation controls */
-.product-carousel .carousel-control-prev,
-.product-carousel .carousel-control-next {
-  width: 8%; /* Reduced from 10% to take up less space */
-  opacity: 0.7;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 0;
-  z-index: 5;
+.navbar-brand {
+  font-size: 1.1rem;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  margin-right: 0.5rem !important;
 }
 
-.product-carousel .carousel-control-prev:hover,
-.product-carousel .carousel-control-next:hover {
-  opacity: 0.9;
-  background: rgba(0, 0, 0, 0.2);
+.navbar-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
-/* Carousel indicators */
-.product-carousel .carousel-indicators {
-  margin-bottom: 0.25rem; /* Reduced margin */
-  z-index: 5;
+.navbar .btn, 
+.navbar .dropdown-toggle {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  line-height: 1 !important;
 }
 
-.product-carousel .carousel-indicators button {
-  width: 8px; /* Smaller indicators */
-  height: 8px; 
-  border-radius: 50%;
-  background-color: rgba(var(--primary-rgb), 0.5);
-  margin: 0 3px; /* Reduced margin */
+.navbar-toggler {
+  padding: 0.2rem !important;
+  font-size: 0.85rem !important;
 }
 
-.product-carousel .carousel-indicators button.active {
-  background-color: var(--primary);
+/* Adjust top padding for main content */
+main.flex-grow-1 {
+  padding-top: 48px !important; /* Just enough to clear the navbar */
+  margin-top: 0 !important;
 }
 
-/* Responsive height adjustments */
-@media (max-width: 768px) {
-  .product-carousel {
-    height: 280px; /* Reduced from 300px */
-  }
-}
-
+/* Responsive navbar adjustments */
 @media (max-width: 576px) {
-  .product-carousel {
-    height: 220px; /* Reduced from 250px */
+  /* Compact navbar on small screens */
+  .navbar-brand {
+    font-size: 1.2rem;
+    max-width: 40%;
+  }
+  
+  /* Ensure better spacing for the top navigation bar elements */
+  .navbar .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Make download button more compact */
+  .dropdown-toggle.btn {
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  /* Better navbar container alignment */
+  .navbar-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  
+  /* Navbar toggle button adjustment */
+  .navbar-toggler {
+    padding: 0.25rem !important;
+    margin-left: 0.25rem !important;
   }
 }
 
-/* Additional spacing adjustments for product detail page */
-.product-detail-section h5 {
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
+/* Add bottom padding to main content to prevent overlap with mobile nav */
+@media (max-width: 992px) {
+  main.flex-grow-1 {
+    padding-bottom: 80px !important;
+  }
 }
 
-@media (max-width: 768px) {
-  /* Ensure content is more compact on mobile */
-  .product-detail-container {
-    padding-left: 10px;
-    padding-right: 10px;
+/* Hide product links menu in mobile view */
+@media (max-width: 992px) {
+  .product-actions {
+    display: none !important;
+  }
+}
+
+.district-dropdown .dropdown-menu,
+.district-dropdown-menu {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scroll-behavior: smooth !important;
+  scrollbar-width: thin !important;
+  max-height: 200px !important;
+  -webkit-overflow-scrolling: touch !important; /* For iOS smooth scrolling */
+}
+
+/* Make dropdown items not interfere with scrolling */
+.district-dropdown .dropdown-item,
+.district-dropdown-menu .dropdown-item {
+  cursor: pointer !important;
+  user-select: none !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 2px !important; /* Add some space between items */
+  clear: both !important;
+  text-align: inherit !important;
+  white-space: nowrap !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  transition: background-color 0.15s ease-in-out !important;
+  outline: 0 !important;
+  position: relative !important; /* Enable position context for pseudo-elements */
+  z-index: 1 !important; /* Ensure item is above scrolling container */
+}
+
+.district-dropdown .dropdown-item:hover, 
+.district-dropdown .dropdown-item:focus,
+.district-dropdown-menu .dropdown-item:hover,
+.district-dropdown-menu .dropdown-item:focus {
+  background-color: #f5f5f5 !important;
+  color: #000000 !important;
+  outline: 0 !important;
+}
+
+.district-dropdown .dropdown-item.active, 
+.district-dropdown .dropdown-item:active,
+.district-dropdown-menu .dropdown-item.active,
+.district-dropdown-menu .dropdown-item:active {
+  background-color: #333333 !important;
+  color: #FFFFFF !important;
+  outline: 0 !important;
+  font-weight: bold !important;
+}
+
+/* Custom Dropdown Enhancements */
+.dropdown-menu {
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 1050;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.dropdown-item:hover {
+  background-color: var(--neutral-100);
+}
+
+.dropdown-item.active, 
+.dropdown-item:active {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
+}
+
+.dropdown-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-height: 38px;
+}
+
+.dropdown-toggle::after {
+  margin-left: 1rem;
+}
+
+/* District dropdown specific styles */
+.district-dropdown-menu {
+  max-height: 200px;
+  overflow-y: auto;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  position: absolute;
+  will-change: transform;
+}
+
+.district-dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer !important;
+}
+
+/* Mobile enhancements for dropdowns */
+@media (max-width: 767.98px) {
+  .dropdown-menu {
+    max-height: 160px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .dropdown-item {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+  }
+}
+
+/* Animation for dropdown */
+.animate-dropdown {
+  animation: dropdownFade 0.2s ease-out;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 ```
@@ -15204,6 +15583,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
   const itemCount = getItemCount();
   const wishlistCount = wishlistItems.length;
   const [showOffcanvas, setShowOffcanvas] = useState(false);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -15212,6 +15592,16 @@ const Layout = ({ installPrompt }: LayoutProps) => {
     'en': 'English',
     'am': 'አማርኛ',
     'om': 'Afaan Oromoo'
+  };
+
+  // Helper for language abbreviation
+  const getLangAbbr = (lang: string) => {
+    switch (lang) {
+      case 'en': return 'EN';
+      case 'am': return '\u12A0\u121B'; // አማ
+      case 'om': return 'AF';
+      default: return lang.substring(0,2).toUpperCase();
+    }
   };
 
   // Get current language display name
@@ -15261,42 +15651,105 @@ const Layout = ({ installPrompt }: LayoutProps) => {
     });
   };
 
+  // Add body class when offcanvas is open to help with hiding elements
+  useEffect(() => {
+    if (showOffcanvas) {
+      document.body.classList.add('offcanvas-open');
+    } else {
+      document.body.classList.remove('offcanvas-open');
+    }
+    
+    return () => {
+      document.body.classList.remove('offcanvas-open');
+    };
+  }, [showOffcanvas]);
+
   return (
     <div className="app-wrapper d-flex flex-column min-vh-100">
-      <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-3 border-bottom">
-        <Container>
-          <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover">
-            <FaStore className="me-2 text-primary" size={24} />
-            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>{t('app.name').includes('Store') ? 'Store' : ''}
+      <Navbar bg="white" variant="light" expand={false} fixed="top" className="shadow-sm py-1 border-bottom">
+        <Container className="navbar-container">
+          <Navbar.Brand as={Link} to="/" className="fw-bolder text-decoration-none transition-hover mb-0">
+            <FaStore className="me-1 text-primary" size={20} />
+            <span style={{ color: 'var(--primary)' }}>{t('app.name').split('Store')[0]}</span>
+            <span className="d-none d-sm-inline">{t('app.name').includes('Store') ? 'Store' : ''}</span>
           </Navbar.Brand>
           
           <div className="d-flex align-items-center">
-            {/* Language Switcher Dropdown */}
-            <NavDropdown 
-              title={<><FaGlobe className="me-1" /> <span className="d-none d-md-inline">{getCurrentLanguageName()}</span></>}
-              id="language-dropdown"
-              align="end"
-              className="me-3"
-            >
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('en')} 
-                active={i18n.language === 'en'}
+            {/* Custom Language Switcher Button & Dropdown */}
+            <div className="dropdown me-2" style={{ position: 'relative' }} id="language-dropdown">
+              <button
+                className="dropdown-toggle btn"
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #CCCCCC',
+                  borderRadius: 16,
+                  color: '#222',
+                  fontWeight: 500,
+                  padding: '0.25rem 0.5rem',
+                  minWidth: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  boxShadow: '0 2px 8px rgba(51,51,51,0.07)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                }}
+                onClick={() => setShowLangDropdown((v: boolean) => !v)}
+                onBlur={() => setTimeout(() => setShowLangDropdown(false), 120)}
+                tabIndex={0}
+                aria-haspopup="listbox"
+                aria-expanded={showLangDropdown}
               >
-                English
-              </NavDropdown.Item>
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('am')} 
-                active={i18n.language === 'am'}
-              >
-                አማርኛ
-              </NavDropdown.Item>
-              <NavDropdown.Item 
-                onClick={() => changeLanguage('om')} 
-                active={i18n.language === 'om'}
-              >
-                Afaan Oromoo
-              </NavDropdown.Item>
-            </NavDropdown>
+                <span style={{
+                  fontWeight: 700,
+                  fontSize: '0.97em',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.03em',
+                  marginRight: '0.35em',
+                  minWidth: 16,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                  lineHeight: 1.1,
+                }}>{getLangAbbr(i18n.language)}</span>
+                <span className="d-none d-md-inline">{getCurrentLanguageName()}</span>
+              </button>
+              {showLangDropdown && (
+                <ul
+                  className="dropdown-menu show"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    minWidth: '100%',
+                    width: '100%',
+                    borderRadius: 14,
+                    boxShadow: '0 6px 24px rgba(0,0,0,0.09)',
+                    marginTop: 6,
+                    zIndex: 3000,
+                    padding: '0.35rem 0.3rem',
+                  }}
+                >
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'en' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'en' ? '#fff' : '#333', background: i18n.language === 'en' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('en')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', textTransform: 'uppercase', letterSpacing: '0.03em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>EN</span>
+                      <span className="d-none d-md-inline">English</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'am' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'am' ? '#fff' : '#333', background: i18n.language === 'am' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('am')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>አማ</span>
+                      <span className="d-none d-md-inline">አማርኛ</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button className={`dropdown-item${i18n.language === 'om' ? ' active' : ''}`} style={{ borderRadius: 8, fontWeight: 500, color: i18n.language === 'om' ? '#fff' : '#333', background: i18n.language === 'om' ? '#222' : 'transparent', padding: '0.45rem 1.2rem 0.45rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.6em' }} onClick={() => changeLanguage('om')}>
+                      <span style={{ fontWeight: 700, fontSize: '1em', minWidth: 16, display: 'inline-block', textAlign: 'center' }}>AF</span>
+                      <span className="d-none d-md-inline">Afaan Oromoo</span>
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
             
             {/* Install App button */}
             {installPrompt && (
@@ -15304,11 +15757,12 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                 variant="outline-primary"
                 size="sm"
                 onClick={handleInstallClick}
-                className="d-flex align-items-center gap-1 me-3 rounded-pill px-3 py-1"
+                className="d-flex align-items-center me-2 rounded-pill py-0 px-2"
                 title={t('common.installApp')}
+                style={{ minWidth: 'auto', fontSize: '0.85rem' }}
               >
-                <FaDownload />
-                <span className="d-none d-md-inline">{t('common.installApp')}</span>
+                <FaDownload size={14} />
+                <span className="d-none d-md-inline ms-1">{t('common.installApp')}</span>
               </Button>
             )}
             
@@ -15366,16 +15820,17 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                 </Nav.Link>
                 
                 {/* Language Switcher in Offcanvas Menu */}
-                <div className="py-3 border-bottom px-3">
+                <div className="dropdown py-3 border-bottom px-3">
                   <div className="d-flex align-items-center mb-2">
-                    <FaGlobe className="me-2 text-primary" /> {t('common.language', 'Language')}
+                    <FaGlobe className="me-2 text-primary" /> 
+                    <span>{t('common.language')}</span>
                   </div>
-                  <div className="d-flex flex-wrap gap-2">
+                  <div className="d-flex flex-wrap gap-2 mt-1">
                     <Button 
                       variant={i18n.language === 'en' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('en')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       English
                     </Button>
@@ -15383,7 +15838,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       variant={i18n.language === 'am' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('am')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       አማርኛ
                     </Button>
@@ -15391,7 +15846,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       variant={i18n.language === 'om' ? 'primary' : 'outline-primary'} 
                       size="sm"
                       onClick={() => changeLanguage('om')}
-                      className="flex-grow-1"
+                      className="rounded-pill px-3"
                     >
                       Afaan Oromoo
                     </Button>
@@ -15428,13 +15883,13 @@ const Layout = ({ installPrompt }: LayoutProps) => {
                       <FaSignOutAlt className="me-2" /> {t('navigation.logout')}
                     </Button>
                   </>
-                ) : (
+                ) :
                   <>
                     <Nav.Link as={Link} to="/login" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
                       <FaUser className="me-2 text-primary" /> {t('navigation.loginRegister')}
                     </Nav.Link>
                   </>
-                )}
+                }
                 <Nav.Link as={Link} to="/about" onClick={handleCloseOffcanvas} className="py-3 border-bottom d-flex align-items-center px-3">
                   <FaStore className="me-2 text-primary" /> {t('navigation.about')}
                 </Nav.Link>
@@ -15444,81 +15899,51 @@ const Layout = ({ installPrompt }: LayoutProps) => {
         </Container>
       </Navbar>
       
-      <main className="flex-grow-1 pt-5 mt-4 pb-5 pb-lg-0">
+      <main className="flex-grow-1 pt-5 mt-5 pb-5 pb-lg-0">
         <Outlet />
       </main>
       
       {/* Bottom Navigation Bar - Mobile Only */}
-      <div className="d-lg-none">
-        <Navbar fixed="bottom" bg="white" className="shadow-sm border-top">
-          <Container>
-            <Nav className="w-100 justify-content-around">
-              <Nav.Link 
-                as={Link} 
-                to="/" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaHome 
-                  size={20} 
-                  className="mb-1"
-                  style={{ color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.home')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/cart" 
-                className="d-flex flex-column align-items-center text-center py-2 position-relative"
-                style={{ color: location.pathname === '/cart' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
+      <nav className="d-lg-none fixed-bottom bg-white border-top py-2 mobile-nav">
+        <div className="d-flex justify-content-around align-items-center">
+          <Link to="/" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaHome size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.home')}</small>
+            </div>
+          </Link>
+          <Link to="/cart" className="text-center text-decoration-none position-relative">
+            <div className="d-flex flex-column align-items-center">
                 <div className="position-relative">
-                  <FaShoppingCart 
-                    size={20} 
-                    className="mb-1"
-                    style={{ color: location.pathname === '/cart' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                  />
+                <FaShoppingCart size={20} className="mb-1 text-dark" />
                   {itemCount > 0 && (
-                    <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle p-1" style={{ fontSize: '0.6rem' }}>
+                  <Badge 
+                    pill 
+                    bg="danger" 
+                    className="position-absolute top-0 start-100 translate-middle badge-sm"
+                    style={{ fontSize: "0.6rem", padding: "0.2rem 0.4rem" }}
+                  >
                       {itemCount}
                     </Badge>
                   )}
                 </div>
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.cart')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/orders" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaList 
-                  size={20} 
-                  className="mb-1"
-                  style={{ color: location.pathname === '/orders' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.orders')}</small>
-              </Nav.Link>
-              
-              <Nav.Link 
-                as={Link} 
-                to="/settings" 
-                className="d-flex flex-column align-items-center text-center py-2"
-                style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }}
-              >
-                <FaCog 
-                  size={20} 
-                  className="mb-1" 
-                  style={{ color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)' }} 
-                />
-                <small style={{ fontSize: '0.7rem' }}>{t('navigation.settings')}</small>
-              </Nav.Link>
-            </Nav>
-          </Container>
-        </Navbar>
+              <small className="d-block small text-dark">{t('navigation.cart')}</small>
+            </div>
+          </Link>
+          <Link to="/orders" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaList size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.orders')}</small>
+            </div>
+          </Link>
+          <Link to="/settings" className="text-center text-decoration-none">
+            <div className="d-flex flex-column align-items-center">
+              <FaCog size={20} className="mb-1 text-dark" />
+              <small className="d-block small text-dark">{t('navigation.settings')}</small>
+            </div>
+          </Link>
       </div>
+      </nav>
     </div>
   );
 };
@@ -16852,8 +17277,10 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { getImageUrl } from '../utils/imageUrl';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const CartPage = () => {
+  const { t } = useTranslation();
   const { cartItems, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal, fetchCart, isLoading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -17026,17 +17453,17 @@ const CartPage = () => {
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
-        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
         <Card className="shadow-sm border-0 mb-4">
           <Card.Body className="p-5 text-center">
             <div className="empty-state">
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
-              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                Start Shopping
+                {t('cart.startShopping')}
               </Link>
             </div>
           </Card.Body>
@@ -17049,9 +17476,9 @@ const CartPage = () => {
   if (isLoading && cartItems.length === 0) {
     return (
       <Container className="py-4 text-center">
-        <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
         <Spinner animation="border" role="status" className="my-5">
-          <span className="visually-hidden">Loading...</span>
+          <span className="visually-hidden">{t('common.loading')}</span>
         </Spinner>
       </Container>
     );
@@ -17059,7 +17486,7 @@ const CartPage = () => {
   
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">Your Shopping Cart</h2>
+      <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
       
       {errorMessage && (
         <Alert variant="danger" className="mb-3" onClose={() => setErrorMessage(null)} dismissible>
@@ -17074,10 +17501,10 @@ const CartPage = () => {
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">Your cart is empty</h3>
-              <p className="text-muted mb-4">Add some products to your cart and they will appear here.</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                Start Shopping
+                {t('cart.startShopping')}
               </Link>
             </div>
           </Card.Body>
@@ -17170,36 +17597,41 @@ const CartPage = () => {
             ))}
           </div>
 
-          {/* Summary and Buttons Section (Visible on all sizes) */}
-          <Card className="mb-4 shadow-sm border-0">
-            <Card.Body className="p-4">
-              <h4 className="mb-4 fw-semibold text-end">Total: {formatCurrency(getCartTotal())}</h4>
-              <div className="d-grid gap-3 d-md-flex justify-content-md-end">
+          {/* Cart Footer - Summary and Buttons */}
+          <div className="d-flex flex-column mt-4">
+            {/* Cart Summary */}
+            <div className="d-flex justify-content-end mb-3">
+              <h4 className="fw-semibold">{t('common.total')}: {formatCurrency(getCartTotal())}</h4>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="d-flex flex-column flex-md-row gap-2 mt-3">
                 <Button 
                   variant="outline-danger" 
-                  className="rounded-pill px-4 py-2 fw-medium" 
+                className="w-100 py-2"
                   onClick={() => clearCart()}
                   disabled={isLoading}
                 >
-                  Clear Cart
+                {t('cart.clearCart')}
                 </Button>
+              
                 <Link 
                   to="/" 
-                  className="btn btn-secondary rounded-pill px-4 py-2 fw-medium"
+                className="btn btn-outline-primary w-100 py-2"
                 >
-                  Continue Shopping
+                {t('cart.continueShopping')}
                 </Link>
+              
                 <Button 
                   variant="primary" 
-                  className="rounded-pill px-4 py-2 fw-medium" 
+                className="w-100 py-2"
                   onClick={handleCheckout}
-                  disabled={isLoading}
+                disabled={isLoading || cartIsEmpty}
                 >
-                  Proceed to Checkout
+                {t('cart.proceedToCheckout')}
                 </Button>
               </div>
-            </Card.Body>
-          </Card>
+          </div>
         </>
       )}
     </Container>
@@ -17213,7 +17645,7 @@ export default CartPage;
 
 ```
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge } from 'react-bootstrap';
+import { Container, Form, Row, Col, Button, Card, Table, Alert, Spinner, Modal, Badge, Dropdown } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -17221,6 +17653,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 interface DeliveryLocation {
   id: number;
@@ -17235,12 +17668,19 @@ const CheckoutPage: React.FC = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Delivery location selection state
   const [savedLocations, setSavedLocations] = useState<DeliveryLocation[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationErrorState, setLocationErrorState] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Derived label for delivery location dropdown
+  const selectedLocation = savedLocations.find(loc => loc.id.toString() === selectedLocationId);
+  const currentLocationLabel = selectedLocation
+    ? `${selectedLocation.name} (${selectedLocation.district}) - ${selectedLocation.phone}${selectedLocation.isDefault ? ' (Default)' : ''}`
+    : '-- Select Delivery Location --';
 
   // Add Location Modal state
   const [showAddLocationModal, setShowAddLocationModal] = useState(false);
@@ -17269,6 +17709,11 @@ const CheckoutPage: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -17596,6 +18041,9 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
+  // Derived label for new location district dropdown
+  const currentDistrictLabel = newLocationData.district || '-- Select District --';
+
   return (
     <Container className="py-3">
       <h2 className="mb-4">Checkout</h2>
@@ -17652,29 +18100,56 @@ const CheckoutPage: React.FC = () => {
                       <Spinner animation="border" size="sm" className="me-2" />
                       <span>Loading delivery locations...</span>
                     </div>
-                  ) : savedLocations.length > 0 ? (
-                    <Form.Select 
-                      value={selectedLocationId}
-                      onChange={(e) => setSelectedLocationId(e.target.value)}
-                      required
-                      className="mb-3"
-                    >
-                      <option value="" disabled>-- Select Delivery Location --</option>
-                      {savedLocations.map(location => (
-                        <option key={location.id} value={location.id.toString()}>
-                          {`${location.name} (${location.district}) - ${location.phone}`}
-                          {location.isDefault ? ' (Default)' : ''}
-                        </option>
-                      ))}
-                    </Form.Select>
                   ) : (
-                    <Alert variant="info" className="mb-3">
-                      <div className="d-flex align-items-center mb-2">
-                        <FaMapMarkerAlt className="me-2 text-primary" size={18} />
-                        <span className="fw-medium">You don't have any saved delivery locations.</span>
+                    <div className="mb-3">
+                      <label htmlFor="location" className="form-label">
+                        {t('checkout.location')}
+                      </label>
+                      <div className="dropdown w-100">
+                        <button
+                          className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
+                          type="button"
+                          id="locationDropdown"
+                          onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+                          aria-expanded={locationDropdownOpen}
+                          data-testid="location-dropdown"
+                        >
+                          {currentLocationLabel || t('checkout.selectLocation')}
+                          <i className="bi bi-caret-down-fill"></i>
+                        </button>
+                        <div
+                          className={`dropdown-menu w-100 ${locationDropdownOpen ? 'show animate-dropdown' : ''}`}
+                          aria-labelledby="locationDropdown"
+                          onClick={(e) => {
+                            // Don't close dropdown when clicking on the menu itself (for scrolling)
+                            if (e.target === e.currentTarget) {
+                              e.stopPropagation();
+                            }
+                          }}
+                        >
+                          {savedLocations.map((location) => (
+                            <div
+                              key={location.id}
+                              className={`dropdown-item ${selectedLocationId === location.id.toString() ? 'active' : ''}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedLocationId(location.id.toString());
+                                setSelectedDistrict('');
+                                setDistrictOptions(location.district ? [location.district] : []);
+                                // Close dropdown after selection
+                                setTimeout(() => {
+                                  setLocationDropdownOpen(false);
+                                }, 150);
+                              }}
+                              data-testid={`location-option-${location.id}`}
+                            >
+                              {location.name}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <p className="mb-0">Please add a delivery location to continue with checkout.</p>
-                    </Alert>
+                    </div>
                   )}
                 </Form.Group>
                 
@@ -17682,6 +18157,57 @@ const CheckoutPage: React.FC = () => {
                   <Alert variant="warning" className="mb-3">
                     {locationError}
                   </Alert>
+                )}
+
+                {/* District dropdown - only show if a location is selected */}
+                {selectedLocationId && (
+                  <div className="mb-3">
+                    <label htmlFor="district" className="form-label">
+                      {t('checkout.district')}
+                    </label>
+                    <div className="dropdown w-100">
+                      <button
+                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
+                        type="button"
+                        id="districtDropdown"
+                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
+                        aria-expanded={districtDropdownOpen}
+                        data-testid="district-dropdown"
+                      >
+                        {selectedDistrict || t('checkout.selectDistrict')}
+                        <i className="bi bi-caret-down-fill"></i>
+                      </button>
+                      <div
+                        className={`dropdown-menu w-100 ${districtDropdownOpen ? 'show animate-dropdown' : ''}`}
+                        aria-labelledby="districtDropdown"
+                        onClick={(e) => {
+                          // Don't close dropdown when clicking on the menu itself (for scrolling)
+                          if (e.target === e.currentTarget) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {districtOptions.map((district, index) => (
+                          <div
+                            key={index}
+                            className={`dropdown-item ${selectedDistrict === district ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedDistrict(district);
+                              // Close dropdown after selection
+                              setTimeout(() => {
+                                setDistrictDropdownOpen(false);
+                              }, 150);
+                            }}
+                            data-testid={`district-option-${index}`}
+                          >
+                            {district}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 <Button 
@@ -17807,25 +18333,63 @@ const CheckoutPage: React.FC = () => {
               <Col>
                 <Form.Group>
                   <Form.Label className="fw-medium">District</Form.Label>
-                  <Form.Select
-                    name="district"
-                    value={newLocationData.district}
-                    onChange={handleNewLocationChange}
-                    required
-                    isInvalid={!!formErrors.district}
-                    disabled={isLoadingDistricts}
-                  >
-                    {isLoadingDistricts ? (
-                      <option value="">Loading districts...</option>
-                    ) : (
-                      <>
-                        <option value="" disabled>-- Select District --</option>
-                        {districts.map((district) => (
-                          <option key={district} value={district}>{district}</option>
-                        ))}
-                      </>
-                    )}
-                  </Form.Select>
+                  <Dropdown className="district-dropdown" onSelect={(eventKey, event) => {
+                    if (event) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }
+                    setNewLocationData(prev => ({ ...prev, district: eventKey || '' }));
+                  }}>
+                    <Dropdown.Toggle variant={formErrors.district ? 'outline-danger' : 'outline-secondary'} id="newLocationDistrictDropdown" className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle" disabled={isLoadingDistricts}>
+                      {currentDistrictLabel}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      style={{ width: '100%' }} 
+                      className="district-dropdown-menu animate-dropdown w-100"
+                      onClick={(e) => {
+                        // Prevent the dropdown from closing when clicking inside it for scrolling
+                        if (e.target === e.currentTarget) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      <Dropdown.Header>Select District</Dropdown.Header>
+                      {isLoadingDistricts ? (
+                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                      ) : districtError ? (
+                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                      ) : districts.length > 0 ? (
+                        districts.map(d => (
+                          <Dropdown.Item 
+                            key={d} 
+                            eventKey={d} 
+                            active={newLocationData.district === d} 
+                            className="district-dropdown-item"
+                            onClick={(e) => {
+                              // Prevent event bubbling to parent elements
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              // Set the form state directly
+                              setNewLocationData(prev => ({ ...prev, district: d }));
+                              
+                              // Close dropdown manually after a short delay
+                              const dropdown = document.getElementById('newLocationDistrictDropdown');
+                              if (dropdown) {
+                                setTimeout(() => {
+                                  dropdown.click();
+                                }, 150);
+                              }
+                            }}
+                          >
+                            {d}
+                          </Dropdown.Item>
+                        ))
+                      ) : (
+                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
                   <Form.Control.Feedback type="invalid">
                     {formErrors.district}
                   </Form.Control.Feedback>
@@ -18104,9 +18668,9 @@ export default CustomerOrderDetailPage;
 ## File: `packages\customer-frontend\src\pages\HomePage.tsx`
 
 ```
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 import { toast } from 'react-hot-toast';
@@ -18118,6 +18682,7 @@ import { FaRegHeart } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
 import { getImageUrl } from '../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 interface ProductImage {
   id: number;
@@ -18154,6 +18719,7 @@ interface PaginatedProductsResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18168,11 +18734,54 @@ const HomePage = () => {
   // Sort state
   const [sortBy, setSortBy] = useState<string>('createdAt'); // Default sort
   const [sortOrder, setSortOrder] = useState<string>('desc'); // Default order
+  const [showSortOptions, setShowSortOptions] = useState(false);
   
+  // Create ref for the dropdown container
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
+
+  // Function to handle sort selection
+  const handleSortChange = (field: string, order: string) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setShowSortOptions(false);
+  };
+
+  // Open/close sort options dropdown
+  const openSortOptions = () => setShowSortOptions(true);
+  const closeSortOptions = () => setShowSortOptions(false);
+  const toggleSortOptions = () => setShowSortOptions((prev) => !prev);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showSortOptions) return;
+    function handleClick(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        closeSortOptions();
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeSortOptions();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showSortOptions]);
+
+  // Fetch products when search term, category filter, or sort changes - reset to page 1
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when filters change
+    fetchProducts(1);
+  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   const fetchProducts = async (page = 1) => {
     setIsLoading(true);
@@ -18250,12 +18859,6 @@ const HomePage = () => {
     }
   };
 
-  // Fetch products when search term, category filter, or sort changes - reset to page 1
-  useEffect(() => {
-    setCurrentPage(1); // Reset to first page when filters change
-    fetchProducts(1);
-  }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
-
   // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -18288,10 +18891,10 @@ const HomePage = () => {
     
     if (isWishlisted(product.id)) {
       removeFromWishlist(product.id);
-      toast.success(`${product.name} removed from wishlist`);
+      toast.success(t('wishlist.removedFromWishlist').replace('!', `: ${product.name}`));
     } else {
       addToWishlist(product.id);
-      toast.success(`${product.name} added to wishlist`);
+      toast.success(t('wishlist.addedToWishlist').replace('!', `: ${product.name}`));
     }
   };
 
@@ -18356,15 +18959,15 @@ const HomePage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-3 d-none d-sm-block">Our Products</h2>
+      <h2 className="mb-3 d-none d-sm-block">{t('homePage.title')}</h2>
       
       {/* Category Filter */}
       <div className="mb-4">
-        <h5 className="mb-3 d-none d-sm-block">Categories</h5>
+        <h5 className="mb-3 d-none d-sm-block">{t('homePage.categories')}</h5>
         {isLoadingCategories ? (
           <div className="text-center py-4">
             <Spinner animation="border" size="sm" />
-            <p className="mt-2">Loading categories...</p>
+            <p className="mt-2">{t('homePage.loadingCategories')}</p>
           </div>
         ) : (
           <div className="category-scroll-container mb-3">
@@ -18376,11 +18979,11 @@ const HomePage = () => {
               >
                 <img 
                   src="/placeholder-image.svg" 
-                  alt="All Categories" 
+                  alt={t('homePage.allCategories')} 
                   className="category-image" 
                   onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
                 />
-                <p className="category-name text-truncate w-100">All Categories</p>
+                <p className="category-name text-truncate w-100">{t('homePage.allCategories')}</p>
               </div>
             </div>
             
@@ -18405,49 +19008,205 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* Combined Search and Sort */}
-      <div className="mb-4">
-        <Row className="justify-content-center">
-          <Col xs={12} md={8} lg={7}>
-            <InputGroup className="shadow-sm rounded overflow-hidden">
+      {/* Search and Sort Controls */}
+      <Row className="justify-content-center mb-4">
+        <Col xs={12} md={8} lg={7}>
+          <div className="d-flex align-items-stretch shadow-sm rounded search-sort-container">
+            {/* Search Input - 65% width */}
+            <div className="search-sort-input" style={{ width: "65%" }}>
               <Form.Control
                 id="productSearch"
                 type="search"
-                placeholder="Search products by name..."
+                placeholder={t('homePage.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Search Products"
-                className="border-end-0"
-              />
-              <Form.Select
-                id="productSort"
+                aria-label={t('search.searchProducts')}
                 size="sm"
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [field, order] = e.target.value.split('-');
-                  setSortBy(field);
-                  setSortOrder(order);
+                className="h-100 border-0 rounded-0"
+              />
+            </div>
+            
+            {/* Custom Sort Dropdown - 35% width */}
+            <div 
+              ref={sortDropdownRef}
+              className="position-relative sort-dropdown-wrapper" 
+              style={{ width: "35%", position: 'relative', zIndex: 1050 }}
+            >
+              <div 
+                role="button"
+                tabIndex={0}
+                onClick={toggleSortOptions}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    toggleSortOptions();
+                  }
                 }}
-                aria-label="Sort products by"
-                className="flex-grow-0 border-start-0"
-                style={{ minWidth: '130px', maxWidth: '180px' }}
+                className="h-100 d-flex align-items-center justify-content-between px-3 sort-toggle"
+                style={{ 
+                  backgroundColor: '#FFFFFF',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  color: '#000000'
+                }}
               >
-                <option value="createdAt-desc">Newest</option>
-                <option value="price-asc">Price: Low-High</option>
-                <option value="price-desc">Price: High-Low</option>
-                <option value="name-asc">Name: A-Z</option>
-                <option value="name-desc">Name: Z-A</option>
-              </Form.Select>
-            </InputGroup>
-          </Col>
-        </Row>
-      </div>
+                <span style={{ fontSize: '0.85rem' }}>
+                  {sortBy === 'createdAt' && sortOrder === 'desc' && t('homePage.sortOptions.newestFirst')}
+                  {sortBy === 'price' && sortOrder === 'asc' && t('homePage.sortOptions.priceLowToHigh')}
+                  {sortBy === 'price' && sortOrder === 'desc' && t('homePage.sortOptions.priceHighToLow')}
+                  {sortBy === 'name' && sortOrder === 'asc' && t('homePage.sortOptions.nameAToZ')}
+                  {sortBy === 'name' && sortOrder === 'desc' && t('homePage.sortOptions.nameZToA')}
+                </span>
+                <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>▼</span>
+              </div>
+              
+              {showSortOptions && (
+                <div 
+                  className="position-absolute top-100 start-0 end-0 py-1 shadow-sm dropdown-menu show animate-dropdown"
+                  style={{ 
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CCCCCC',
+                    zIndex: 1050,
+                    width: '100%',
+                    left: 0,
+                    right: 0,
+                    display: 'block',
+                    marginTop: '1px',
+                    borderRadius: '0 0 4px 4px'
+                  }}
+                  onClick={(e) => {
+                    // Don't close dropdown when clicking on the menu itself (for scrolling)
+                    if (e.target === e.currentTarget) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'createdAt' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'createdAt' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('createdAt', 'desc');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSortChange('createdAt', 'desc');
+                      }
+                    }}
+                  >
+                    {t('homePage.sortOptions.newestFirst')}
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'price' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'asc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('price', 'asc');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSortChange('price', 'asc');
+                      }
+                    }}
+                  >
+                    {t('homePage.sortOptions.priceLowToHigh')}
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'price' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'price' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('price', 'desc');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSortChange('price', 'desc');
+                      }
+                    }}
+                  >
+                    {t('homePage.sortOptions.priceHighToLow')}
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'name' && sortOrder === 'asc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'asc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('name', 'asc');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSortChange('name', 'asc');
+                      }
+                    }}
+                  >
+                    {t('homePage.sortOptions.nameAToZ')}
+                  </div>
+                  <div 
+                    role="button" 
+                    tabIndex={0}
+                    className="dropdown-item"
+                    style={{ 
+                      backgroundColor: sortBy === 'name' && sortOrder === 'desc' ? '#f0f0f0' : 'transparent',
+                      fontWeight: sortBy === 'name' && sortOrder === 'desc' ? 'bold' : 'normal',
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSortChange('name', 'desc');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSortChange('name', 'desc');
+                      }
+                    }}
+                  >
+                    {t('homePage.sortOptions.nameZToA')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Col>
+      </Row>
       
       {/* Product Listing */}
       {isLoading && (
         <div className="text-center my-5">
           <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading products...</span>
+            <span className="visually-hidden">{t('homePage.loadingProducts')}</span>
           </Spinner>
         </div>
       )}
@@ -18463,16 +19222,16 @@ const HomePage = () => {
           {totalProducts > 0 && (
             <p className="text-muted mb-3">
               {totalProducts === 1 
-                ? 'Found 1 product'
-                : `Found ${totalProducts} products`}
-              {searchTerm && ` matching "${searchTerm}"`}
+                ? t('homePage.productFound_one')
+                : t('homePage.productFound_other', { count: totalProducts })}
+              {searchTerm && ` ${t('homePage.matching')} "${searchTerm}"`}
             </p>
           )}
           
           <Row className="g-3 my-3">
             {products.length === 0 ? (
               <Col>
-                <p>No products available at the moment.</p>
+                <p>{t('homePage.noProductsAvailable')}</p>
               </Col>
             ) : (
               products.map((product) => (
@@ -18513,7 +19272,7 @@ const HomePage = () => {
                           className="position-absolute top-0 end-0 m-2 rounded-circle p-1"
                           style={{ width: '30px', height: '30px' }}
                           onClick={(e) => handleToggleWishlist(e, product)}
-                          aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                          aria-label={isWishlisted(product.id) ? t('product.removeFromWishlist') : t('product.addToWishlist')}
                         >
                           {isWishlisted(product.id) ? (
                             <FaHeart className="text-danger" />
@@ -18799,6 +19558,7 @@ import { FaList, FaShoppingBag, FaRegClock } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
 import EmptyState from '../components/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 interface UserOrder {
   id: number; 
@@ -18810,6 +19570,7 @@ interface UserOrder {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const OrderHistoryPage = () => {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true); // For order list loading
   const [error, setError] = useState<string | null>(null);
@@ -18888,7 +19649,7 @@ const OrderHistoryPage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-4">My Orders</h2>
+      <h2 className="mb-4">{t('orders.title')}</h2>
 
       {error && ( // Show error if occurred after loading
         <Alert variant="danger" className="my-3">
@@ -18901,9 +19662,9 @@ const OrderHistoryPage = () => {
           {orders.length === 0 ? (
             <EmptyState
               icon={<FaList />}
-              title="No Orders Yet"
-              message="You haven't placed any orders yet. Start shopping to see your order history here."
-              actionButton={<Link to="/" className="btn btn-primary px-4">Start Shopping</Link>}
+              title={t('orders.noOrders')}
+              message={t('orders.noOrdersMessage', 'You haven\'t placed any orders yet. Start shopping to see your order history here.')}
+              actionButton={<Link to="/" className="btn btn-primary px-4">{t('cart.startShopping')}</Link>}
             />
           ) : (
             <>
@@ -19279,7 +20040,7 @@ export default OrderSuccessPage;
 ```
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Alert, Badge, Card, Form, ListGroup, Carousel, Dropdown } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -19295,6 +20056,7 @@ import { FaHeart } from 'react-icons/fa';
 import { FaRegHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
 import { getImageUrl } from '../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 // Define interface for product data matching backend response
 interface ProductImage {
@@ -19341,6 +20103,8 @@ interface PaginatedProductsResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const ProductDetailPage = () => {
+  const { t } = useTranslation();
+  
   // State for product
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -19366,6 +20130,17 @@ const ProductDetailPage = () => {
   // State for other products
   const [otherProducts, setOtherProducts] = useState<Product[]>([]);
   const [isLoadingOther, setIsLoadingOther] = useState(false);
+  
+  // Rating dropdown options
+  const ratingOptions = [
+    { value: 0, label: t('product.selectARating') },
+    { value: 1, label: `1 - ${t('product.ratingOptions.poor')}` },
+    { value: 2, label: `2 - ${t('product.ratingOptions.fair')}` },
+    { value: 3, label: `3 - ${t('product.ratingOptions.good')}` },
+    { value: 4, label: `4 - ${t('product.ratingOptions.veryGood')}` },
+    { value: 5, label: `5 - ${t('product.ratingOptions.excellent')}` }
+  ];
+  const currentRatingLabel = ratingOptions.find(opt => opt.value === newRating)?.label || t('product.selectARating');
   
   // Hooks
   const { productId } = useParams<{ productId: string }>();
@@ -19661,7 +20436,7 @@ const ProductDetailPage = () => {
     return (
       <Container className="py-5 text-center">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading product details...</span>
+          <span className="visually-hidden">{t('product.loadingDetails')}</span>
         </Spinner>
       </Container>
     );
@@ -19675,7 +20450,7 @@ const ProductDetailPage = () => {
           {error}
         </Alert>
         <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-          Back to Products
+          {t('navigation.backToProducts')}
         </Button>
       </Container>
     );
@@ -19686,10 +20461,10 @@ const ProductDetailPage = () => {
     return (
       <Container className="py-3">
         <Alert variant="warning">
-          Product not found or has been removed.
+          {t('product.notFound')}
         </Alert>
         <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-          Back to Products
+          {t('navigation.backToProducts')}
         </Button>
       </Container>
     );
@@ -19723,7 +20498,7 @@ const ProductDetailPage = () => {
       <Row className="mb-2">
         <Col>
           <Button variant="secondary" size="sm" onClick={handleBackClick} className="mb-3">
-            &larr; Back to Products
+            &larr; {t('navigation.backToProducts')}
           </Button>
         </Col>
       </Row>
@@ -19766,7 +20541,7 @@ const ProductDetailPage = () => {
                       <img
                         className="d-block"
                         src={getImageUrl(image.url)}
-                        alt={`${product.name} - Image ${index + 1}`}
+                        alt={`${product.name} - ${t('product.image')} ${index + 1}`}
                         style={{ 
                           objectFit: 'contain',
                           maxHeight: '330px',
@@ -19812,9 +20587,42 @@ const ProductDetailPage = () => {
                 bg="info" 
                 className="position-absolute top-0 start-0 m-2 z-1"
               >
-                New!
+                {t('common.new')}
               </Badge>
             )}
+          </div>
+          
+          <div className="mb-1">
+            <p className="text-muted small mb-0">{t('product.addedOn')} {formatDate(product.createdAt)}</p>
+          </div>
+          
+          {/* Description with reduced margin */}
+          <div className="mb-2">
+            <h5 className="mb-1">{t('product.description')}</h5>
+            <p className="text-break mb-0 product-description">{product.description || t('product.noDescriptionAvailable')}</p>
+          </div>
+          
+          {/* Add to Cart Button - with improved positioning */}
+          <div className="mt-3 mb-2 sticky-bottom">
+            <Button
+              variant={isInCart ? "success" : "primary"}
+              className="w-100 py-2"
+              onClick={handleAddToCartClick}
+              disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
+            >
+              {isAddingToCart ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
+                  {t('product.adding')}
+                </>
+              ) : isInCart ? (
+                t('product.inCart')
+              ) : product?.stock <= 0 ? (
+                t('product.outOfStock')
+              ) : (
+                t('product.addToCart')
+              )}
+            </Button>
           </div>
         </Col>
         
@@ -19869,172 +20677,149 @@ const ProductDetailPage = () => {
             )}
           </div>
           
-          <div className="mb-1">
-            <p className="text-muted small mb-0">Added on {formatDate(product.createdAt)}</p>
-          </div>
-          
-          {/* Description with reduced margin */}
-          <div className="mb-2">
-            <h5 className="mb-1">Description</h5>
-            <p className="text-break mb-0 product-description">{product.description || 'No description available.'}</p>
-          </div>
-          
-          {/* Add to Cart Button - with improved positioning */}
-          <div className="mt-3 mb-2 sticky-bottom">
-            <Button
-              variant={isInCart ? "success" : "primary"}
-              className="w-100 py-2"
-              onClick={handleAddToCartClick}
-              disabled={!product || product.stock <= 0 || isInCart || isAddingToCart}
-            >
-              {isAddingToCart ? (
-                <>
-                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2"/>
-                  Adding...
-                </>
-              ) : isInCart ? (
-                '✓ In Cart'
-              ) : product?.stock <= 0 ? (
-                'Out of Stock'
-              ) : (
-                'Add to Cart'
-              )}
-            </Button>
-          </div>
-        </Col>
-      </Row>
-
-      {/* Reviews Section - moved outside product details column */}
-      <Row className="mt-4">
-        <Col xs={12}>
-          <Card>
-            <Card.Header className="bg-light">
-              <h3 className="fs-4 mb-0">Reviews</h3>
-            </Card.Header>
-            <Card.Body>
-              {/* Write Review Form */}
-              {isAuthenticated && !hasUserReviewed && (
-                <div className="mb-4">
-                  <h4 className="fs-5 mb-3 fw-semibold">Write a Review</h4>
-                  <Form onSubmit={handleSubmitReview}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-medium">Rating</Form.Label>
-                      <Form.Select 
-                        value={newRating} 
-                        onChange={(e) => setNewRating(parseInt(e.target.value))}
-                        required
-                      >
-                        <option value="0">Select a rating</option>
-                        <option value="1">1 - Poor</option>
-                        <option value="2">2 - Fair</option>
-                        <option value="3">3 - Good</option>
-                        <option value="4">4 - Very Good</option>
-                        <option value="5">5 - Excellent</option>
-                      </Form.Select>
-                    </Form.Group>
+          {/* Reviews Section - moved outside product details column */}
+          <Row className="mt-4">
+            <Col xs={12}>
+              <Card>
+                <Card.Header className="bg-light">
+                  <h3 className="fs-4 mb-0">{t('product.reviews')}</h3>
+                </Card.Header>
+                <Card.Body>
+                  {/* Write Review Form */}
+                  {isAuthenticated && !hasUserReviewed && (
+                    <div className="mb-4">
+                      <h4 className="fs-5 mb-3 fw-semibold">{t('product.writeReview')}</h4>
+                      <Form onSubmit={handleSubmitReview}>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-medium">{t('product.rating')}</Form.Label>
+                          <Dropdown onSelect={eventKey => setNewRating(eventKey ? parseInt(eventKey) : 0)}>
+                            <Dropdown.Toggle
+                              variant="outline-secondary"
+                              id="ratingDropdown"
+                              className="w-100 d-flex justify-content-between align-items-center"
+                              size="sm"
+                            >
+                              {currentRatingLabel}
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu className="w-100 animate-dropdown">
+                              {ratingOptions.map(option => (
+                                <Dropdown.Item
+                                  key={option.value}
+                                  eventKey={option.value.toString()}
+                                  active={newRating === option.value}
+                                  disabled={option.value === 0}
+                                >
+                                  {option.label}
+                                </Dropdown.Item>
+                              ))}
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </Form.Group>
+                        
+                        <Form.Group className="mb-4">
+                          <Form.Label className="fw-medium">{t('product.comment')}</Form.Label>
+                          <Form.Control 
+                            as="textarea" 
+                            rows={3} 
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder={t('product.placeholder')}
+                          />
+                        </Form.Group>
+                        
+                        {submitReviewError && (
+                          <Alert variant="danger" className="mb-3">
+                            {submitReviewError}
+                          </Alert>
+                        )}
+                        
+                        <Button 
+                          type="submit" 
+                          variant="primary"
+                          disabled={isSubmittingReview}
+                          className="px-4 py-2 rounded-pill fw-medium"
+                        >
+                          {isSubmittingReview ? (
+                            <>
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                                className="me-2"
+                              />
+                              {t('common.submitting')}
+                            </>
+                          ) : (
+                            t('product.submitReview')
+                          )}
+                        </Button>
+                      </Form>
+                    </div>
+                  )}
+                  
+                  {/* Display Reviews */}
+                  <div>
+                    <h4 className="fs-5 mb-3">{t('product.customerReviews')}</h4>
                     
-                    <Form.Group className="mb-4">
-                      <Form.Label className="fw-medium">Comment (optional)</Form.Label>
-                      <Form.Control 
-                        as="textarea" 
-                        rows={3} 
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Share your thoughts about this product..."
-                      />
-                    </Form.Group>
+                    {isLoadingReviews && (
+                      <div className="text-center py-3">
+                        <Spinner animation="border" size="sm" role="status">
+                          <span className="visually-hidden">{t('product.loadingReviews')}</span>
+                        </Spinner>
+                        <p className="mb-0 mt-2">{t('product.loadingReviews')}</p>
+                      </div>
+                    )}
                     
-                    {submitReviewError && (
-                      <Alert variant="danger" className="mb-3">
-                        {submitReviewError}
+                    {reviewError && !isLoadingReviews && (
+                      <Alert variant="danger">
+                        {reviewError}
                       </Alert>
                     )}
                     
-                    <Button 
-                      type="submit" 
-                      variant="primary"
-                      disabled={isSubmittingReview}
-                      className="px-4 py-2 rounded-pill fw-medium"
-                    >
-                      {isSubmittingReview ? (
-                        <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                            className="me-2"
-                          />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit Review'
-                      )}
-                    </Button>
-                  </Form>
-                </div>
-              )}
-              
-              {/* Display Reviews */}
-              <div>
-                <h4 className="fs-5 mb-3">Customer Reviews</h4>
-                
-                {isLoadingReviews && (
-                  <div className="text-center py-3">
-                    <Spinner animation="border" size="sm" role="status">
-                      <span className="visually-hidden">Loading reviews...</span>
-                    </Spinner>
-                    <p className="mb-0 mt-2">Loading reviews...</p>
+                    {!isLoadingReviews && !reviewError && reviews.length === 0 && (
+                      <p className="text-muted">
+                        {t('product.noReviews')}
+                      </p>
+                    )}
+                    
+                    {!isLoadingReviews && !reviewError && reviews.length > 0 && (
+                      <ListGroup variant="flush">
+                        {reviews.map((review) => (
+                          <ListGroup.Item key={review.id} className="py-3">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <div className="d-flex align-items-center">
+                                <StarRating rating={review.rating} />
+                                <span className="ms-2 fw-bold">{review.user.email}</span>
+                              </div>
+                              <small className="text-muted">
+                                {formatDate(review.createdAt)}
+                              </small>
+                            </div>
+                            {review.comment && (
+                              <p className="mb-0 mt-2">{review.comment}</p>
+                            )}
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    )}
                   </div>
-                )}
-                
-                {reviewError && !isLoadingReviews && (
-                  <Alert variant="danger">
-                    {reviewError}
-                  </Alert>
-                )}
-                
-                {!isLoadingReviews && !reviewError && reviews.length === 0 && (
-                  <p className="text-muted">
-                    No reviews yet. Be the first to review this product!
-                  </p>
-                )}
-                
-                {!isLoadingReviews && !reviewError && reviews.length > 0 && (
-                  <ListGroup variant="flush">
-                    {reviews.map((review) => (
-                      <ListGroup.Item key={review.id} className="py-3">
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                          <div className="d-flex align-items-center">
-                            <StarRating rating={review.rating} />
-                            <span className="ms-2 fw-bold">{review.user.email}</span>
-                          </div>
-                          <small className="text-muted">
-                            {formatDate(review.createdAt)}
-                          </small>
-                        </div>
-                        {review.comment && (
-                          <p className="mb-0 mt-2">{review.comment}</p>
-                        )}
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
         </Col>
       </Row>
 
       {/* You Might Also Like Section */}
       <Row className="mt-5">
         <Col xs={12}>
-          <h3 className="mb-3">You Might Also Like</h3>
+          <h3 className="mb-3">{t('product.youMightAlsoLike')}</h3>
           {isLoadingOther ? (
             <div className="text-center py-3">
               <Spinner animation="border" size="sm" role="status">
-                <span className="visually-hidden">Loading recommended products...</span>
+                <span className="visually-hidden">{t('product.loadingRecommendedProducts')}</span>
               </Spinner>
             </div>
           ) : otherProducts.length > 0 ? (
@@ -20048,7 +20833,7 @@ const ProductDetailPage = () => {
               ))}
             </Row>
           ) : (
-            <p className="text-muted">No similar products found.</p>
+            <p className="text-muted">{t('product.noSimilarProductsFound')}</p>
           )}
         </Col>
       </Row>
@@ -20594,25 +21379,13 @@ export default ResetPasswordPage;
 ```
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
-import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab } from 'react-bootstrap';
+import { Container, Card, Alert, Spinner, Form, Button, InputGroup, ListGroup, Badge, Modal, Row, Col, Nav, Tab, Dropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUserEdit } from 'react-icons/fa';
-import { FaPlus } from 'react-icons/fa';
-import { FaEdit } from 'react-icons/fa';
-import { FaTrash } from 'react-icons/fa';
-import { FaList } from 'react-icons/fa';
-import { FaHeart } from 'react-icons/fa';
-import { FaMapMarkerAlt } from 'react-icons/fa';
-import { FaLock } from 'react-icons/fa';
-import { FaUser } from 'react-icons/fa';
-import { FaChevronRight } from 'react-icons/fa';
-import { FaInfoCircle } from 'react-icons/fa';
-import { FaCog } from 'react-icons/fa';
-import { FaExclamationTriangle } from 'react-icons/fa';
-import { FaShieldAlt } from 'react-icons/fa';
+import { FaUserEdit, FaPlus, FaEdit, FaTrash, FaList, FaHeart, FaMapMarkerAlt, FaLock, FaUser, FaChevronRight, FaInfoCircle, FaCog, FaExclamationTriangle, FaShieldAlt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 interface UserProfile {
   id: number;
@@ -20633,6 +21406,7 @@ interface DeliveryLocation {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const SettingsPage = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20668,11 +21442,7 @@ const SettingsPage = () => {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   
   // Location form state
-  const [locationForm, setLocationForm] = useState({
-    name: '',
-    phone: '',
-    district: ''
-  });
+  const [locationForm, setLocationForm] = useState<{ name: string; phone: string; district: string }>({ name: '', phone: '', district: '' });
   
   // Tab state
   const [activeTab, setActiveTab] = useState('account');
@@ -20688,6 +21458,9 @@ const SettingsPage = () => {
   // Add these state variables if they don't exist already (they seem to be defined around line 50)
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   
+  // Derived label for district dropdown
+  const currentDistrictLabel = locationForm.district || '-- Select District --';
+
   const { token, isAuthenticated, isAuthLoading } = useAuth();
 
   useEffect(() => {
@@ -21161,155 +21934,291 @@ const SettingsPage = () => {
   }
 
   return (
-    <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">Settings</h2>
+    <Container className="py-3">
+      <h2 className="mb-4 fw-semibold">{t('account.title')}</h2>
       
-      <Tab.Container id="settings-tabs" defaultActiveKey="account">
-        <Card className="settings-card shadow-sm mb-4 border-0">
-          <Card.Header className="bg-white">
-            <Nav variant="tabs" className="nav-fill">
-              <Nav.Item>
-                <Nav.Link eventKey="account" className="py-3">
-                  <FaUser className="me-2" size={18} /> Account
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="shipping" className="py-3">
-                  <FaMapMarkerAlt className="me-2" size={18} /> Shipping
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="security" className="py-3">
-                  <FaShieldAlt className="me-2" size={18} /> Security
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="preferences" className="py-3">
-                  <FaCog className="me-2" size={18} /> Preferences
-                </Nav.Link>
-              </Nav.Item>
-            </Nav>
-          </Card.Header>
+      {error && (
+        <Alert variant="danger" className="mb-3">
+          {error}
+        </Alert>
+      )}
+      
+      {isLoading ? (
+        <div className="text-center my-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">{t('common.loading')}</span>
+          </Spinner>
+        </div>
+      ) : (
+        <Card className="settings-card shadow-sm border-0">
           <Card.Body className="p-0">
-            <Tab.Content>
-              {/* Account Tab */}
-              <Tab.Pane eventKey="account">
-                <ListGroup variant="flush" className="profile-action-list">
-                  <div 
-                    onClick={handleEditToggle} 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaUserEdit className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">Edit Profile</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </div>
-                  
-                  <Link to="/orders" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaList className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">My Orders</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </Link>
-                  
-                  <Link to="/wishlist" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaHeart className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">My Wishlist</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </Link>
-                </ListGroup>
-              </Tab.Pane>
-              
-              {/* Shipping Tab */}
-              <Tab.Pane eventKey="shipping" className="p-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h4 className="mb-0 fs-5 fw-semibold">My Delivery Locations</h4>
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm"
-                    onClick={handleShowLocationModal}
-                    className="d-flex align-items-center rounded-pill px-3 py-2"
-                    disabled={isLoadingLocations}
-                  >
-                    <FaPlus className="me-2" /> Add New Location
-                  </Button>
-                </div>
-                
-                {isLoadingLocations ? (
-                  <div className="text-center py-5">
-                    <Spinner animation="border" role="status" variant="primary">
-                      <span className="visually-hidden">Loading delivery locations...</span>
-                    </Spinner>
-                    <p className="mt-3 text-muted">Loading your delivery locations...</p>
-                  </div>
-                ) : locationError ? (
-                  <Alert variant="danger" className="shadow-sm">
-                    <div className="d-flex align-items-center">
-                      <FaExclamationTriangle className="text-danger me-2" size={20} />
-                      <div>
-                        <p className="mb-1 fw-semibold">Error loading delivery locations</p>
-                        <p className="mb-0 small">{locationError}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm" 
-                        onClick={() => fetchLocations()}
-                        className="rounded-pill px-3"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </Alert>
-                ) : deliveryLocations.length === 0 ? (
-                  <div className="address-empty-state shadow-sm">
-                    <div className="address-empty-state-icon">
-                      <FaMapMarkerAlt />
-                    </div>
-                    <p className="address-empty-state-text">
-                      You don't have any saved delivery locations yet. Add your first location to make checkout faster.
-                    </p>
-                    <Button 
-                      variant="primary" 
-                      onClick={handleShowLocationModal}
-                      className="rounded-pill px-4"
-                    >
-                      <FaPlus className="me-2" /> Add Your First Location
-                    </Button>
-                  </div>
-                ) : (
-                  <ListGroup className="address-list shadow-sm">
-                    {deliveryLocations.map((location) => (
-                      <ListGroup.Item key={location.id} className="d-flex flex-column p-3">
-                        <div className="d-flex justify-content-between align-items-start mb-3">
-                          <div className="address-info">
-                            <div className="fw-semibold">{location.name}</div>
-                            <div>{location.phone}</div>
-                            <div>{location.district}</div>
+            <Tab.Container id="settings-tabs" activeKey={activeTab} onSelect={(k) => k && setActiveTab(k)}>
+              <Row className="g-0">
+                <Col md={12}>
+                  <Nav variant="tabs" className="border-0">
+                    <Nav.Item>
+                      <Nav.Link eventKey="account" className="rounded-0">
+                        <FaUser className="me-2" />
+                        {t('profile.account')}
+                      </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                      <Nav.Link eventKey="security" className="rounded-0">
+                        <FaShieldAlt className="me-2" />
+                        {t('account.security')}
+                      </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                      <Nav.Link eventKey="shipping" className="rounded-0">
+                        <FaMapMarkerAlt className="me-2" />
+                        {t('checkout.shipping')}
+                      </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                      <Nav.Link eventKey="preferences" className="rounded-0">
+                        <FaCog className="me-2" />
+                        {t('account.preferences')}
+                      </Nav.Link>
+                    </Nav.Item>
+                  </Nav>
+                </Col>
+                <Col md={12}>
+                  <Tab.Content className="p-4">
+                    {/* Account Tab */}
+                    <Tab.Pane eventKey="account">
+                      <ListGroup variant="flush" className="profile-action-list">
+                        <Link to="#" 
+                          onClick={(e) => { e.preventDefault(); handleEditToggle(); }} 
+                          className="d-flex justify-content-between align-items-center list-group-item"
+                        >
+                          <div className="d-flex align-items-center">
+                            <FaUserEdit className="text-secondary me-3" size={20} />
+                            <span className="fw-medium">{t('account.editProfile')}</span>
                           </div>
-                          {location.isDefault && (
-                            <Badge bg="success" pill className="default-badge">Default</Badge>
-                          )}
+                          <FaChevronRight className="text-muted" />
+                        </Link>
+                        
+                        <Link to="/orders" 
+                          className="d-flex justify-content-between align-items-center list-group-item"
+                        >
+                          <div className="d-flex align-items-center">
+                            <FaList className="text-secondary me-3" size={20} />
+                            <span className="fw-medium">{t('navigation.myOrders')}</span>
+                          </div>
+                          <FaChevronRight className="text-muted" />
+                        </Link>
+                        
+                        <Link to="/wishlist" 
+                          className="d-flex justify-content-between align-items-center list-group-item"
+                        >
+                          <div className="d-flex align-items-center">
+                            <FaHeart className="text-secondary me-3" size={20} />
+                            <span className="fw-medium">{t('navigation.myWishlist')}</span>
+                          </div>
+                          <FaChevronRight className="text-muted" />
+                        </Link>
+                      </ListGroup>
+                    </Tab.Pane>
+                    
+                    {/* Shipping Tab */}
+                    <Tab.Pane eventKey="shipping" className="p-4">
+                      <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h4 className="mb-0 fs-5 fw-semibold">{t('account.deliveryLocations')}</h4>
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={handleShowLocationModal}
+                          className="d-flex align-items-center rounded-pill px-3 py-2"
+                          disabled={isLoadingLocations}
+                        >
+                          <FaPlus className="me-2" /> {t('account.addNewAddress')}
+                        </Button>
+                      </div>
+                      
+                      {isLoadingLocations ? (
+                        <div className="text-center py-5">
+                          <Spinner animation="border" role="status" variant="primary">
+                            <span className="visually-hidden">Loading delivery locations...</span>
+                          </Spinner>
+                          <p className="mt-3 text-muted">Loading your delivery locations...</p>
                         </div>
-                        <div className="d-flex justify-content-end mt-2 address-actions">
-                          {!location.isDefault && (
+                      ) : locationError ? (
+                        <Alert variant="danger" className="shadow-sm">
+                          <div className="d-flex align-items-center">
+                            <FaExclamationTriangle className="text-danger me-2" size={20} />
+                            <div>
+                              <p className="mb-1 fw-semibold">Error loading delivery locations</p>
+                              <p className="mb-0 small">{locationError}</p>
+                            </div>
+                          </div>
+                          <div className="mt-3">
                             <Button 
-                              variant="outline-success" 
-                              size="sm"
-                              onClick={() => handleSetDefaultLocation(location.id)}
-                              disabled={isSettingDefault !== null || isDeletingLocation !== null}
-                              className="address-action-btn rounded-pill px-3"
+                              variant="outline-danger" 
+                              size="sm" 
+                              onClick={() => fetchLocations()}
+                              className="rounded-pill px-3"
                             >
-                              {isSettingDefault === location.id ? (
+                              Try Again
+                            </Button>
+                          </div>
+                        </Alert>
+                      ) : deliveryLocations.length === 0 ? (
+                        <div className="address-empty-state shadow-sm">
+                          <div className="address-empty-state-icon">
+                            <FaMapMarkerAlt />
+                          </div>
+                          <p className="address-empty-state-text">
+                            You don't have any saved delivery locations yet. Add your first location to make checkout faster.
+                          </p>
+                          <Button 
+                            variant="primary" 
+                            onClick={handleShowLocationModal}
+                            className="rounded-pill px-4"
+                          >
+                            <FaPlus className="me-2" /> Add Your First Location
+                          </Button>
+                        </div>
+                      ) : (
+                        <ListGroup className="address-list shadow-sm">
+                          {deliveryLocations.map((location) => (
+                            <ListGroup.Item key={location.id} className="d-flex flex-column p-3">
+                              <div className="d-flex justify-content-between align-items-start mb-3">
+                                <div className="address-info">
+                                  <div className="fw-semibold">{location.name}</div>
+                                  <div>{location.phone}</div>
+                                  <div>{location.district}</div>
+                                </div>
+                                {location.isDefault && (
+                                  <Badge bg="success" pill className="default-badge">Default</Badge>
+                                )}
+                              </div>
+                              <div className="d-flex justify-content-end mt-2 address-actions">
+                                {!location.isDefault && (
+                                  <Button 
+                                    variant="outline-success" 
+                                    size="sm"
+                                    onClick={() => handleSetDefaultLocation(location.id)}
+                                    disabled={isSettingDefault !== null || isDeletingLocation !== null}
+                                    className="address-action-btn rounded-pill px-3"
+                                  >
+                                    {isSettingDefault === location.id ? (
+                                      <>
+                                        <Spinner
+                                          as="span"
+                                          animation="border"
+                                          size="sm"
+                                          role="status"
+                                          aria-hidden="true"
+                                          className="me-1"
+                                        />
+                                        <span className="visually-hidden">Setting as default...</span>
+                                      </>
+                                    ) : 'Set as Default'}
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleEditLocation(location)}
+                                  disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                                  className="address-action-btn rounded-pill px-3"
+                                >
+                                  <FaEdit className="me-1" /> Edit
+                                </Button>
+                                <Button 
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleDeleteLocation(location.id)}
+                                  disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                                  className="address-action-btn rounded-pill px-3"
+                                >
+                                  {isDeletingLocation === location.id ? (
+                                    <>
+                                      <Spinner
+                                        as="span"
+                                        animation="border"
+                                        size="sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                        className="me-1"
+                                      />
+                                      <span className="visually-hidden">Deleting...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaTrash className="me-1" /> Delete
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                      )}
+                    </Tab.Pane>
+                    
+                    {/* Security Tab */}
+                    <Tab.Pane eventKey="security" className="p-4">
+                      <h4 className="mb-4 fs-5 fw-semibold">{t('account.changePassword')}</h4>
+                      
+                      {updateError && (
+                        <Alert variant="danger" className="mb-4">
+                          {updateError}
+                        </Alert>
+                      )}
+                      
+                      {updateSuccess && (
+                        <Alert variant="success" className="mb-4">
+                          {updateSuccess}
+                        </Alert>
+                      )}
+                      
+                      <Form onSubmit={handlePasswordChange}>
+                        <Row>
+                          <Col md={8} lg={6}>
+                            <Form.Group className="mb-3" controlId="formCurrentPassword">
+                              <Form.Label className="fw-medium">Current Password</Form.Label>
+                              <Form.Control
+                                type="password"
+                                placeholder="Enter your current password"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                required
+                              />
+                            </Form.Group>
+                            
+                            <Form.Group className="mb-3" controlId="formNewPassword">
+                              <Form.Label className="fw-medium">New Password</Form.Label>
+                              <Form.Control
+                                type="password"
+                                placeholder="Enter new password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                required
+                              />
+                              <Form.Text className="text-muted">
+                                Password must be at least 6 characters long.
+                              </Form.Text>
+                            </Form.Group>
+                            
+                            <Form.Group className="mb-4" controlId="formConfirmPassword">
+                              <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+                              <Form.Control
+                                type="password"
+                                placeholder="Confirm new password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                              />
+                            </Form.Group>
+                            
+                            <Button
+                              variant="primary"
+                              type="submit"
+                              disabled={isUpdatingPassword}
+                              className="fw-medium py-2 rounded-pill px-4"
+                            >
+                              {isUpdatingPassword ? (
                                 <>
                                   <Spinner
                                     as="span"
@@ -21317,173 +22226,59 @@ const SettingsPage = () => {
                                     size="sm"
                                     role="status"
                                     aria-hidden="true"
-                                    className="me-1"
+                                    className="me-2"
                                   />
-                                  <span className="visually-hidden">Setting as default...</span>
+                                  {t('common.updating')}
                                 </>
-                              ) : 'Set as Default'}
+                              ) : (
+                                t('account.updatePassword')
+                              )}
                             </Button>
-                          )}
-                          <Button 
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleEditLocation(location)}
-                            disabled={isDeletingLocation !== null || isSettingDefault !== null}
-                            className="address-action-btn rounded-pill px-3"
-                          >
-                            <FaEdit className="me-1" /> Edit
-                          </Button>
-                          <Button 
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDeleteLocation(location.id)}
-                            disabled={isDeletingLocation !== null || isSettingDefault !== null}
-                            className="address-action-btn rounded-pill px-3"
-                          >
-                            {isDeletingLocation === location.id ? (
-                              <>
-                                <Spinner
-                                  as="span"
-                                  animation="border"
-                                  size="sm"
-                                  role="status"
-                                  aria-hidden="true"
-                                  className="me-1"
-                                />
-                                <span className="visually-hidden">Deleting...</span>
-                              </>
-                            ) : (
-                              <>
-                                <FaTrash className="me-1" /> Delete
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
-              </Tab.Pane>
-              
-              {/* Security Tab */}
-              <Tab.Pane eventKey="security" className="p-4">
-                <h4 className="mb-4 fs-5 fw-semibold">Change Your Password</h4>
-                
-                {updateError && (
-                  <Alert variant="danger" className="mb-4">
-                    {updateError}
-                  </Alert>
-                )}
-                
-                {updateSuccess && (
-                  <Alert variant="success" className="mb-4">
-                    {updateSuccess}
-                  </Alert>
-                )}
-                
-                <Form onSubmit={handlePasswordChange}>
-                  <Row>
-                    <Col md={8} lg={6}>
-                      <Form.Group className="mb-3" controlId="formCurrentPassword">
-                        <Form.Label className="fw-medium">Current Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Enter your current password"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          required
-                        />
-                      </Form.Group>
+                          </Col>
+                        </Row>
+                      </Form>
                       
-                      <Form.Group className="mb-3" controlId="formNewPassword">
-                        <Form.Label className="fw-medium">New Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Enter new password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          required
-                        />
-                        <Form.Text className="text-muted">
-                          Password must be at least 6 characters long.
-                        </Form.Text>
-                      </Form.Group>
+                      <hr className="my-4" />
                       
-                      <Form.Group className="mb-4" controlId="formConfirmPassword">
-                        <Form.Label className="fw-medium">Confirm New Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Confirm new password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          required
-                        />
-                      </Form.Group>
-                      
-                      <Button
-                        variant="primary"
-                        type="submit"
-                        disabled={isUpdatingPassword}
-                        className="fw-medium py-2 rounded-pill px-4"
-                      >
-                        {isUpdatingPassword ? (
-                          <>
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              role="status"
-                              aria-hidden="true"
-                              className="me-2"
-                            />
-                            Updating...
-                          </>
-                        ) : (
-                          'Update Password'
-                        )}
-                      </Button>
-                    </Col>
-                  </Row>
-                </Form>
-                
-                <hr className="my-4" />
-                
-                <div className="mt-4">
-                  <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
-                  <ul className="text-muted">
-                    <li>Use a combination of letters, numbers, and special characters</li>
-                    <li>Avoid using easily guessable information like birthdays</li>
-                    <li>Use different passwords for different accounts</li>
-                    <li>Change your password periodically for enhanced security</li>
-                  </ul>
-                </div>
-              </Tab.Pane>
-              
-              {/* Preferences Tab */}
-              <Tab.Pane eventKey="preferences">
-                <ListGroup variant="flush" className="profile-action-list">
-                  <Link to="/about" 
-                    className="d-flex justify-content-between align-items-center list-group-item"
-                  >
-                    <div className="d-flex align-items-center">
-                      <FaInfoCircle className="text-secondary me-3" size={20} />
-                      <span className="fw-medium">About HybridStore</span>
-                    </div>
-                    <FaChevronRight className="text-muted" />
-                  </Link>
-                  
-                  {/* Add more preference options here as needed */}
-                </ListGroup>
-              </Tab.Pane>
-            </Tab.Content>
+                      <div className="mt-4">
+                        <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
+                        <ul className="text-muted">
+                          <li>Use a combination of letters, numbers, and special characters</li>
+                          <li>Avoid using easily guessable information like birthdays</li>
+                          <li>Use different passwords for different accounts</li>
+                          <li>Change your password periodically for enhanced security</li>
+                        </ul>
+                      </div>
+                    </Tab.Pane>
+                    
+                    {/* Preferences Tab */}
+                    <Tab.Pane eventKey="preferences">
+                      <ListGroup variant="flush" className="profile-action-list">
+                        <Link to="/about" 
+                          className="d-flex justify-content-between align-items-center list-group-item"
+                        >
+                          <div className="d-flex align-items-center">
+                            <FaInfoCircle className="text-secondary me-3" size={20} />
+                            <span className="fw-medium">{t('about.aboutHybridStore')}</span>
+                          </div>
+                          <FaChevronRight className="text-muted" />
+                        </Link>
+                        
+                        {/* Add more preference options here as needed */}
+                      </ListGroup>
+                    </Tab.Pane>
+                  </Tab.Content>
+                </Col>
+              </Row>
+            </Tab.Container>
           </Card.Body>
         </Card>
-      </Tab.Container>
+      )}
       
       {/* Edit Profile Modal */}
       <Modal show={showEditProfileModal} onHide={handleCloseEditModal} centered>
         <Modal.Header closeButton className="border-bottom">
-          <Modal.Title className="fw-semibold">Edit Profile</Modal.Title>
+          <Modal.Title className="fw-semibold">{t('account.editProfile')}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
           <Form onSubmit={handleProfileUpdate}>
@@ -21538,7 +22333,9 @@ const SettingsPage = () => {
       {/* Location Modal */}
       <Modal show={showLocationModal} onHide={handleCloseLocationModal} centered>
         <Modal.Header closeButton className="border-bottom">
-          <Modal.Title className="fw-semibold">{editingLocation ? 'Edit Delivery Location' : 'Add New Delivery Location'}</Modal.Title>
+          <Modal.Title className="fw-semibold">
+            {editingLocation ? t('account.editAddress') : t('account.addNewAddress')}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
           {modalError && (
@@ -21592,18 +22389,43 @@ const SettingsPage = () => {
               <Col>
                 <Form.Group>
                   <Form.Label className="fw-medium">District</Form.Label>
-                  <Form.Select
-                    name="district"
-                    value={locationForm.district}
-                    onChange={handleLocationFormChange}
-                    required
-                    isInvalid={!!formErrors.district}
+                  <Dropdown 
+                    className="district-dropdown"
+                    onSelect={eventKey => setLocationForm(prev => ({ ...prev, district: eventKey || '' }))}
                   >
-                    <option value="" disabled>-- Select District --</option>
-                    {districts.map((district) => (
-                      <option key={district} value={district}>{district}</option>
-                    ))}
-                  </Form.Select>
+                    <Dropdown.Toggle
+                      variant={formErrors.district ? "outline-danger" : "outline-secondary"}
+                      id="districtDropdown"
+                      className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle"
+                      disabled={isLoadingDistricts}
+                    >
+                      {currentDistrictLabel}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      style={{ maxHeight: '200px', overflowY: 'auto' }} 
+                      className="w-100 district-dropdown-menu animate-dropdown"
+                    >
+                      <Dropdown.Header>Select District</Dropdown.Header>
+                      {isLoadingDistricts ? (
+                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                      ) : districtError ? (
+                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                      ) : districts.length > 0 ? (
+                        districts.map(d => (
+                          <Dropdown.Item 
+                            key={d} 
+                            eventKey={d} 
+                            active={locationForm.district === d} 
+                            className="district-dropdown-item"
+                          >
+                            {d}
+                          </Dropdown.Item>
+                        ))
+                      ) : (
+                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
                   <Form.Control.Feedback type="invalid">
                     {formErrors.district}
                   </Form.Control.Feedback>

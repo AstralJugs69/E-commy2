@@ -22,12 +22,17 @@ export function getImageUrl(relativePath?: string | null): string {
   // Allow explicit uploads URL to override base URL for uploads
   const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || `${BASE_URL}/uploads`;
    
-  // Default placeholder image path
+  // Default placeholder image path - use local file
   const PLACEHOLDER_IMAGE_PATH = '/placeholder-image.svg';
    
   // Handle null, undefined or empty string
   if (!relativePath) {
     return PLACEHOLDER_IMAGE_PATH;
+  }
+  
+  // Handle placeholder.png specially to avoid 429 errors
+  if (relativePath === '/placeholder.png') {
+    return '/placeholder.png';
   }
    
   // Handle already absolute URLs

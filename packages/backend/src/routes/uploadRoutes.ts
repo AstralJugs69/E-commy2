@@ -4,27 +4,26 @@ import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { isAdmin } from '../middleware/authMiddleware'; // Protect upload
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
 
 const router = Router();
 
-// Ensure uploads directory exists
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dco9dq5a4',
+    api_key: process.env.CLOUDINARY_API_KEY || '116735482649165',
+    api_secret: process.env.CLOUDINARY_API_SECRET || 'uwmsnm63pkG3DLEnnfVljbgqL2A'
+});
+
+// Ensure uploads directory exists (for temporary files if needed)
 const uploadsDir = path.join(__dirname, '../../public/uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer storage
-const storage = multer.diskStorage({
-    destination: function (req: any, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) {
-        cb(null, uploadsDir);
-    },
-    filename: function (req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
-        // Generate a unique filename with timestamp and original extension
-        const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, uniquePrefix + ext);
-    }
-});
+// Configure multer for memory storage instead of disk storage
+const storage = multer.memoryStorage();
 
 // File filter to only allow specific image types
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -47,9 +46,27 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
+// Helper function to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer: Buffer, options: any): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        // Create a readable stream from the buffer
+        const stream = new Readable();
+        stream.push(buffer);
+        stream.push(null);
+        
+        // Upload stream to Cloudinary
+        const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+        });
+        
+        stream.pipe(uploadStream);
+    });
+};
+
 /**
  * @route POST /api/admin/upload
- * @description Upload multiple product images (admin only, up to 5 files), resize them, and convert to WebP
+ * @description Upload multiple product images (admin only, up to 5 files), resize them, and upload to Cloudinary
  * @access Admin
  */
 router.post('/', isAdmin, (req: Request, res: Response) => {
@@ -80,7 +97,7 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
             return;
         }
         
-        // Files upload successful - now process with sharp
+        // Files upload successful - now process with sharp and upload to Cloudinary
         const files = req.files as Express.Multer.File[];
         const processedImageUrls: string[] = [];
         
@@ -88,24 +105,23 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
             // Process each file sequentially using Promise.all
             await Promise.all(files.map(async (file) => {
                 try {
-                    // Define WebP output path
-                    const fileNameWithoutExt = file.filename.replace(/\.[^/.]+$/, "");
-                    const outputFileName = `${fileNameWithoutExt}.webp`;
-                    const outputFilePath = path.join(uploadsDir, outputFileName);
-                    
-                    // Process image with sharp - resize and convert to WebP
-                    await sharp(file.path)
+                    // Process image with sharp - resize and convert to webp format
+                    const processedImageBuffer = await sharp(file.buffer)
                         .resize({ width: 800, withoutEnlargement: true })
                         .webp({ quality: 80 })
-                        .toFile(outputFilePath);
+                        .toBuffer();
                     
-                    // Add to processed images list
-                    processedImageUrls.push(`/uploads/${outputFileName}`);
+                    // Upload processed image to Cloudinary
+                    const uploadResult = await uploadToCloudinary(processedImageBuffer, {
+                        folder: 'e-commy/products',
+                        format: 'webp',
+                        resource_type: 'image'
+                    });
                     
-                    // Delete original file
-                    fs.unlinkSync(file.path);
+                    // Add the Cloudinary URL to processed images list
+                    processedImageUrls.push(uploadResult.secure_url);
                 } catch (sharpError) {
-                    console.error(`Error processing image ${file.filename}:`, sharpError);
+                    console.error(`Error processing image ${file.originalname}:`, sharpError);
                     // Skip problematic file, don't add to processedImageUrls
                 }
             }));
@@ -115,9 +131,9 @@ router.post('/', isAdmin, (req: Request, res: Response) => {
                 imageUrls: processedImageUrls
             });
         } catch (processingError) {
-            console.error('Error during image processing:', processingError);
+            console.error('Error during image processing or upload:', processingError);
             res.status(500).json({ 
-                message: 'Error during image processing',
+                message: 'Error during image processing or upload',
                 error: processingError instanceof Error ? processingError.message : 'Unknown error'
             });
         }
