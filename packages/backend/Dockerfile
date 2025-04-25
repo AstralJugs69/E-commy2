@@ -5,8 +5,8 @@ WORKDIR /app
 # ---- Dependencies ----
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma
+COPY packages/backend/package.json packages/backend/package-lock.json* ./
+COPY packages/backend/prisma ./prisma
 RUN npm install --production=false
 
 # ---- Builder ----
@@ -14,14 +14,14 @@ FROM deps AS builder
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN npx prisma generate
-COPY src ./src
-COPY tsconfig.json ./
+COPY packages/backend/src ./src
+COPY packages/backend/tsconfig.json ./
 RUN npm run build
 
 # ---- Production ----
 FROM base AS production
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl curl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/package-lock.json ./package-lock.json
@@ -30,4 +30,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 ENV PORT=10000
 EXPOSE 10000
+
+# Add health check for AWS
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/ || exit 1
+
 CMD ["npm","run","start"]

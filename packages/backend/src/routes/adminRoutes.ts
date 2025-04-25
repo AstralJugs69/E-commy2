@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod'; // Import Zod for validation
 import { isAdmin } from '../middleware/authMiddleware';
+import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -121,6 +122,9 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
   const statusParam = req.query.status;
   const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
   
+  // Get pagination parameters
+  const paginationParams = getPaginationParams(req);
+  
   // Convert status parameter to array regardless of input type
   let statusFilters: string[] = [];
   
@@ -137,7 +141,7 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
     }
   }
   
-  console.log(`GET /api/admin/orders route hit. Status filters: ${statusFilters.join(', ')}, DateFilter: ${dateFilter}`);
+  console.log(`GET /api/admin/orders route hit. Status filters: ${statusFilters.join(', ')}, DateFilter: ${dateFilter}, Page: ${paginationParams.page}, Limit: ${paginationParams.limit}`);
 
   try {
     // Build dynamic where clause
@@ -166,6 +170,11 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
     }
     // Add 'all' case or specific date range handling later if needed
     // Default behavior (if no dateFilter or dateFilter=='all') is no date filtering
+
+    // First, count total matching orders
+    const totalOrdersCount = await prisma.order.count({
+      where: whereClause
+    });
 
     // Fetch orders from the database with relevant fields
     console.log('Fetching orders from database with where clause:', whereClause);
@@ -202,7 +211,9 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       },
       orderBy: {
         createdAt: 'desc' 
-      }
+      },
+      skip: paginationParams.skip,
+      take: paginationParams.limit
     });
 
     // Process orders to extract customer information from delivery location
@@ -229,9 +240,13 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       };
     });
 
-    console.log(`Found ${orders.length} orders matching filter.`);
-    // Return the processed list within an object with 'orders' property
-    res.status(200).json({ orders: processedOrders });
+    console.log(`Found ${orders.length} orders matching filter (page ${paginationParams.page} of ${Math.ceil(totalOrdersCount / paginationParams.limit)})`);
+    
+    // Create standardized paginated response
+    const paginatedResponse = createPaginatedResponse(processedOrders, totalOrdersCount, paginationParams);
+    
+    // Return the paginated response
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     // Handle potential database errors
     console.error("Error fetching orders for admin:", error);
@@ -278,9 +293,31 @@ router.put('/orders/:orderId/status', isAdmin, async (req: Request, res: Respons
       data: { status: newStatus },
       select: { // Return updated order status and ID
         id: true,
-        status: true
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        updatedAt: true,
+        deliveryLocation: {
+          select: {
+            name: true,
+            phone: true,
+            district: true
+          }
+        }
       }
     });
+    
+    // Process the order to include customer name for socket emission
+    const processedOrder = {
+      ...updatedOrder,
+      customerName: updatedOrder.deliveryLocation?.name || 'N/A'
+    };
+    
+    // Emit WebSocket event to notify clients of the status change
+    if ((global as any).socketIO) {
+      (global as any).socketIO.to('admin_dashboard').emit('order_status_updated', processedOrder);
+      console.log(`Emitted order_status_updated event for order #${orderIdInt} to admin_dashboard`);
+    }
     
     // 4. Return 200 OK with updated status
     res.status(200).json(updatedOrder);
@@ -333,9 +370,31 @@ router.post('/orders/:orderId/status', isAdmin, async (req: Request, res: Respon
       data: { status: newStatus },
       select: { // Return updated order status and ID
         id: true,
-        status: true
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        updatedAt: true,
+        deliveryLocation: {
+          select: {
+            name: true,
+            phone: true,
+            district: true
+          }
+        }
       }
     });
+    
+    // Process the order to include customer name for socket emission
+    const processedOrder = {
+      ...updatedOrder,
+      customerName: updatedOrder.deliveryLocation?.name || 'N/A'
+    };
+    
+    // Emit WebSocket event to notify clients of the status change
+    if ((global as any).socketIO) {
+      (global as any).socketIO.to('admin_dashboard').emit('order_status_updated', processedOrder);
+      console.log(`Emitted order_status_updated event for order #${orderIdInt} to admin_dashboard`);
+    }
     
     // 4. Return 200 OK with updated status
     res.status(200).json(updatedOrder);

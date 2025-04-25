@@ -1,55 +1,81 @@
 import { Router, Request, Response, RequestHandler } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { z } from 'zod';
+import { dynamicCache, staticCache, etagMiddleware } from '../middleware/cacheMiddleware';
+import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
+import { processFieldSelection, FieldSelectionOptions } from '../utils/fieldSelection';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Define product field selection options
+const productFieldOptions: FieldSelectionOptions = {
+  defaultFields: ['id', 'name', 'price', 'description', 'images', 'stock', 'averageRating', 'reviewCount', 'createdAt'],
+  allowedFields: ['id', 'name', 'price', 'description', 'images', 'stock', 'averageRating', 'reviewCount', 'createdAt', 'category'],
+  nestedFields: {
+    images: ['url', 'id'],
+    category: ['id', 'name', 'slug']
+  }
+};
 
 /**
  * @route GET /api/products
  * @description Get all products with optional search and filtering
  * @access Public
  */
-router.get('/', (async (req: Request, res: Response) => {
+router.get('/', dynamicCache(300), etagMiddleware(), (async (req: Request, res: Response) => {
   try {
-    console.log('GET /api/products route hit');
-    console.log('Query params:', req.query);
+    // Extract field selection from query params
+    let selectClause = processFieldSelection(req, productFieldOptions);
     
-    // Extract query parameters
-    const search = req.query.search as string | undefined;
+    // Get pagination parameters
+    const { page = 1, limit = 12 } = req.query;
+    const pageInt = parseInt(page as string, 10) || 1;
+    const limitInt = parseInt(limit as string, 10) || 12;
+    const skip = (pageInt - 1) * limitInt;
+    
+    // Extract sorting params
     const sortBy = req.query.sortBy as string || 'createdAt';
     const sortOrder = req.query.sortOrder as string || 'desc';
-    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
     
-    // Extract pagination parameters
-    const page = parseInt(req.query.page as string || '1', 10);
-    const limit = parseInt(req.query.limit as string || '12', 10); // Default limit 12
-    if (isNaN(page) || page < 1 || isNaN(limit) || limit < 1) {
-        return res.status(400).json({ message: 'Invalid pagination parameters.' });
-    }
-    const skip = (page - 1) * limit;
+    // Construct order by clause
+    const orderByClause: {[key: string]: 'asc' | 'desc'} = {};
     
-    // Build the where clause for filtering
-    const whereClause: any = {};
+    // Prepare filter conditions
+    let whereClause: any = {
+      isPublished: true // Only show published products
+    };
     
-    // Add search filter if provided
-    if (search) {
-      whereClause.name = {
-        contains: search,
-        mode: 'insensitive'
+    // Apply category filter if provided
+    if (req.query.category) {
+      whereClause.category = {
+        slug: req.query.category as string
       };
     }
     
-    // Add category filter if provided
-    if (categoryId && !isNaN(categoryId)) {
-      whereClause.categories = {
-        some: {
-          categoryId
-        }
-      };
+    // Apply search filter if provided
+    if (req.query.search) {
+      const searchTerm = req.query.search as string;
+      whereClause.OR = [
+        { name: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } }
+      ];
     }
     
-    // Get sorting configuration
-    const orderByClause: any = {};
+    // Apply price range filter if provided
+    if (req.query.minPrice || req.query.maxPrice) {
+      whereClause.price = {};
+      
+      if (req.query.minPrice) {
+        whereClause.price.gte = parseFloat(req.query.minPrice as string);
+      }
+      
+      if (req.query.maxPrice) {
+        whereClause.price.lte = parseFloat(req.query.maxPrice as string);
+      }
+    }
+    
+    // Apply sorting
     if (['name', 'price', 'createdAt'].includes(sortBy)) {
       orderByClause[sortBy] = sortOrder === 'asc' ? 'asc' : 'desc';
     } else {
@@ -62,39 +88,39 @@ router.get('/', (async (req: Request, res: Response) => {
       where: whereClause
     });
     
-    // Fetch products with the constructed filters and pagination
+    // Handle special formatting for the 'images' field if requested
+    // This ensures we only get the first image if images field is selected
+    if (selectClause.images === true) {
+      selectClause.images = {
+        select: {
+          url: true
+        },
+        take: 1
+      };
+    }
+    
+    // Fetch products with the constructed filters, pagination, and field selection
     const products = await prisma.product.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        description: true,
-        images: {
-          select: {
-            url: true
-          },
-          take: 1 // Only need first image for list view
-        },
-        stock: true,
-        averageRating: true,
-        reviewCount: true,
-        createdAt: true
-      },
+      select: selectClause,
       orderBy: orderByClause,
       skip: skip,
-      take: limit
+      take: limitInt
     });
     
-    console.log(`Found ${products.length} products (page ${page} of ${Math.ceil(totalProducts / limit)})`);
+    console.log(`Found ${products.length} products (page ${pageInt} of ${Math.ceil(totalProducts / limitInt)})`);
+    
+    // Create paginated response
+    const paginationParams = {
+      page: pageInt,
+      limit: limitInt,
+      skip
+    };
+    
+    const paginatedResponse = createPaginatedResponse(products, totalProducts, paginationParams);
     
     // Return paginated response
-    res.status(200).json({
-      products: products,
-      currentPage: page,
-      totalPages: Math.ceil(totalProducts / limit),
-      totalProducts: totalProducts
-    });
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Error retrieving products' });
@@ -106,7 +132,7 @@ router.get('/', (async (req: Request, res: Response) => {
  * @description Get a single product by ID
  * @access Public
  */
-router.get('/:productId', (async (req: Request, res: Response) => {
+router.get('/:productId', staticCache(600), etagMiddleware(), (async (req: Request, res: Response) => {
   // Validate productId param (convert to int, check NaN)
   const productId = parseInt(req.params.productId, 10);
   if (isNaN(productId)) {
@@ -152,7 +178,7 @@ router.get('/:productId', (async (req: Request, res: Response) => {
  * @description Get all reviews for a product
  * @access Public
  */
-router.get('/:productId/reviews', (async (req: Request, res: Response) => {
+router.get('/:productId/reviews', staticCache(600), etagMiddleware(), (async (req: Request, res: Response) => {
   try {
     console.log(`GET /api/products/${req.params.productId}/reviews route hit`);
     console.log('Request params:', req.params);
@@ -202,6 +228,100 @@ router.get('/:productId/reviews', (async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error in product reviews route:', error);
     res.status(500).json({ message: 'Error retrieving product reviews.', error: String(error) });
+  }
+}) as RequestHandler);
+
+/**
+ * @route GET /api/products/:productId/with-details
+ * @description Get a product with all its details including reviews
+ * @access Public
+ */
+router.get('/:productId/with-details', staticCache(300), etagMiddleware(), (async (req: Request, res: Response) => {
+  // Validate productId param
+  const productId = parseInt(req.params.productId, 10);
+  if (isNaN(productId)) {
+    res.status(400).json({ message: 'Invalid Product ID format.' });
+    return;
+  }
+
+  try {
+    // Fetch product with reviews in a single query
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        description: true,
+        stock: true,
+        averageRating: true,
+        reviewCount: true,
+        createdAt: true,
+        images: true,
+        reviews: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!product) {
+      res.status(404).json({ message: `Product with ID ${productId} not found.` });
+      return;
+    }
+
+    // Get related products from the same category
+    let relatedProducts: Array<{
+      id: number;
+      name: string;
+      price: number;
+      images: Array<{ url: string }>;
+    }> = [];
+    if (product.category) {
+      relatedProducts = await prisma.product.findMany({
+        where: {
+          AND: [
+            { category: { id: product.category.id } },
+            { id: { not: productId } } // Exclude current product
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          images: {
+            select: { url: true },
+            take: 1
+          }
+        },
+        take: 4 // Limit to 4 related products
+      });
+    }
+
+    // Return complete product details with related products
+    res.status(200).json({
+      product,
+      relatedProducts
+    });
+  } catch (error) {
+    console.error(`Error fetching product details for ${productId}:`, error);
+    res.status(500).json({ message: 'Error retrieving product details.' });
   }
 }) as RequestHandler);
 

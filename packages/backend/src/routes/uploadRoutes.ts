@@ -1,28 +1,13 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
 import { isAdmin } from '../middleware/authMiddleware'; // Protect upload
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '../utils/cloudinaryConfig';
 import { Readable } from 'stream';
 
 const router = Router();
 
-// Configure Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dco9dq5a4',
-    api_key: process.env.CLOUDINARY_API_KEY || '116735482649165',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'uwmsnm63pkG3DLEnnfVljbgqL2A'
-});
-
-// Ensure uploads directory exists (for temporary files if needed)
-const uploadsDir = path.join(__dirname, '../../public/uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for memory storage instead of disk storage
+// Configure multer for memory storage
 const storage = multer.memoryStorage();
 
 // File filter to only allow specific image types

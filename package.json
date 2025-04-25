@@ -11,6 +11,10 @@
     "build:admin": "npm run build --workspace=admin-frontend",
     "build:customer": "npm run build --workspace=customer-frontend",
     "build": "npm run build:backend && npm run build:admin && npm run build:customer",
+    "compose:up": "docker compose up -d --build",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f",
+    "compose:logs:be": "docker compose logs -f backend",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

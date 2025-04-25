@@ -17,6 +17,21 @@ const addCartItemSchema = z.object({
 });
 
 /**
+ * Schema for batch cart operations
+ */
+const batchCartOperationSchema = z.object({
+  operations: z.array(
+    z.object({
+      productId: z.number().int().positive({ message: "Product ID must be a positive integer" }),
+      quantity: z.number().int().min(1, { message: "Quantity must be at least 1" }),
+      action: z.enum(['add', 'update', 'remove'], { 
+        errorMap: () => ({ message: "Action must be one of: add, update, remove" })
+      })
+    })
+  ).min(1, { message: "At least one operation is required" })
+});
+
+/**
  * @route POST /api/cart/item
  * @description Add/Update an item in the cart with a specific quantity
  * @access Private (User only)
@@ -343,6 +358,194 @@ router.delete('/', isUser, async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Cart cleared successfully' });
   } catch (error) {
     console.error('Error clearing cart:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
+});
+
+/**
+ * @route POST /api/cart/batch
+ * @description Process multiple cart operations in a single request
+ * @access Private (User only)
+ */
+router.post('/batch', isUser, async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validationResult = batchCartOperationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        message: 'Validation failed',
+        errors: validationResult.error.errors
+      });
+      return;
+    }
+
+    // Extract validated data
+    const { operations } = validationResult.data;
+
+    // Get user ID from the JWT token (via middleware)
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'User ID not found in token' });
+      return;
+    }
+
+    // Use transaction for atomic operations
+    const results = await prisma.$transaction(async (tx) => {
+      const processedResults = [];
+      
+      // First, fetch all the products in one query to check stock
+      const productIds = operations.map(op => op.productId);
+      const products = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+          images: true
+        }
+      });
+      
+      // Create a lookup map for fast access
+      const productMap = new Map(products.map(p => [p.id, p]));
+      
+      // Get current cart items for this user (to check existing quantities)
+      const existingCartItems = await tx.cartItem.findMany({
+        where: { 
+          userId,
+          productId: { in: productIds }
+        }
+      });
+      
+      // Create a lookup map for cart items
+      const cartItemMap = new Map(existingCartItems.map(item => [item.productId, item]));
+      
+      // Process each operation
+      for (const op of operations) {
+        const { productId, quantity, action } = op;
+        const product = productMap.get(productId);
+        
+        // Skip if product doesn't exist
+        if (!product) {
+          processedResults.push({
+            productId,
+            success: false,
+            message: 'Product not found'
+          });
+          continue;
+        }
+        
+        try {
+          let result;
+          
+          switch (action) {
+            case 'add':
+              // Check if adding would exceed stock
+              const currentQuantity = cartItemMap.get(productId)?.quantity || 0;
+              if (currentQuantity + quantity > product.stock) {
+                processedResults.push({
+                  productId,
+                  success: false,
+                  message: `Insufficient stock. Only ${product.stock} available and you already have ${currentQuantity} in your cart.`
+                });
+                continue;
+              }
+              
+              // Add to cart
+              result = await tx.cartItem.upsert({
+                where: {
+                  userId_productId: { userId, productId }
+                },
+                create: {
+                  userId,
+                  productId,
+                  quantity
+                },
+                update: {
+                  quantity: { increment: quantity }
+                }
+              });
+              break;
+              
+            case 'update':
+              // Check if update would exceed stock
+              if (quantity > product.stock) {
+                processedResults.push({
+                  productId,
+                  success: false,
+                  message: `Insufficient stock. Only ${product.stock} available.`
+                });
+                continue;
+              }
+              
+              // Update quantity
+              result = await tx.cartItem.upsert({
+                where: {
+                  userId_productId: { userId, productId }
+                },
+                create: {
+                  userId,
+                  productId,
+                  quantity
+                },
+                update: {
+                  quantity
+                }
+              });
+              break;
+              
+            case 'remove':
+              // Remove from cart
+              result = await tx.cartItem.deleteMany({
+                where: {
+                  userId,
+                  productId
+                }
+              });
+              break;
+          }
+          
+          processedResults.push({
+            productId,
+            success: true,
+            action,
+            result
+          });
+        } catch (error) {
+          processedResults.push({
+            productId,
+            success: false,
+            message: 'Operation failed',
+            error: (error as Error).message
+          });
+        }
+      }
+      
+      // Get the updated cart
+      const updatedCart = await tx.cartItem.findMany({
+        where: { userId },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              stock: true,
+              images: true
+            }
+          }
+        }
+      });
+      
+      return {
+        operations: processedResults,
+        cart: updatedCart
+      };
+    });
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error processing batch cart operations:', error);
     res.status(500).json({ message: 'An internal server error occurred' });
   }
 });

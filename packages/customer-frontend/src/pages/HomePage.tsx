@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
 import axios from 'axios';
+import api from '../utils/api'; // Use our optimized API client
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge, Form, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
@@ -46,12 +47,20 @@ interface PaginatedProductsResponse {
   totalProducts: number;
 }
 
+interface HomepageData {
+  featuredProducts: Product[];
+  categories: Category[];
+  newProducts: Product[];
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const HomePage = () => {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingHomepage, setIsLoadingHomepage] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const { wishlistItems, isWishlisted, addToWishlist, removeFromWishlist } = useWishlist();
@@ -59,7 +68,7 @@ const HomePage = () => {
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(''); // '' means All
-  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
   
   // Sort state
   const [sortBy, setSortBy] = useState<string>('createdAt'); // Default sort
@@ -106,11 +115,47 @@ const HomePage = () => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [showSortOptions]);
+  
+  // Fetch homepage data on component mount
+  useEffect(() => {
+    const fetchHomepageData = async () => {
+      setIsLoadingHomepage(true);
+      try {
+        const response = await api.get<HomepageData>('/homepage');
+        setFeaturedProducts(response.data.featuredProducts || []);
+        setCategories(response.data.categories || []);
+        
+        // If no search/filters are active, use the newProducts as initial product list
+        if (!searchTerm && !selectedCategoryId) {
+          setProducts(response.data.newProducts || []);
+          setTotalProducts(response.data.newProducts.length);
+          setTotalPages(1);
+          setCurrentPage(1);
+          // Avoid duplicate loading when no search is active
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error fetching homepage data:', error);
+        // Only show error if it's not related to product search
+        if (!searchTerm && !selectedCategoryId) {
+          setError('Failed to load homepage data');
+        }
+      } finally {
+        setIsLoadingHomepage(false);
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchHomepageData();
+  }, []);
 
   // Fetch products when search term, category filter, or sort changes - reset to page 1
   useEffect(() => {
+    // Only fetch filtered products if there are actual filters
+    if (searchTerm || selectedCategoryId || sortBy !== 'createdAt' || sortOrder !== 'desc') {
     setCurrentPage(1); // Reset to first page when filters change
     fetchProducts(1);
+    }
   }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   const fetchProducts = async (page = 1) => {
@@ -138,10 +183,10 @@ const HomePage = () => {
       params.append('limit', '12'); // Default limit
       
       const queryString = params.toString();
-      const apiUrl = `${API_BASE_URL}/products${queryString ? `?${queryString}` : ''}`;
+      const apiUrl = `/products${queryString ? `?${queryString}` : ''}`;
 
       console.log(`Fetching products from ${apiUrl}`);
-      const response = await axios.get<PaginatedProductsResponse>(apiUrl);
+      const response = await api.get<PaginatedProductsResponse>(apiUrl);
       
       // Ensure we have valid data before updating state
       if (response.data && response.data.products) {
@@ -188,32 +233,6 @@ const HomePage = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
-  // Fetch categories on component mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setIsLoadingCategories(true);
-            
-      try {
-        const response = await axios.get(`${API_BASE_URL}/categories`);
-        // Ensure response.data is an array
-        if (Array.isArray(response.data)) {
-          setCategories(response.data);
-        } else {
-          console.error('Expected array for categories data, got:', response.data);
-          setCategories([]);
-        }
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-        setCategories([]);
-        // Optionally set an error state for categories
-      } finally {
-        setIsLoadingCategories(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
 
   const handleToggleWishlist = (e: React.MouseEvent, product: Product) => {
     e.preventDefault(); // Prevent navigation to product detail

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { staticCache, etagMiddleware } from '../middleware/cacheMiddleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,7 +10,7 @@ const prisma = new PrismaClient();
  * @description Get all categories (public, read-only access)
  * @access Public
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', staticCache(3600), etagMiddleware(), async (req: Request, res: Response) => {
   try {
     const categories = await prisma.category.findMany({
       select: {

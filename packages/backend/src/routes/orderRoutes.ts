@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client'; // Import Prisma type
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
+import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -122,6 +123,15 @@ router.post('/', isUser, async (req: Request, res: Response) => {
           longitude: location?.lng || null, // Store longitude if available
           assignedPhoneNumberId: availablePhone.id, // Link the assigned phone number to the order
         },
+        include: { // Include necessary relationships for the WebSocket event
+          deliveryLocation: {
+            select: {
+              name: true,
+              phone: true,
+              district: true
+            }
+          }
+        }
       });
       console.log(`Order created with ID: ${newOrder.id}`);
 
@@ -159,6 +169,19 @@ router.post('/', isUser, async (req: Request, res: Response) => {
 
     // Transaction successful if it reaches here
     console.log(`Order ${order.id} created successfully.`);
+    
+    // Process the order to include customer name for socket emission
+    const processedOrder = {
+      ...order,
+      customerName: order.deliveryLocation?.name || 'N/A'
+    };
+    
+    // Emit WebSocket event to notify admin clients of the new order
+    if ((global as any).socketIO) {
+      (global as any).socketIO.to('admin_dashboard').emit('new_order_created', processedOrder);
+      console.log(`Emitted new_order_created event for order #${order.id} to admin_dashboard`);
+    }
+    
     res.status(201).json({
       message: "Order created successfully",
       orderId: order.id, // Return the order ID
@@ -273,6 +296,14 @@ router.get('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    // Get pagination parameters from request
+    const paginationParams = getPaginationParams(req);
+    
+    // Count total orders for pagination
+    const totalOrdersCount = await prisma.order.count({
+      where: { userId }
+    });
+
     // Fetch all orders for the user, select necessary fields for list view
     const orders = await prisma.order.findMany({
       where: { userId },
@@ -290,10 +321,16 @@ router.get('/', isUser, async (req: Request, res: Response) => {
                 productId: true
               }
           }
-      }
+      },
+      skip: paginationParams.skip,
+      take: paginationParams.limit
     });
 
-    res.status(200).json(orders);
+    // Create paginated response
+    const paginatedResponse = createPaginatedResponse(orders, totalOrdersCount, paginationParams);
+    
+    // Return the paginated response
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ message: "An internal server error occurred" });

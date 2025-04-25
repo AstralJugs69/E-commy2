@@ -12,6 +12,20 @@ const addWishlistItemSchema = z.object({
 });
 
 /**
+ * Schema for batch wishlist operations
+ */
+const batchWishlistOperationSchema = z.object({
+  operations: z.array(
+    z.object({
+      productId: z.number().int().positive({ message: "Product ID must be a positive integer" }),
+      action: z.enum(['add', 'remove'], { 
+        errorMap: () => ({ message: "Action must be one of: add, remove" })
+      })
+    })
+  ).min(1, { message: "At least one operation is required" })
+});
+
+/**
  * @route GET /api/wishlist
  * @description Get all wishlist items for the authenticated user
  * @access Private (User only)
@@ -184,6 +198,148 @@ router.delete('/:productId', isUser, async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('Error removing item from wishlist:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
+});
+
+/**
+ * @route POST /api/wishlist/batch
+ * @description Process multiple wishlist operations in a single request
+ * @access Private (User only)
+ */
+router.post('/batch', isUser, async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validationResult = batchWishlistOperationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        message: 'Validation failed',
+        errors: validationResult.error.errors
+      });
+      return;
+    }
+
+    // Extract validated data
+    const { operations } = validationResult.data;
+
+    // Get user ID from the JWT token (via middleware)
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'User ID not found in token' });
+      return;
+    }
+
+    // Use transaction for atomic operations
+    const results = await prisma.$transaction(async (tx) => {
+      const operationResults = [];
+
+      // Process each operation
+      for (const op of operations) {
+        const { productId, action } = op;
+
+        try {
+          if (action === 'add') {
+            // Check if product exists
+            const product = await tx.product.findFirst({
+              where: { id: productId }
+            });
+
+            if (!product) {
+              operationResults.push({
+                success: false,
+                productId,
+                action,
+                message: 'Product not found'
+              });
+              continue;
+            }
+
+            // Check if already in wishlist
+            const existing = await tx.wishlistItem.findUnique({
+              where: {
+                userId_productId: {
+                  userId,
+                  productId
+                }
+              }
+            });
+
+            if (existing) {
+              operationResults.push({
+                success: true, // Consider it a success since the item is already in wishlist
+                productId,
+                action,
+                message: 'Item already in wishlist'
+              });
+              continue;
+            }
+
+            // Add to wishlist
+            await tx.wishlistItem.create({
+              data: {
+                userId,
+                productId
+              }
+            });
+
+            operationResults.push({
+              success: true,
+              productId,
+              action,
+              message: 'Item added to wishlist'
+            });
+          } 
+          else if (action === 'remove') {
+            try {
+              // Remove from wishlist
+              await tx.wishlistItem.delete({
+                where: {
+                  userId_productId: {
+                    userId,
+                    productId
+                  }
+                }
+              });
+
+              operationResults.push({
+                success: true,
+                productId,
+                action,
+                message: 'Item removed from wishlist'
+              });
+            } catch (error) {
+              // Item not in wishlist (P2025 error)
+              if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                operationResults.push({
+                  success: true, // Consider it a success since the end state is achieved
+                  productId,
+                  action,
+                  message: 'Item not in wishlist'
+                });
+              } else {
+                throw error; // Re-throw other errors
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing operation ${action} for product ${productId}:`, error);
+          operationResults.push({
+            success: false,
+            productId,
+            action,
+            message: 'Operation failed'
+          });
+        }
+      }
+
+      return operationResults;
+    });
+
+    res.status(200).json({
+      results
+    });
+  } catch (error) {
+    console.error('Error processing batch wishlist operations:', error);
     res.status(500).json({ message: 'An internal server error occurred' });
   }
 });
