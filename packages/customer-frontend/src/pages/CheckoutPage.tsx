@@ -60,14 +60,14 @@ const CheckoutPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingIPLocation, setIsLoadingIPLocation] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
-  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
+  
+  // Label for district dropdown in the modal
+  const currentDistrictLabel = newLocationData.district || '-- Select District --';
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -75,46 +75,88 @@ const CheckoutPage: React.FC = () => {
       navigate('/cart');
     }
 
-    // Get user location if supported
+    // Get precise location using HTML5 Geolocation API
+    getUserPreciseLocation();
+  }, [cartItems, navigate]);
+
+  // Function to get precise location using HTML5 Geolocation API
+  const getUserPreciseLocation = () => {
+    setIsLoadingIPLocation(true);
+    
     if (navigator.geolocation) {
+      console.log("Getting precise location using HTML5 Geolocation API...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          // Success handler
           const locationData = {
             lat: position.coords.latitude,
-            lng: position.coords.longitude,
+            lng: position.coords.longitude
           };
-          console.log("Successfully captured geolocation:", locationData);
+          console.log("Precise location obtained:", locationData);
           setLocation(locationData);
-          setLocationError(null);
+          setIsLoadingIPLocation(false);
         },
         (error) => {
-          console.error('Error getting location:', error);
-          // Set a user-friendly error message based on the error code
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              setLocationError("Location access denied. Delivery location will not be used.");
-              break;
-            case error.POSITION_UNAVAILABLE:
-              setLocationError("Location information unavailable. Delivery location will not be used.");
-              break;
-            case error.TIMEOUT:
-              setLocationError("Location request timed out. Delivery location will not be used.");
-              break;
-            default:
-              setLocationError("An unknown error occurred. Delivery location will not be used.");
-          }
+          // Error handler - fall back to IP-based location
+          console.warn("Geolocation permission denied or error:", error.message);
+          console.log("Falling back to IP-based location...");
+          fetchIPBasedLocation();
         },
-        // Options for geolocation request
-        {
-          enableHighAccuracy: false, // Don't need high accuracy for delivery
-          timeout: 5000, // 5 seconds timeout
-          maximumAge: 0 // Don't use cached position
+        { 
+          enableHighAccuracy: true, // Request high accuracy
+          timeout: 10000,          // Time limit for request (10 seconds)
+          maximumAge: 0            // Always get fresh position
         }
       );
     } else {
-      setLocationError("Geolocation is not supported by this browser. Delivery location will not be used.");
+      // Browser doesn't support geolocation
+      console.warn("Geolocation not supported by this browser");
+      fetchIPBasedLocation();
     }
-  }, [cartItems, navigate]);
+  };
+
+  // Function to fetch IP-based location using free service
+  const fetchIPBasedLocation = async () => {
+    setIsLoadingIPLocation(true);
+    
+    try {
+      // Use a free IP geolocation API
+      const response = await axios.get('https://ipapi.co/json/');
+      
+      if (response.data && response.data.latitude && response.data.longitude) {
+        const locationData = {
+          lat: response.data.latitude,
+          lng: response.data.longitude
+        };
+        
+        console.log("IP-based location detected:", locationData);
+        setLocation(locationData);
+      } else {
+        // Fallback to a secondary API if the first one fails
+        try {
+          const fallbackResponse = await axios.get('https://geolocation-db.com/json/');
+          
+          if (fallbackResponse.data && fallbackResponse.data.latitude && fallbackResponse.data.longitude) {
+            const locationData = {
+              lat: fallbackResponse.data.latitude,
+              lng: fallbackResponse.data.longitude
+            };
+            
+            console.log("IP-based location detected (fallback):", locationData);
+            setLocation(locationData);
+          } else {
+            console.error("Could not determine location from IP address");
+          }
+        } catch (fallbackError) {
+          console.error("Error with fallback geolocation service:", fallbackError);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching IP-based location:", error);
+    } finally {
+      setIsLoadingIPLocation(false);
+    }
+  };
 
   // Fetch saved delivery locations
   useEffect(() => {
@@ -254,6 +296,24 @@ const CheckoutPage: React.FC = () => {
   // New function to attempt order placement that can be reused for retries
   const attemptOrderPlacement = async (orderData: any) => {
     try {
+      // Add detailed request data logging
+      console.log("ORDER DATA (DETAILED):", JSON.stringify(orderData, null, 2));
+      console.log("Order items count:", orderData.items.length);
+      console.log("Delivery location ID:", orderData.deliveryLocationId, "Type:", typeof orderData.deliveryLocationId);
+      console.log("Total amount:", orderData.totalAmount, "Type:", typeof orderData.totalAmount);
+      
+      // Validate item data client-side
+      orderData.items.forEach((item: any, index: number) => {
+        console.log(`Item ${index} validation:`, {
+          productId: item.productId, 
+          productIdType: typeof item.productId, 
+          quantity: item.quantity, 
+          quantityType: typeof item.quantity,
+          price: item.price,
+          priceType: typeof item.price
+        });
+      });
+
       console.log("Sending order data with location:", orderData);
 
       // Use the configured api instance instead of direct axios calls
@@ -286,6 +346,32 @@ const CheckoutPage: React.FC = () => {
           status: error.response.status,
           data: error.response.data
         });
+        
+        // Log detailed validation errors if present
+        if (error.response.data.errors) {
+          console.error("VALIDATION ERRORS (DETAILED):", JSON.stringify(error.response.data.errors, null, 2));
+          
+          // Check for specific field errors
+          const fieldErrors = error.response.data.errors.fieldErrors;
+          if (fieldErrors) {
+            Object.entries(fieldErrors).forEach(([field, messages]) => {
+              console.error(`Field '${field}' errors:`, messages);
+            });
+          }
+        }
+        
+        // Check for zone availability error
+        const isZoneAvailabilityError = 
+          (errorMessage.toLowerCase().includes('service not available') || 
+           errorMessage.toLowerCase().includes('outside service area') || 
+           errorMessage.toLowerCase().includes('zone'));
+          
+        if (isZoneAvailabilityError) {
+          toast.error(errorMessage || 'Service is not available in your area.');
+          setError(errorMessage || 'Service is not available in your area.');
+          setLoading(false);
+          return;
+        }
         
         // Modify the isPhoneUnavailableError condition to include the "internal server error" message
         const isPhoneUnavailableError = 
@@ -365,21 +451,70 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
+    // Check if cart is empty
+    if (cartItems.length === 0) {
+      setValidationError('Your cart is empty. Please add items before checkout.');
+      return;
+    }
+
+    // Validate each item in the cart
+    let hasInvalidItems = false;
+    cartItems.forEach((item, index) => {
+      if (!item.id || typeof item.id !== 'number' || item.id <= 0) {
+        console.error(`Invalid product ID for item ${index}:`, item.id);
+        hasInvalidItems = true;
+      }
+      if (!item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
+        console.error(`Invalid quantity for item ${index}:`, item.quantity);
+        hasInvalidItems = true;
+      }
+      if (!item.price || typeof item.price !== 'number' || item.price <= 0) {
+        console.error(`Invalid price for item ${index}:`, item.price);
+        hasInvalidItems = true;
+      }
+    });
+
+    if (hasInvalidItems) {
+      setValidationError('One or more items in your cart has invalid data. Please try refreshing the page.');
+      return;
+    }
+
+    // Validate total price
+    if (!totalPrice || typeof totalPrice !== 'number' || totalPrice <= 0) {
+      setValidationError('Invalid total price. Please try refreshing the page.');
+      console.error('Invalid total price:', totalPrice);
+      return;
+    }
+
     setLoading(true);
 
-    const orderData = {
-      items: cartItems.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        price: item.price
-      })),
-      deliveryLocationId: parseInt(selectedLocationId, 10),
-      location: location, // Ensure location is included (will be undefined if not available)
-      totalAmount: totalPrice
-    };
+    try {
+      // Convert deliveryLocationId to integer
+      const locationId = parseInt(selectedLocationId, 10);
+      if (isNaN(locationId) || locationId <= 0) {
+        throw new Error(`Invalid delivery location ID: ${selectedLocationId}`);
+      }
+      
+      const orderData = {
+        items: cartItems.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        deliveryLocationId: locationId,
+        location: location, // IP-based location is silently attached here
+        totalAmount: totalPrice
+      };
 
-    // Attempt order placement with the prepared data
-    await attemptOrderPlacement(orderData);
+      console.log("Order data prepared:", orderData);
+      
+      // Attempt order placement with the prepared data
+      await attemptOrderPlacement(orderData);
+    } catch (err) {
+      console.error("Error preparing order data:", err);
+      setValidationError('Failed to prepare order data. Please try again.');
+      setLoading(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -394,9 +529,6 @@ const CheckoutPage: React.FC = () => {
       </Container>
     );
   }
-
-  // Derived label for new location district dropdown
-  const currentDistrictLabel = newLocationData.district || '-- Select District --';
 
   return (
     <Container className="py-3">
@@ -433,6 +565,26 @@ const CheckoutPage: React.FC = () => {
                     {locationErrorState}
                   </Alert>
                 )}
+                
+                {/* Location Status Indicator */}
+                <div className="mb-3 d-flex align-items-center">
+                  {isLoadingIPLocation ? (
+                    <Alert variant="info" className="mb-0 d-flex align-items-center w-100">
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      <span>Getting your location for accurate delivery...</span>
+                    </Alert>
+                  ) : location ? (
+                    <Alert variant="success" className="mb-0 d-flex align-items-center w-100">
+                      <FaMapMarkerAlt className="me-2" />
+                      <span>Your location is available for accurate delivery</span>
+                    </Alert>
+                  ) : (
+                    <Alert variant="warning" className="mb-0 d-flex align-items-center w-100">
+                      <FaMapMarkerAlt className="me-2" />
+                      <span>Location unavailable. Delivery might be less accurate.</span>
+                    </Alert>
+                  )}
+                </div>
                 
                 {/* Delivery Location Selection */}
                 <Form.Group className="mb-4">
@@ -489,8 +641,6 @@ const CheckoutPage: React.FC = () => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setSelectedLocationId(location.id.toString());
-                                setSelectedDistrict('');
-                                setDistrictOptions(location.district ? [location.district] : []);
                                 // Close dropdown after selection
                                 setTimeout(() => {
                                   setLocationDropdownOpen(false);
@@ -506,63 +656,6 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   )}
                 </Form.Group>
-                
-                {locationError && (
-                  <Alert variant="warning" className="mb-3">
-                    {locationError}
-                  </Alert>
-                )}
-
-                {/* District dropdown - only show if a location is selected */}
-                {selectedLocationId && (
-                  <div className="mb-3">
-                    <label htmlFor="district" className="form-label">
-                      {t('checkout.district')}
-                    </label>
-                    <div className="dropdown w-100">
-                      <button
-                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
-                        type="button"
-                        id="districtDropdown"
-                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
-                        aria-expanded={districtDropdownOpen}
-                        data-testid="district-dropdown"
-                      >
-                        {selectedDistrict || t('checkout.selectDistrict')}
-                        <i className="bi bi-caret-down-fill"></i>
-                      </button>
-                      <div
-                        className={`dropdown-menu w-100 ${districtDropdownOpen ? 'show animate-dropdown' : ''}`}
-                        aria-labelledby="districtDropdown"
-                        onClick={(e) => {
-                          // Don't close dropdown when clicking on the menu itself (for scrolling)
-                          if (e.target === e.currentTarget) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      >
-                        {districtOptions.map((district, index) => (
-                          <div
-                            key={index}
-                            className={`dropdown-item ${selectedDistrict === district ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedDistrict(district);
-                              // Close dropdown after selection
-                              setTimeout(() => {
-                                setDistrictDropdownOpen(false);
-                              }, 150);
-                            }}
-                            data-testid={`district-option-${index}`}
-                          >
-                            {district}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <Button 
                   type="submit"
