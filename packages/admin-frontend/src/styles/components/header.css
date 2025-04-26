@@ -1,0 +1,110 @@
+/* 
+ * Header Styles for Admin Panel
+ */
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 1.5rem;
+  background-color: var(--light-bg);
+  border-bottom: 1px solid var(--subtle-border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-title {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.header-icon:hover {
+  background-color: var(--neutral-100);
+}
+
+.header-icon svg,
+.header-icon i {
+  font-size: 1.25rem;
+}
+
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.profile-dropdown .dropdown-menu {
+  right: 0;
+  left: auto;
+  margin-top: 0.5rem;
+}
+
+.search-box {
+  position: relative;
+  min-width: 200px;
+}
+
+.search-box input {
+  padding-left: 2.5rem;
+  border-radius: var(--input-border-radius);
+  background-color: var(--neutral-100);
+  border: none;
+}
+
+.search-box input:focus {
+  background-color: white;
+  box-shadow: 0 0 0 2px var(--primary-bg-subtle);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .admin-header {
+    padding: 0 1rem;
+  }
+  
+  .search-box {
+    display: none;
+  }
+} 

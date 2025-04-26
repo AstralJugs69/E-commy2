@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client'; // Import Prisma type
 import { z } from 'zod';
 import { isUser } from '../middleware/authMiddleware';
 import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
+import { isPointInAnyZone } from '../utils/geoUtils';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -54,6 +55,35 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       // This should technically be caught by isUser, but double-check
       res.status(401).json({ message: "User ID not found in token" });
       return;
+    }
+
+    // If location data is provided, validate it against service zones
+    if (location) {
+      console.log(`Validating order location: [${location.lat}, ${location.lng}]`);
+      
+      // Get all service zones from the database
+      const serviceZones = await prisma.serviceArea.findMany();
+      
+      // Skip validation if no service zones are defined
+      if (serviceZones.length > 0) {
+        // Check if the location is in any service zone
+        const isInServiceZone = isPointInAnyZone(location.lat, location.lng, serviceZones);
+        
+        if (!isInServiceZone) {
+          console.log(`Location [${location.lat}, ${location.lng}] is outside all service zones. Order rejected.`);
+          res.status(400).json({ 
+            message: "Sorry, we don't currently service your location. Please check our service areas.",
+            outOfServiceArea: true
+          });
+          return;
+        }
+        
+        console.log(`Location is within a service zone. Proceeding with order.`);
+      } else {
+        console.log('No service zones defined. Skipping location validation.');
+      }
+    } else {
+      console.log('No location data provided with order. Skipping location validation.');
     }
 
     // Create the order and order items in a transaction

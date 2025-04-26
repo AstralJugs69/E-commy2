@@ -1,0 +1,86 @@
+/* 
+ * Sidebar Styles for Admin Panel
+ */
+
+.sidebar {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+
+.sidebar .nav-link {
+  color: var(--sidebar-text);
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  border-radius: 0;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar .nav-link:hover {
+  background-color: var(--sidebar-hover-bg);
+  opacity: 1;
+}
+
+.sidebar .nav-link.active {
+  background-color: var(--sidebar-active-bg);
+  opacity: 1;
+  font-weight: var(--font-weight-semibold);
+}
+
+.sidebar .nav-link svg,
+.sidebar .nav-link i {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  color: white;
+  font-weight: var(--font-weight-bold);
+  font-size: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-section {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-heading {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Mobile sidebar toggle */
+.sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-dark);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+@media (max-width: 992px) {
+  .sidebar-toggle {
+    display: block;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 1040;
+    transition: transform 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+} 

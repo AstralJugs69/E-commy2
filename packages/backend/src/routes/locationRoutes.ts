@@ -2,8 +2,11 @@ import { Router, Request, Response } from 'express';
 import { isUser } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import { RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { isPointInAnyZone } from '../utils/geoUtils';
 
 const router = Router();
+const prisma = new PrismaClient();
 
 /**
  * @route GET /api/location/ip
@@ -75,19 +78,31 @@ router.post('/check-zone', (async (req: Request, res: Response) => {
     
     const { lat, lng } = result.data;
     
-    // For now, return a simple mock response
-    // In a real implementation, you would query your database to check if the 
-    // coordinates are within any of your service zones
+    // Query all service zones from the database
+    const serviceZones = await prisma.serviceArea.findMany();
     
-    // This is a placeholder. It should be implemented to check against real zones
-    const isInServiceZone = true; // Replace with actual zone check
+    if (!serviceZones || serviceZones.length === 0) {
+      return res.status(200).json({
+        success: true,
+        isInServiceZone: false,
+        message: 'No service zones defined yet',
+        debug: { zonesChecked: 0 }
+      });
+    }
+    
+    // Check if the location is in any service zone
+    const isInServiceZone = isPointInAnyZone(lat, lng, serviceZones);
+    
+    // Log the result for debugging
+    console.log(`Location check [${lat}, ${lng}]: In service zone: ${isInServiceZone}`);
     
     res.status(200).json({
       success: true,
       isInServiceZone,
       message: isInServiceZone 
         ? 'Location is within our service area'
-        : 'Sorry, we don\'t currently service this area'
+        : 'Sorry, we don\'t currently service this area',
+      debug: { zonesChecked: serviceZones.length }
     });
     
   } catch (error) {
@@ -95,6 +110,33 @@ router.post('/check-zone', (async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to check service zone availability'
+    });
+  }
+}) as RequestHandler);
+
+/**
+ * @route GET /api/location/zones
+ * @description Get all active service zones
+ * @access Public
+ */
+router.get('/zones', (async (req: Request, res: Response) => {
+  try {
+    // Get all service zones from the database
+    const serviceZones = await prisma.serviceArea.findMany({
+      select: {
+        id: true,
+        name: true,
+        geoJsonPolygon: true
+      }
+    });
+    
+    // Return zones as JSON
+    res.status(200).json(serviceZones);
+  } catch (error) {
+    console.error('Error fetching service zones:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch service zones' 
     });
   }
 }) as RequestHandler);

@@ -41,10 +41,15 @@ interface Category {
 }
 
 interface PaginatedProductsResponse {
-  products: Product[];
-  currentPage: number;
-  totalPages: number;
-  totalProducts: number;
+  data: Product[];
+  meta: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
 }
 
 interface HomepageData {
@@ -149,13 +154,20 @@ const HomePage = () => {
     fetchHomepageData();
   }, []);
 
+  // Special handler for category selection
+  const handleCategorySelect = (categoryId: string) => {
+    // Only update if it's actually a different selection
+    if (categoryId !== selectedCategoryId) {
+      setSelectedCategoryId(categoryId);
+      // This will trigger the useEffect that depends on selectedCategoryId
+    }
+  };
+
   // Fetch products when search term, category filter, or sort changes - reset to page 1
   useEffect(() => {
-    // Only fetch filtered products if there are actual filters
-    if (searchTerm || selectedCategoryId || sortBy !== 'createdAt' || sortOrder !== 'desc') {
+    // Always fetch products when any filter or sort changes
     setCurrentPage(1); // Reset to first page when filters change
     fetchProducts(1);
-    }
   }, [searchTerm, selectedCategoryId, sortBy, sortOrder]); // Re-fetch when filters or sort changes
 
   const fetchProducts = async (page = 1) => {
@@ -168,7 +180,7 @@ const HomePage = () => {
       if (searchTerm.trim() !== '') {
         params.append('search', searchTerm.trim());
       }
-      if (selectedCategoryId) {
+      if (selectedCategoryId && selectedCategoryId.trim() !== '') {
         params.append('categoryId', selectedCategoryId);
       }
       if (sortBy) {
@@ -189,14 +201,14 @@ const HomePage = () => {
       const response = await api.get<PaginatedProductsResponse>(apiUrl);
       
       // Ensure we have valid data before updating state
-      if (response.data && response.data.products) {
+      if (response.data && response.data.data) {
         // Update state with paginated response data
-        setProducts(response.data.products || []);
-        setCurrentPage(response.data.currentPage || 1);
-        setTotalPages(response.data.totalPages || 1);
-        setTotalProducts(response.data.totalProducts || 0);
+        setProducts(response.data.data || []);
+        setCurrentPage(response.data.meta.currentPage || 1);
+        setTotalPages(response.data.meta.totalPages || 1);
+        setTotalProducts(response.data.meta.totalItems || 0);
         
-        console.log(`Loaded page ${response.data.currentPage || 1} of ${response.data.totalPages || 1}`);
+        console.log(`Loaded page ${response.data.meta.currentPage || 1} of ${response.data.meta.totalPages || 1}`);
       } else {
         console.error('Invalid product data received:', response.data);
         setProducts([]);
@@ -324,7 +336,7 @@ const HomePage = () => {
             <div className={`category-item-wrapper ${selectedCategoryId === '' ? 'active' : ''}`}>
               <div 
                 className="category-item"
-                onClick={() => setSelectedCategoryId('')}
+                onClick={() => handleCategorySelect('')}
               >
                 <img 
                   src="/placeholder-image.svg" 
@@ -341,7 +353,7 @@ const HomePage = () => {
               <div key={category.id} className={`category-item-wrapper ${selectedCategoryId === category.id.toString() ? 'active' : ''}`}>
                 <div 
                   className="category-item"
-                  onClick={() => setSelectedCategoryId(category.id.toString())}
+                  onClick={() => handleCategorySelect(category.id.toString())}
                 >
                   <img 
                     src={getImageUrl(category.imageUrl)} 

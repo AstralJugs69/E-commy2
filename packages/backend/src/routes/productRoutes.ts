@@ -42,15 +42,16 @@ router.get('/', dynamicCache(300), etagMiddleware(), (async (req: Request, res: 
     const orderByClause: {[key: string]: 'asc' | 'desc'} = {};
     
     // Prepare filter conditions
-    let whereClause: any = {
-      isPublished: true // Only show published products
-    };
+    let whereClause: any = {};
     
-    // Apply category filter if provided
-    if (req.query.category) {
-      whereClause.category = {
-        slug: req.query.category as string
-      };
+    // Apply category filter if provided - now using categoryId directly
+    if (req.query.categoryId) {
+      // Parse the category parameter as a number
+      const categoryId = parseInt(req.query.categoryId as string, 10);
+      if (!isNaN(categoryId)) {
+        // Filter by categoryId directly
+        whereClause.categoryId = categoryId;
+      }
     }
     
     // Apply search filter if provided

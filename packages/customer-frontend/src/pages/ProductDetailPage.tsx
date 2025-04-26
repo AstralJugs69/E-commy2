@@ -203,8 +203,8 @@ const ProductDetailPage = () => {
       setIsLoadingOther(true);
       try {
         const response = await api.get('/products');
-        // The data now contains a products array instead of being the array directly
-        const products = response.data.products;
+        // The data array is in response.data.data due to pagination structure
+        const products = response.data.data;
         // Filter out current product and take first 4
         const filteredProducts = products
           .filter((p: Product) => p.id !== product.id)
@@ -786,7 +786,7 @@ const ProductDetailPage = () => {
             <Row xs={2} md={4} className="g-3">
               {otherProducts.map(p => (
                 <Col key={p.id}>
-                  <Link to={`/product/${p.id}`} className="text-decoration-none text-reset d-block h-100">
+                  <Link to={`/products/${p.id}`} className="text-decoration-none text-reset d-block h-100">
                     <ProductCard product={p} hideAddToCart={true} disableInternalLink={true} />
                   </Link>
                 </Col>

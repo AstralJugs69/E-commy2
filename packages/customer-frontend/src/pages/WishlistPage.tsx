@@ -119,7 +119,7 @@ const WishlistPage: React.FC = () => {
             {wishlistItems.map((item) => (
               <Col key={item.id} xs={6} md={4} lg={3} className="d-flex">
                 <Card className="w-100 shadow-sm h-100">
-                  <Link to={`/product/${item.product.id}`} className="text-decoration-none text-reset">
+                  <Link to={`/products/${item.product.id}`} className="text-decoration-none text-reset">
                     <div className="position-relative">
                       {((item.product.images && item.product.images.length > 0) || item.product.imageUrl) ? (
                         <Card.Img 

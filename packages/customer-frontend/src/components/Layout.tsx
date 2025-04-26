@@ -26,9 +26,10 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface LayoutProps {
   installPrompt: BeforeInstallPromptEvent | null;
+  children?: React.ReactNode;
 }
 
-const Layout = ({ installPrompt }: LayoutProps) => {
+const Layout = ({ installPrompt, children }: LayoutProps) => {
   const { isAuthenticated, logout } = useAuth();
   const { getItemCount } = useCart();
   const { wishlistItems } = useWishlist();
@@ -353,7 +354,7 @@ const Layout = ({ installPrompt }: LayoutProps) => {
       </Navbar>
       
       <main className="flex-grow-1 pt-5 mt-5 pb-5 pb-lg-0">
-        <Outlet />
+        {children || <Outlet />}
       </main>
       
       {/* Bottom Navigation Bar - Mobile Only */}

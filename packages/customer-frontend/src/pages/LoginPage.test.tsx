@@ -1,5 +1,5 @@
 // src/pages/LoginPage.test.tsx
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom'; // Needed if component uses Link/useNavigate
 import { AuthProvider } from '../context/AuthContext'; // Wrap with providers if needed
@@ -34,7 +34,7 @@ vi.mock('react-hot-toast', () => ({
 
 describe('LoginPage Component', () => {
     it('renders login form elements', () => {
-        render(
+        const { getByRole, getByLabelText, getByText } = render(
             <BrowserRouter> {/* Wrap with Router if Link is used */}
                 <AuthProvider> {/* Wrap with necessary context providers */}
                     <LoginPage />
@@ -43,12 +43,12 @@ describe('LoginPage Component', () => {
         );
 
         // Check for key elements using testing-library queries
-        expect(screen.getByRole('heading', { name: /customer login/i })).toBeInTheDocument();
-        expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
-        expect(screen.getByText(/forgot password/i)).toBeInTheDocument();
-        expect(screen.getByText(/register here/i)).toBeInTheDocument();
+        expect(getByRole('heading', { name: /customer login/i })).toBeInTheDocument();
+        expect(getByLabelText(/email address/i)).toBeInTheDocument();
+        expect(getByLabelText(/password/i)).toBeInTheDocument();
+        expect(getByRole('button', { name: /login/i })).toBeInTheDocument();
+        expect(getByText(/forgot password/i)).toBeInTheDocument();
+        expect(getByText(/register here/i)).toBeInTheDocument();
     });
 
     // Add more tests as needed

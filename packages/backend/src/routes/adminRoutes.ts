@@ -3,6 +3,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod'; // Import Zod for validation
 import { isAdmin } from '../middleware/authMiddleware';
 import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
+import ethiopianCities, { City } from '../data/ethiopianCities';
+import { isInEthiopia, generateCityPolygon } from '../utils/geoUtils';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -764,6 +766,116 @@ router.get('/users/:userId', isAdmin, async (req: Request, res: Response) => {
 router.get('/test', (req: Request, res: Response) => {
   console.log('GET /api/admin/test route hit');
   res.status(200).json({ message: 'Admin routes are working' });
+});
+
+// GET /api/admin/cities - Search Ethiopian cities
+router.get('/cities', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { query, limit = 10, page = 1 } = req.query;
+    
+    // Filter cities based on search query if provided
+    let filteredCities: City[] = [...ethiopianCities];
+    
+    if (query && typeof query === 'string') {
+      const searchTerm = query.toLowerCase();
+      filteredCities = ethiopianCities.filter(city => 
+        city.name.toLowerCase().includes(searchTerm) || 
+        city.region.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Apply pagination
+    const startIndex = (Number(page) - 1) * Number(limit);
+    const endIndex = startIndex + Number(limit);
+    const paginatedCities = filteredCities.slice(startIndex, endIndex);
+    
+    // Return paginated results with metadata
+    res.status(200).json({
+      cities: paginatedCities,
+      total: filteredCities.length,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(filteredCities.length / Number(limit))
+    });
+  } catch (error) {
+    console.error('Error searching cities:', error);
+    res.status(500).json({ message: 'Failed to search cities' });
+  }
+});
+
+// POST /api/admin/serviceareas/from-city - Create service area from city
+router.post('/serviceareas/from-city', isAdmin, async (req: Request, res: Response) => {
+  // Validate request body
+  const schema = z.object({
+    cityId: z.number().int().positive(),
+    name: z.string().min(1).optional(),
+    radiusKm: z.number().positive().max(50).default(5) // Default 5km, max 50km
+  });
+  
+  const validationResult = schema.safeParse(req.body);
+  if (!validationResult.success) {
+    res.status(400).json({ 
+      message: "Validation failed", 
+      errors: validationResult.error.errors 
+    });
+    return;
+  }
+  
+  const { cityId, radiusKm, name } = validationResult.data;
+  
+  try {
+    // Find the city
+    const city = ethiopianCities.find(city => city.id === cityId);
+    if (!city) {
+      res.status(404).json({ message: `City with ID ${cityId} not found` });
+      return;
+    }
+    
+    // Validate coordinates are in Ethiopia
+    if (!isInEthiopia(city.lat, city.lng)) {
+      res.status(400).json({ message: "City coordinates are outside Ethiopia's boundaries" });
+      return;
+    }
+    
+    // Generate service area name if not provided
+    const serviceAreaName = name || `${city.name} Service Zone`;
+    
+    // Create polygon based on city coordinates and radius
+    const geoJsonPolygon = generateCityPolygon(city.lat, city.lng, radiusKm);
+    
+    // Create service area in database
+    const newServiceArea = await prisma.serviceArea.create({
+      data: {
+        name: serviceAreaName,
+        geoJsonPolygon
+      },
+      select: {
+        id: true,
+        name: true,
+        geoJsonPolygon: true
+      }
+    });
+    
+    res.status(201).json({
+      ...newServiceArea,
+      city: {
+        id: city.id,
+        name: city.name,
+        lat: city.lat,
+        lng: city.lng
+      },
+      radiusKm
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+      res.status(409).json({ 
+        message: `Service area with this name already exists.` 
+      });
+      return;
+    }
+    console.error("Error creating city-based service area:", error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
 });
 
 export default router; 
