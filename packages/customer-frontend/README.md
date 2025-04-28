@@ -1,3 +1,63 @@
+# E-Commy Customer Frontend
+
+The customer-facing storefront for the E-Commy platform built with React, TypeScript, and Vite.
+
+## Environment Setup
+
+Create a `.env` file in the packages/customer-frontend directory with the following variables:
+
+```
+# API configuration
+VITE_API_BASE_URL=http://localhost:3001/api
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+## Production
+
+```bash
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Docker
+
+The customer frontend can run as a containerized service with:
+
+```bash
+# Build the container
+docker build -t ecommy-customer-frontend .
+
+# Run the container
+docker run -p 3010:80 -e VITE_API_BASE_URL=http://localhost:10000/api ecommy-customer-frontend
+```
+
+For a complete deployment with backend and admin frontend, use:
+
+```bash
+# From the project root
+docker-compose up -d
+```
+
+## Image Handling
+
+The application now uses Cloudinary for image storage:
+
+1. All product images are served directly from Cloudinary
+2. Image URLs in the UI are managed by the `getImageUrl()` utility
+3. The utility automatically handles both relative paths and absolute Cloudinary URLs
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -10,10 +10,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 interface PWAPromptProps {
-  onInstallPromptAvailable: (event: BeforeInstallPromptEvent | null) => void;
+  onInstallPromptAvailable?: (event: BeforeInstallPromptEvent | null) => void;
+  installPrompt?: BeforeInstallPromptEvent | null;
 }
 
-function PWAPrompt({ onInstallPromptAvailable }: PWAPromptProps) {
+function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) {
   // Track install state at the top level, not inside useEffect
   const [isInstalled, setIsInstalled] = useState(false);
   
@@ -40,49 +41,6 @@ function PWAPrompt({ onInstallPromptAvailable }: PWAPromptProps) {
     setNeedRefresh(false);
   };
 
-  // Effect to handle beforeinstallprompt event
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault(); 
-      console.log('beforeinstallprompt event fired');
-      
-      // Pass the event to the parent component
-      if (!isInstalled) {
-        onInstallPromptAvailable(e as BeforeInstallPromptEvent);
-      }
-    };
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      onInstallPromptAvailable(null);
-      console.log('PWA was installed');
-      toast.success('App installed successfully!');
-    };
-
-    // Check if app is already installed
-    const checkIfInstalled = () => {
-      // @ts-ignore - This property exists in some browsers but TypeScript doesn't know about it
-      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-        setIsInstalled(true);
-        onInstallPromptAvailable(null);
-      }
-    };
-
-    // Add event listeners
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    // Check if already installed
-    checkIfInstalled();
-
-    // Cleanup listeners on component unmount
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, [onInstallPromptAvailable, isInstalled]); // Add isInstalled to dependencies
-
   // Handle offline readiness
   React.useEffect(() => {
     if (offlineReady) {
@@ -91,6 +49,55 @@ function PWAPrompt({ onInstallPromptAvailable }: PWAPromptProps) {
       setOfflineReady(false); // Close state
     }
   }, [offlineReady, setOfflineReady]);
+
+  // Only run this effect if we don't have an installPrompt passed as a prop
+  useEffect(() => {
+    if (!installPrompt) {
+      const handleBeforeInstallPrompt = (e: Event) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault(); 
+        console.log('beforeinstallprompt event fired');
+        
+        // Pass the event to the parent component
+        if (!isInstalled && onInstallPromptAvailable) {
+          onInstallPromptAvailable(e as BeforeInstallPromptEvent);
+        }
+      };
+
+      const handleAppInstalled = () => {
+        setIsInstalled(true);
+        if (onInstallPromptAvailable) {
+          onInstallPromptAvailable(null);
+        }
+        console.log('PWA was installed');
+        toast.success('App installed successfully!');
+      };
+
+      // Check if app is already installed
+      const checkIfInstalled = () => {
+        // @ts-ignore - This property exists in some browsers but TypeScript doesn't know about it
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+          setIsInstalled(true);
+          if (onInstallPromptAvailable) {
+            onInstallPromptAvailable(null);
+          }
+        }
+      };
+
+      // Add event listeners
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+
+      // Check if already installed
+      checkIfInstalled();
+
+      // Cleanup listeners on component unmount
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    }
+  }, [installPrompt, onInstallPromptAvailable, isInstalled]);
 
   // Handle update notifications
   React.useEffect(() => {

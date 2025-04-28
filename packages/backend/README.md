@@ -8,10 +8,10 @@ Create a `.env` file in the packages/backend directory with the following variab
 # Database connection
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ecommerce"
 
-# Cloudinary configuration
-CLOUDINARY_CLOUD_NAME=dco9dq5a4
-CLOUDINARY_API_KEY=116735482649165
-CLOUDINARY_API_SECRET=uwmsnm63pkG3DLEnnfVljbgqL2A
+# Cloudinary configuration (required for image uploads)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 
 # Server settings
 PORT=3001
@@ -22,13 +22,14 @@ ADMIN_FRONTEND_URL=http://localhost:5173
 CUSTOMER_FRONTEND_URL=http://localhost:3000
 ```
 
-## Image Upload Changes
+## Image Upload System
 
-The backend now uses Cloudinary for image storage instead of local file storage. Key changes:
+The backend uses Cloudinary for image storage with the following features:
 
-1. Images are uploaded directly to Cloudinary after processing with Sharp
-2. All image URLs in the database are now complete Cloudinary URLs
-3. No more local file storage for images in the public/uploads directory
+1. Images are processed with Sharp for resizing and conversion to WebP format
+2. Processed images are uploaded directly to Cloudinary
+3. All image URLs in the database are now complete Cloudinary URLs
+4. No local file storage is used for images
 
 ## Development
 
@@ -48,4 +49,23 @@ npm run build
 
 # Start production server
 npm start
+```
+
+## Docker
+
+The backend can run as a containerized service with:
+
+```bash
+# Build the container
+docker build -t ecommy-backend .
+
+# Run the container
+docker run -p 10000:10000 --env-file .env ecommy-backend
+```
+
+For a complete deployment with database and frontends, use:
+
+```bash
+# From the project root
+docker-compose up -d
 ``` 

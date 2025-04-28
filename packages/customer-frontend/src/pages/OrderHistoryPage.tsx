@@ -48,14 +48,17 @@ const OrderHistoryPage = () => {
       setError(null);
 
       try {
-        const response = await axios.get<UserOrder[]>(`${API_BASE_URL}/orders`, {
+        const response = await axios.get<{data: UserOrder[]; meta: any}>(`${API_BASE_URL}/orders`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         
-        // Ensure we have an array
-        if (Array.isArray(response.data)) {
+        // Check if the response has a data property (new API format)
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          setOrders(response.data.data);
+        } else if (Array.isArray(response.data)) {
+          // For backward compatibility with old API format
           setOrders(response.data);
         } else {
           console.error('Expected array of orders but received:', response.data);

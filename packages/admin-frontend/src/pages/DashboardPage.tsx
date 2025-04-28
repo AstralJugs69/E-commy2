@@ -5,6 +5,10 @@ import { Container, Row, Col, Card, Alert, Spinner, Button, Table, Badge } from 
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDate, getStatusBadgeVariant } from '../utils/formatters';
 import LinkButton from '../components/LinkButton';
+import { HiBuildingStorefront, HiUsers, HiShoppingCart, HiPhone } from 'react-icons/hi2';
+import toast from 'react-hot-toast';
+import { Socket } from 'socket.io-client';
+import { initSocket, disconnectSocket } from '../utils/socket';
 
 interface AdminStats {
   recentOrders: {
@@ -14,6 +18,19 @@ interface AdminStats {
     totalAmount: number;
     createdAt: string;
   }[];
+  totalOrders: number;
+  pendingOrders: number;
+  verifiedOrders: number;
+  processingOrders: number;
+  shippedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalProducts: number;
+  totalUsers: number;
+  availablePhones: number;
+  totalZones: number;
+  totalRevenue: number;
+  ordersLast7Days: number;
 }
 
 interface DeliveryLocation {
@@ -51,8 +68,11 @@ const DashboardPage = () => {
   const [isLoadingActive, setIsLoadingActive] = useState(true);
   const [activeError, setActiveError] = useState<string | null>(null);
   const refreshIntervalIdRef = useRef<number | null>(null);
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
 
-  useEffect(() => {
+  // Reference to the socket using useRef
+  const socketRef = useRef<Socket | null>(null);
+
     const fetchDashboardData = async () => {
       setIsLoading(true);
       setError(null);
@@ -101,6 +121,7 @@ const DashboardPage = () => {
       }
     };
 
+  useEffect(() => {
     fetchDashboardData();
   }, [navigate]);
 
@@ -129,11 +150,23 @@ const DashboardPage = () => {
       // Fetch orders with all relevant statuses
       const response = await api.get(apiUrl);
       
-      // Update state with fetched orders
-      if (response.data && Array.isArray(response.data.orders)) {
+      // Update state with fetched orders - handle both array format and paginated format
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          // Handle direct array response
+          setActiveOrders(response.data);
+        } else if (Array.isArray(response.data.orders)) {
+          // Handle paginated response with orders array
         setActiveOrders(response.data.orders);
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Handle standard paginated response format with data array
+          setActiveOrders(response.data.data);
+        } else {
+          console.error('Unexpected response format:', response.data);
+          setActiveError('Invalid data format received from server.');
+        }
       } else {
-        setActiveError('Invalid data format received from server.');
+        setActiveError('No data received from server.');
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -185,29 +218,113 @@ const DashboardPage = () => {
     }
   };
 
+  // Initialize socket connection and set up listeners
+  useEffect(() => {
+    // Initialize the socket connection
+    socketRef.current = initSocket();
+    
+    // Set up event listeners for WebSocket events
+    if (socketRef.current) {
+      const socket = socketRef.current;
+      
+      // Listen for new order events
+      socket.on('new_order_created', (newOrder) => {
+        console.log('New order received via WebSocket:', newOrder);
+        toast.success(`New order #${newOrder.id} received!`);
+        
+        // Update the active orders state to include the new order
+        setActiveOrders((prevOrders) => {
+          // Check if the order already exists in the list
+          if (prevOrders.some(order => order.id === newOrder.id)) {
+            return prevOrders;
+          }
+          // Add the new order to the beginning of the list
+          return [newOrder, ...prevOrders];
+        });
+        
+        // Refresh dashboard stats to reflect the new order
+        fetchDashboardData();
+      });
+      
+      // Listen for order status update events
+      socket.on('order_status_updated', (updatedOrder) => {
+        console.log('Order status updated via WebSocket:', updatedOrder);
+        toast.success(`Order #${updatedOrder.id} updated to ${updatedOrder.status}!`);
+        
+        // Update the order in the active orders list
+        setActiveOrders((prevOrders) => {
+          // Find the index of the updated order
+          const orderIndex = prevOrders.findIndex(order => order.id === updatedOrder.id);
+          
+          // If the order is not in the list, don't update anything
+          if (orderIndex === -1) return prevOrders;
+          
+          // Create a copy of the previous orders array
+          const updatedOrders = [...prevOrders];
+          
+          // Update the order at the found index
+          updatedOrders[orderIndex] = {
+            ...updatedOrders[orderIndex],
+            ...updatedOrder
+          };
+          
+          return updatedOrders;
+        });
+        
+        // Refresh dashboard stats to reflect the updated order status
+        fetchDashboardData();
+      });
+      
+      // Set socket connection status
+      socket.on('connect', () => {
+        setSocketConnected(true);
+        toast.success('Connected to real-time order updates!');
+      });
+      
+      socket.on('disconnect', () => {
+        setSocketConnected(false);
+      });
+    }
+    
+    // Clean up on component unmount
+    return () => {
+      // Remove event listeners and disconnect socket
+      if (socketRef.current) {
+        const socket = socketRef.current;
+        socket.off('new_order_created');
+        socket.off('order_status_updated');
+        socket.off('connect');
+        socket.off('disconnect');
+      }
+      
+      disconnectSocket();
+    };
+  }, []);
+
   // Set up auto-refresh for active orders
   useEffect(() => {
     // Initial fetch
     fetchActiveOrders();
     
-    // Set up interval for refreshing
-    refreshIntervalIdRef.current = window.setInterval(fetchActiveOrders, REFRESH_INTERVAL_MS);
+    // Set up interval for refreshing active orders
+    refreshIntervalIdRef.current = window.setInterval(() => {
+      fetchActiveOrders();
+    }, REFRESH_INTERVAL_MS);
     
-    // Clean up on component unmount
+    // Clean up interval on component unmount
     return () => {
-      if (refreshIntervalIdRef.current) {
-        window.clearInterval(refreshIntervalIdRef.current);
+      if (refreshIntervalIdRef.current !== null) {
+        clearInterval(refreshIntervalIdRef.current);
       }
     };
   }, []);
 
   if (isLoading) {
     return (
-      <Container className="py-4">
-        <div className="text-center my-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading dashboard...</span>
-          </Spinner>
+      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: "70vh" }}>
+        <div className="text-center">
+          <Spinner animation="border" variant="primary" className="mb-3" />
+          <p>Loading dashboard data...</p>
         </div>
       </Container>
     );
@@ -216,29 +333,138 @@ const DashboardPage = () => {
   if (error) {
     return (
       <Container className="py-4">
-        <Alert variant="danger" className="my-4">
-          {error}
+        <Alert variant="danger">
+          <Alert.Heading>Error</Alert.Heading>
+          <p>{error}</p>
         </Alert>
-        <Button variant="primary" onClick={() => navigate('/login')}>
-          Go to Login
-        </Button>
       </Container>
     );
   }
 
+  // JSX for conditional rendering based on socket connection
+  const renderSocketStatus = () => {
+    if (socketConnected) {
+      return (
+        <Alert variant="success" className="py-2 d-flex align-items-center">
+          <div className="me-2 d-flex align-items-center">
+            <span className="badge rounded-pill bg-success-subtle border border-success-subtle text-success-emphasis me-2">•</span>
+          </div>
+          <small>Real-time updates active</small>
+        </Alert>
+      );
+    } else {
+      return (
+        <Alert variant="warning" className="py-2 d-flex align-items-center">
+          <div className="me-2 d-flex align-items-center">
+            <span className="badge rounded-pill bg-warning-subtle border border-warning-subtle text-warning-emphasis me-2">•</span>
+          </div>
+          <small>Real-time updates disconnected. Refreshing every {REFRESH_INTERVAL_MS / 1000} seconds.</small>
+        </Alert>
+      );
+    }
+  };
+
   return (
     <Container className="py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Dashboard</h2>
+      <h1 className="mb-4">Dashboard</h1>
+      
+      {/* Socket connection status indicator */}
+      <Row className="mb-4">
+        <Col>
+          {renderSocketStatus()}
+        </Col>
+      </Row>
+      
+      {/* Stats Overview Cards */}
+      <Row className="mb-4">
+        {/* Orders Stats Card */}
+        <Col lg={3} md={6} className="mb-4 mb-lg-0">
+          <Card className="h-100 shadow-sm">
+            <Card.Body className="d-flex flex-column">
+              <div className="d-flex align-items-center mb-4">
+                <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                  <HiShoppingCart className="text-primary" size={24} />
+                </div>
+                <div>
+                  <h6 className="mb-0">Orders</h6>
+                  <h3 className="mb-0">{stats?.totalOrders || 0}</h3>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <div className="d-flex justify-content-between text-muted small">
+                  <span>Past 7 days: {stats?.ordersLast7Days || 0}</span>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Revenue Stats Card */}
+        <Col lg={3} md={6} className="mb-4 mb-lg-0">
+          <Card className="h-100 shadow-sm">
+            <Card.Body className="d-flex flex-column">
+              <div className="d-flex align-items-center mb-4">
+                <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                  <HiShoppingCart className="text-success" size={24} />
+                </div>
+                <div>
+                  <h6 className="mb-0">Revenue</h6>
+                  <h3 className="mb-0">{formatCurrency(stats?.totalRevenue || 0)}</h3>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <div className="d-flex justify-content-between text-muted small">
+                  <span>Processing: {stats?.processingOrders || 0} orders</span>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Products Stats Card */}
+        <Col lg={3} md={6} className="mb-4 mb-lg-0">
+          <Card className="h-100 shadow-sm">
+            <Card.Body className="d-flex flex-column">
+              <div className="d-flex align-items-center mb-4">
+                <div className="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                  <HiBuildingStorefront className="text-info" size={24} />
+                </div>
+                <div>
+                  <h6 className="mb-0">Products</h6>
+                  <h3 className="mb-0">{stats?.totalProducts || 0}</h3>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <div className="d-flex justify-content-between text-muted small">
+                  <span>Zones: {stats?.totalZones || 0}</span>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Users Stats Card */}
+        <Col lg={3} md={6} className="mb-4 mb-lg-0">
+          <Card className="h-100 shadow-sm">
+            <Card.Body className="d-flex flex-column">
+              <div className="d-flex align-items-center mb-4">
+                <div className="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                  <HiUsers className="text-warning" size={24} />
+                </div>
         <div>
-          <LinkButton to="/admin/statistics" variant="primary" className="me-2">
-            View Statistics
-          </LinkButton>
-          <Button variant="outline-primary" onClick={() => window.location.reload()}>
-            Refresh Data
-          </Button>
+                  <h6 className="mb-0">Users</h6>
+                  <h3 className="mb-0">{stats?.totalUsers || 0}</h3>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <div className="d-flex justify-content-between text-muted small">
+                  <span>Phone Lines: {stats?.availablePhones || 0} available</span>
         </div>
       </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
       
       {/* Pending Verification Calls Section */}
       <Card className="shadow-sm mb-4">

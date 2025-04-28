@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Container, Table, Form, Button, Alert, Spinner, Row, Col, Card } from 'react-bootstrap';
+import { Container, Table, Form, Button, Alert, Spinner, Row, Col, Card, InputGroup, ListGroup, Badge } from 'react-bootstrap';
 import L, { LatLngExpression, Layer } from 'leaflet';
 import { MapContainer, TileLayer, GeoJSON, FeatureGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -13,6 +13,16 @@ const MapLoadingFallback = () => (
     <span className="ms-2">Loading map...</span>
   </div>
 );
+
+// Add interface for city data
+interface City {
+  id: number;
+  name: string;
+  region: string;
+  lat: number;
+  lng: number;
+  population?: number;
+}
 
 interface ServiceZone {
   id: number;
@@ -110,6 +120,15 @@ const ZoneManagementPage = () => {
   // Ref for editable layer group
   const editableFG = useRef<L.FeatureGroup | null>(null);
 
+  // Add state for city-based zone creation
+  const [creationMethod, setCreationMethod] = useState<'draw' | 'city'>('draw');
+  const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [isSearchingCities, setIsSearchingCities] = useState(false);
+  const [cities, setCities] = useState<City[]>([]);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [citySearchError, setCitySearchError] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(5); // Default 5km radius
+
   // Map center coordinates (Addis Ababa)
   const mapCenter: LatLngExpression = [9.02, 38.75];
   const mapZoom = 11;
@@ -190,9 +209,130 @@ const ZoneManagementPage = () => {
     setEditableLayerGeoJson(null);
   };
 
-  const handleAddZone = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // Add function to search cities
+  const searchCities = async () => {
+    if (!citySearchQuery.trim()) {
+      setCities([]);
+      return;
+    }
     
+    setIsSearchingCities(true);
+    setCitySearchError(null);
+    
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      setCitySearchError('Authentication required. Please log in again.');
+      setIsSearchingCities(false);
+      return;
+    }
+    
+    try {
+      const response = await axios.get(`${API_BASE_URL}/admin/cities`, {
+        params: { query: citySearchQuery },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      setCities(response.data.cities);
+      if (response.data.cities.length === 0) {
+        setCitySearchError('No cities found matching your search.');
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setCitySearchError(err.response.data.message || 'Failed to search cities.');
+        console.error('Error searching cities:', err.response.data);
+      } else {
+        setCitySearchError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsSearchingCities(false);
+    }
+  };
+
+  // Add function to select a city
+  const handleCitySelect = (city: City) => {
+    setSelectedCity(city);
+    // Clear any previously drawn polygons
+    editableFG.current?.clearLayers();
+    setEditableLayerGeoJson(null);
+  };
+
+  // Add function to create zone from selected city
+  const handleAddCityZone = async () => {
+    if (!selectedCity) {
+      setCreateError('Please select a city first.');
+      return;
+    }
+    
+    if (!newZoneName.trim()) {
+      setCreateError('Please enter a name for the zone.');
+      return;
+    }
+    
+    setIsCreating(true);
+    setCreateError(null);
+    
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      setCreateError('Authentication required. Please log in again.');
+      setIsCreating(false);
+      return;
+    }
+    
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/admin/serviceareas/from-city`,
+        {
+          cityId: selectedCity.id,
+          name: newZoneName,
+          radiusKm: radiusKm
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Add new zone to the list
+      setZones(prevZones => [...prevZones, response.data]);
+      
+      // Reset form
+      setNewZoneName('');
+      setSelectedCity(null);
+      setRadiusKm(5); // Reset to default
+      
+      // Switch back to draw mode
+      setCreationMethod('draw');
+      
+      // Fetch zones to refresh the list
+      fetchZones();
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setCreateError(err.response.data.message || 'Failed to create service zone.');
+        console.error('Error creating zone:', err.response.data);
+      } else {
+        setCreateError('Network error. Please check your connection.');
+        console.error('Network error:', err);
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Modify the handleAddZone function to handle both methods
+  const handleAddZone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (creationMethod === 'city') {
+      handleAddCityZone();
+      return;
+    }
+    
+    // Rest of the existing code for draw-based zone creation
     // Basic validation
     if (!newZoneName.trim()) {
       setCreateError('Zone name is required.');
@@ -261,6 +401,29 @@ const ZoneManagementPage = () => {
             <Card.Body>
               <h3>Add New Service Zone</h3>
               
+              {/* Add toggle for creation method */}
+              <Form.Group className="mb-3">
+                <div className="d-flex">
+                  <Form.Check
+                    type="radio"
+                    id="creation-draw"
+                    name="creation-method"
+                    label="Draw on Map"
+                    checked={creationMethod === 'draw'}
+                    onChange={() => setCreationMethod('draw')}
+                    className="me-3"
+                  />
+                  <Form.Check
+                    type="radio"
+                    id="creation-city"
+                    name="creation-method"
+                    label="Select City"
+                    checked={creationMethod === 'city'}
+                    onChange={() => setCreationMethod('city')}
+                  />
+                </div>
+              </Form.Group>
+              
               <Form onSubmit={handleAddZone}>
                 <Form.Group className="mb-3" controlId="newZoneName">
                   <Form.Label className="fw-medium text-neutral-700">Zone Name</Form.Label>
@@ -273,12 +436,90 @@ const ZoneManagementPage = () => {
                   />
                 </Form.Group>
 
+                {creationMethod === 'draw' ? (
                 <div className="mt-3">
                   <p className="mb-1 fw-medium text-neutral-700">Zone Area</p>
                   <Alert variant="info">
                     Use the drawing tools on the map to create a polygon zone.
                   </Alert>
                 </div>
+                ) : (
+                  <>
+                    <Form.Group className="mb-3">
+                      <Form.Label className="fw-medium text-neutral-700">Search for City</Form.Label>
+                      <InputGroup>
+                        <Form.Control
+                          type="text"
+                          value={citySearchQuery}
+                          onChange={(e) => setCitySearchQuery(e.target.value)}
+                          placeholder="Enter city name..."
+                        />
+                        <Button 
+                          variant="outline-secondary" 
+                          onClick={searchCities}
+                          disabled={isSearchingCities}
+                        >
+                          {isSearchingCities ? (
+                            <>
+                              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-1" />
+                              Searching...
+                            </>
+                          ) : 'Search'}
+                        </Button>
+                      </InputGroup>
+                    </Form.Group>
+                    
+                    {citySearchError && (
+                      <Alert variant="warning" className="mb-3">{citySearchError}</Alert>
+                    )}
+                    
+                    {cities.length > 0 && (
+                      <div className="mb-3">
+                        <Form.Label className="fw-medium text-neutral-700">Select a City</Form.Label>
+                        <ListGroup style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {cities.map(city => (
+                            <ListGroup.Item 
+                              key={city.id}
+                              action
+                              active={selectedCity?.id === city.id}
+                              onClick={() => handleCitySelect(city)}
+                            >
+                              <div className="d-flex justify-content-between align-items-center">
+                                <div>
+                                  <strong>{city.name}</strong>
+                                  <div><small>{city.region}</small></div>
+                                </div>
+                                {city.population && (
+                                  <Badge bg="secondary">
+                                    Pop: {(city.population / 1000).toFixed(0)}k
+                                  </Badge>
+                                )}
+                              </div>
+                            </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                      </div>
+                    )}
+                    
+                    {selectedCity && (
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-medium text-neutral-700">
+                          Radius (km) around {selectedCity.name}
+                        </Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={radiusKm}
+                          onChange={(e) => setRadiusKm(Number(e.target.value))}
+                        />
+                        <Form.Text className="text-muted">
+                          The service zone will cover a circular area with this radius around the city.
+                        </Form.Text>
+                      </Form.Group>
+                    )}
+                  </>
+                )}
                 
                 {createError && (
                   <Alert variant="danger" className="mt-3">
@@ -289,7 +530,7 @@ const ZoneManagementPage = () => {
                 <Button 
                   variant="success" 
                   type="submit" 
-                  disabled={isCreating} 
+                  disabled={isCreating || (creationMethod === 'draw' && !editableLayerGeoJson) || (creationMethod === 'city' && !selectedCity)} 
                   className="mt-3 py-2"
                 >
                   {isCreating ? (

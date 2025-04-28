@@ -223,10 +223,12 @@ router.post('/request-password-reset', passwordResetLimiter, (async (req: Reques
     });
 
     // Simulate email sending by logging the link
-    // Use environment variable for frontend URL, default to Vite default port
-    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const customerResetUrl = `http://localhost:3000/reset-password/${resetToken}`; // Customer FE Port - use PLAIN token in link
-    const adminResetUrl = `http://localhost:5173/reset-password/${resetToken}`; // Admin FE Port - use PLAIN token in link
+    // Use environment variables for frontend URLs, default to local development URLs
+    const customerFrontendUrl = process.env.CUSTOMER_FRONTEND_URL || 'http://localhost:3000';
+    const adminFrontendUrl = process.env.ADMIN_FRONTEND_URL || 'http://localhost:5173';
+    
+    const customerResetUrl = `${customerFrontendUrl}/reset-password/${resetToken}`;
+    const adminResetUrl = `${adminFrontendUrl}/reset-password/${resetToken}`;
     
     console.log(`Password Reset Requested for ${email}. Token: ${resetToken}.`); // Log PLAIN token
     console.log(`   => Customer Link: ${customerResetUrl}`);

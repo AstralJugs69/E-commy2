@@ -82,6 +82,16 @@ const OrderLocationMap: React.FC<{
     return <Alert variant="warning">Location coordinates outside valid range</Alert>;
   }
 
+  // Custom icon for high accuracy location
+  const preciseLocationIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+
   return (
     <div style={{ height: '300px', width: '100%' }}>
       <MapContainer 
@@ -93,10 +103,15 @@ const OrderLocationMap: React.FC<{
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <Marker position={[latitude, longitude]}>
+        <Marker 
+          position={[latitude, longitude]} 
+          icon={preciseLocationIcon}
+        >
           <Popup>
-            Customer Location<br />
-            (Approximate)
+            <strong>Customer Location</strong><br />
+            <span className="text-success">High-Precision GPS Coordinates</span><br />
+            Lat: {latitude.toFixed(6)}<br />
+            Lng: {longitude.toFixed(6)}
           </Popup>
         </Marker>
         

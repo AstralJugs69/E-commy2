@@ -1,16 +1,69 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15
-    container_name: hybrid-ecom-db
+    container_name: ecommy-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: hybriddb
+      POSTGRES_DB: ecommydb
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: ecommy-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ecommydb
+      - PORT=10000
+      - JWT_SECRET=your_jwt_secret_for_development_only
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - ADMIN_FRONTEND_URL=http://localhost:3011
+      - CUSTOMER_FRONTEND_URL=http://localhost:3010
+    ports:
+      - "10000:10000"
+    restart: unless-stopped
+
+  customer-frontend:
+    build:
+      context: .
+      dockerfile: packages/customer-frontend/Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:10000/api
+    container_name: ecommy-customer
+    ports:
+      - "3010:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  admin-frontend:
+    build:
+      context: .
+      dockerfile: packages/admin-frontend/Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:10000/api
+    container_name: ecommy-admin
+    ports:
+      - "3011:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:

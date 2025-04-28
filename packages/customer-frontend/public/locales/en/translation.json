@@ -108,7 +108,9 @@
     "loadingAddresses": "Loading your delivery locations...",
     "noAddressesMessage": "You don't have any saved delivery locations yet. Add your first location to make checkout faster.",
     "updateAddress": "Update Location",
-    "addAddress": "Add Location"
+    "addAddress": "Add Location",
+    "location": "Delivery Location",
+    "selectLocation": "Select a delivery location"
   },
   "orders": {
     "title": "My Orders",

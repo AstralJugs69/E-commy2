@@ -5,9 +5,10 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaPlus, FaMapMarkerAlt, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../utils/api';
 import { useTranslation } from 'react-i18next';
+import LocationMap from '../components/LocationMap';
 
 interface DeliveryLocation {
   id: number;
@@ -60,14 +61,21 @@ const CheckoutPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingIPLocation, setIsLoadingIPLocation] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
-  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
+  
+  // Label for district dropdown in the modal
+  const currentDistrictLabel = newLocationData.district || '-- Select District --';
+
+  // Add any location checking error state
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  // New location within service zone state
+  const [isLocationWithinServiceZone, setIsLocationWithinServiceZone] = useState(false);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -75,46 +83,137 @@ const CheckoutPage: React.FC = () => {
       navigate('/cart');
     }
 
-    // Get user location if supported
-    if (navigator.geolocation) {
+    // Get precise location using HTML5 Geolocation API
+    getUserPreciseLocation();
+  }, [cartItems, navigate]);
+
+  // Function to get precise location using HTML5 Geolocation API
+  const getUserPreciseLocation = () => {
+    setIsLoadingIPLocation(true);
+    setLocationError(null); // Clear any previous location errors
+    setIsLocationWithinServiceZone(false); // Reset service zone state
+    
+    // Check if geolocation is available in the browser
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      setIsLoadingIPLocation(false);
+      return;
+    }
+
+    // Using the Geolocation API to get the precise location
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const locationData = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          console.log("Successfully captured geolocation:", locationData);
-          setLocation(locationData);
-          setLocationError(null);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // Set a user-friendly error message based on the error code
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              setLocationError("Location access denied. Delivery location will not be used.");
-              break;
-            case error.POSITION_UNAVAILABLE:
-              setLocationError("Location information unavailable. Delivery location will not be used.");
-              break;
-            case error.TIMEOUT:
-              setLocationError("Location request timed out. Delivery location will not be used.");
-              break;
-            default:
-              setLocationError("An unknown error occurred. Delivery location will not be used.");
+          // Success handler
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({
+          lat: latitude,
+          lng: longitude
+        });
+        
+        // Check if the new location is in service zone
+        try {
+          const response = await api.post('/location/check-zone', {
+            lat: latitude,
+            lng: longitude
+          });
+          
+          if (!response.data.isInServiceZone) {
+            setLocationError("Your location is outside our service areas. We currently cannot deliver to your location.");
+            setIsLocationWithinServiceZone(false); // Ensure this is false when error is present
+            // Make sure we're consistent between error states
+            toast.error('Your location is outside our service areas.');
+          } else {
+            // Clear any previous location errors if location is valid
+            setLocationError(null);
+            setIsLocationWithinServiceZone(true); // Explicitly set to true when valid
+            toast.success('Your location has been updated successfully!');
           }
+        } catch (err) {
+          console.error("Error checking service zone:", err);
+          setLocationError("Failed to verify if your location is in our service area. Please try again.");
+          setIsLocationWithinServiceZone(false); // Ensure this is false when error occurs
+          toast.error('Failed to verify if your location is in our service area');
+        }
+        
+          setIsLoadingIPLocation(false);
         },
-        // Options for geolocation request
+      // Error handler
+        (error) => {
+        console.error('Error getting location:', error);
+        let errorMessage = 'Failed to get your location.';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied. Please enable location services in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable. Please try again later.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please try again.';
+            break;
+          default:
+            errorMessage = 'An unknown error occurred while getting your location.';
+        }
+        
+        setLocationError(errorMessage);
+        toast.error(errorMessage);
+        setIsLoadingIPLocation(false);
+        
+        // Fall back to IP-based location
+          fetchIPBasedLocation();
+        },
+      // Options
         {
-          enableHighAccuracy: false, // Don't need high accuracy for delivery
-          timeout: 5000, // 5 seconds timeout
-          maximumAge: 0 // Don't use cached position
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
         }
       );
-    } else {
-      setLocationError("Geolocation is not supported by this browser. Delivery location will not be used.");
+  };
+
+  // Function to fetch IP-based location using free service
+  const fetchIPBasedLocation = async () => {
+    setIsLoadingIPLocation(true);
+    
+    try {
+      // Use a free IP geolocation API
+      const response = await axios.get('https://ipapi.co/json/');
+      
+      if (response.data && response.data.latitude && response.data.longitude) {
+        const locationData = {
+          lat: response.data.latitude,
+          lng: response.data.longitude
+        };
+        
+        console.log("IP-based location detected:", locationData);
+        setLocation(locationData);
+      } else {
+        // Fallback to a secondary API if the first one fails
+        try {
+          const fallbackResponse = await axios.get('https://geolocation-db.com/json/');
+          
+          if (fallbackResponse.data && fallbackResponse.data.latitude && fallbackResponse.data.longitude) {
+            const locationData = {
+              lat: fallbackResponse.data.latitude,
+              lng: fallbackResponse.data.longitude
+            };
+            
+            console.log("IP-based location detected (fallback):", locationData);
+            setLocation(locationData);
+          } else {
+            console.error("Could not determine location from IP address");
+          }
+        } catch (fallbackError) {
+          console.error("Error with fallback geolocation service:", fallbackError);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching IP-based location:", error);
+    } finally {
+      setIsLoadingIPLocation(false);
     }
-  }, [cartItems, navigate]);
+  };
 
   // Fetch saved delivery locations
   useEffect(() => {
@@ -254,6 +353,24 @@ const CheckoutPage: React.FC = () => {
   // New function to attempt order placement that can be reused for retries
   const attemptOrderPlacement = async (orderData: any) => {
     try {
+      // Add detailed request data logging
+      console.log("ORDER DATA (DETAILED):", JSON.stringify(orderData, null, 2));
+      console.log("Order items count:", orderData.items.length);
+      console.log("Delivery location ID:", orderData.deliveryLocationId, "Type:", typeof orderData.deliveryLocationId);
+      console.log("Total amount:", orderData.totalAmount, "Type:", typeof orderData.totalAmount);
+      
+      // Validate item data client-side
+      orderData.items.forEach((item: any, index: number) => {
+        console.log(`Item ${index} validation:`, {
+          productId: item.productId, 
+          productIdType: typeof item.productId, 
+          quantity: item.quantity, 
+          quantityType: typeof item.quantity,
+          price: item.price,
+          priceType: typeof item.price
+        });
+      });
+
       console.log("Sending order data with location:", orderData);
 
       // Use the configured api instance instead of direct axios calls
@@ -286,6 +403,32 @@ const CheckoutPage: React.FC = () => {
           status: error.response.status,
           data: error.response.data
         });
+        
+        // Log detailed validation errors if present
+        if (error.response.data.errors) {
+          console.error("VALIDATION ERRORS (DETAILED):", JSON.stringify(error.response.data.errors, null, 2));
+          
+          // Check for specific field errors
+          const fieldErrors = error.response.data.errors.fieldErrors;
+          if (fieldErrors) {
+            Object.entries(fieldErrors).forEach(([field, messages]) => {
+              console.error(`Field '${field}' errors:`, messages);
+            });
+          }
+        }
+        
+        // Check for zone availability error
+        const isZoneAvailabilityError = 
+          (errorMessage.toLowerCase().includes('service not available') || 
+           errorMessage.toLowerCase().includes('outside service area') || 
+           errorMessage.toLowerCase().includes('zone'));
+          
+        if (isZoneAvailabilityError) {
+          toast.error(errorMessage || 'Service is not available in your area.');
+          setError(errorMessage || 'Service is not available in your area.');
+          setLoading(false);
+          return;
+        }
         
         // Modify the isPhoneUnavailableError condition to include the "internal server error" message
         const isPhoneUnavailableError = 
@@ -342,6 +485,47 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
+  // Check if the location is within the service zone
+  const checkLocationServiceZone = async () => {
+    setIsLoadingLocation(true);
+    setLocationError(null);
+    
+    try {
+      if (!location?.lat || !location?.lng) {
+        setLocationError("Location coordinates are missing. Please allow location access.");
+        setIsLocationWithinServiceZone(false);
+        setIsLoadingLocation(false);
+        return false;
+      }
+
+      const response = await api.post('/location/check-service-zone', {
+        latitude: location.lat,
+        longitude: location.lng
+      });
+
+      setIsLoadingLocation(false);
+      
+      // If not in service zone, set an appropriate error message
+      if (!response.data.isWithinServiceZone) {
+        setLocationError("Your location is outside our service areas. We cannot deliver to this address.");
+        setIsLocationWithinServiceZone(false);
+        return false;
+      }
+      
+      // Only set this to true if we've confirmed it's in the service zone
+      setIsLocationWithinServiceZone(true);
+      setLocationError(null);
+      return true;
+    } catch (error) {
+      console.error('Error checking service zone:', error);
+      setLocationError("Failed to check if your location is within our service zone. Please try again.");
+      setIsLocationWithinServiceZone(false);
+      setIsLoadingLocation(false);
+      return false;
+    }
+  };
+
+  // Update the handleSubmit function to check location first
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -358,6 +542,7 @@ const CheckoutPage: React.FC = () => {
     // Validate based on selected option
     setValidationError(null); // Clear previous validation errors
     setError(null); // Clear previous errors
+    setLocationError(null); // Clear location errors
     
     // Check if a delivery location is selected
     if (!selectedLocationId) {
@@ -367,19 +552,40 @@ const CheckoutPage: React.FC = () => {
 
     setLoading(true);
 
+    // Check location against service zones first
+    const locationValid = await checkLocationServiceZone();
+    if (!locationValid) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Convert deliveryLocationId to integer
+      const locationId = parseInt(selectedLocationId, 10);
+      if (isNaN(locationId) || locationId <= 0) {
+        throw new Error(`Invalid delivery location ID: ${selectedLocationId}`);
+      }
+
     const orderData = {
       items: cartItems.map(item => ({
         productId: item.id,
         quantity: item.quantity,
         price: item.price
       })),
-      deliveryLocationId: parseInt(selectedLocationId, 10),
-      location: location, // Ensure location is included (will be undefined if not available)
+        deliveryLocationId: locationId,
+        location: location, // IP-based location is silently attached here
       totalAmount: totalPrice
     };
 
+      console.log("Order data prepared:", orderData);
+
     // Attempt order placement with the prepared data
     await attemptOrderPlacement(orderData);
+    } catch (err) {
+      console.error("Error preparing order data:", err);
+      setValidationError('Failed to prepare order data. Please try again.');
+      setLoading(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -394,9 +600,6 @@ const CheckoutPage: React.FC = () => {
       </Container>
     );
   }
-
-  // Derived label for new location district dropdown
-  const currentDistrictLabel = newLocationData.district || '-- Select District --';
 
   return (
     <Container className="py-3">
@@ -428,10 +631,44 @@ const CheckoutPage: React.FC = () => {
                   </Alert>
                 )}
                 
-                {locationErrorState && (
-                  <Alert variant="warning" className="mb-3">
-                    {locationErrorState}
+                {/* Display location error alert - only show this when there's an actual error */}
+                {locationError && (
+                  <Alert variant="danger" className="mb-3">
+                    <Alert.Heading>Location Error</Alert.Heading>
+                    <p>{locationError}</p>
+                    <div className="d-flex justify-content-end">
+                      <Button onClick={getUserPreciseLocation} variant="outline-danger">
+                        Retry Location Check
+                      </Button>
+                    </div>
                   </Alert>
+                )}
+                
+                {/* Location status indicator - only shown when no error is present */}
+                {!locationError && (
+                  <>
+                    {isLoadingLocation ? (
+                      <Alert variant="info" className="mb-3">
+                      <Spinner animation="border" size="sm" className="me-2" />
+                        Checking if your location is within our service zone...
+                    </Alert>
+                    ) : isLocationWithinServiceZone ? (
+                      <Alert variant="success" className="mb-3">
+                        <FaCheckCircle className="me-2" />
+                        Your location is available for accurate delivery
+                    </Alert>
+                  ) : (
+                      <Alert variant="warning" className="mb-3">
+                        <FaExclamationTriangle className="me-2" />
+                        We couldn't determine if your location is within our service area
+                        <div className="d-flex justify-content-end mt-2">
+                          <Button onClick={getUserPreciseLocation} variant="outline-warning" size="sm">
+                            Retry Location Check
+                          </Button>
+                        </div>
+                    </Alert>
+                  )}
+                  </>
                 )}
                 
                 {/* Delivery Location Selection */}
@@ -489,8 +726,6 @@ const CheckoutPage: React.FC = () => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setSelectedLocationId(location.id.toString());
-                                setSelectedDistrict('');
-                                setDistrictOptions(location.district ? [location.district] : []);
                                 // Close dropdown after selection
                                 setTimeout(() => {
                                   setLocationDropdownOpen(false);
@@ -506,63 +741,6 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   )}
                 </Form.Group>
-                
-                {locationError && (
-                  <Alert variant="warning" className="mb-3">
-                    {locationError}
-                  </Alert>
-                )}
-
-                {/* District dropdown - only show if a location is selected */}
-                {selectedLocationId && (
-                  <div className="mb-3">
-                    <label htmlFor="district" className="form-label">
-                      {t('checkout.district')}
-                    </label>
-                    <div className="dropdown w-100">
-                      <button
-                        className="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center"
-                        type="button"
-                        id="districtDropdown"
-                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
-                        aria-expanded={districtDropdownOpen}
-                        data-testid="district-dropdown"
-                      >
-                        {selectedDistrict || t('checkout.selectDistrict')}
-                        <i className="bi bi-caret-down-fill"></i>
-                      </button>
-                      <div
-                        className={`dropdown-menu w-100 ${districtDropdownOpen ? 'show animate-dropdown' : ''}`}
-                        aria-labelledby="districtDropdown"
-                        onClick={(e) => {
-                          // Don't close dropdown when clicking on the menu itself (for scrolling)
-                          if (e.target === e.currentTarget) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      >
-                        {districtOptions.map((district, index) => (
-                          <div
-                            key={index}
-                            className={`dropdown-item ${selectedDistrict === district ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedDistrict(district);
-                              // Close dropdown after selection
-                              setTimeout(() => {
-                                setDistrictDropdownOpen(false);
-                              }, 150);
-                            }}
-                            data-testid={`district-option-${index}`}
-                          >
-                            {district}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <Button 
                   type="submit"

@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
       }),
       visualizer({
         filename: './dist/stats.html', // Output file in dist folder
-        open: true, // Automatically open report in browser after build
+        open: mode === 'development', // Only open automatically in development
         gzipSize: true, // Show gzipped size
         brotliSize: true, // Show brotli size
       })
@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Proxy API requests to backend server during development
         '/api': {
-          target: 'http://localhost:3001',
+          target: process.env.VITE_API_URL || 'http://localhost:3001',
           changeOrigin: true,
           secure: false
         }
@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Proxy API requests to backend server during preview
         '/api': {
-          target: 'http://localhost:3001',
+          target: process.env.VITE_API_URL || 'http://localhost:3001',
           changeOrigin: true,
           secure: false
         }
@@ -68,7 +68,25 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Make env variables available in the client
-      'process.env': env
+      'process.env': {
+        ...env,
+        // Ensure these variables are always available
+        VITE_API_BASE_URL: env.VITE_API_BASE_URL || '/api',
+        NODE_ENV: env.NODE_ENV || mode
+      }
+    },
+    build: {
+      // Production build optimizations
+      sourcemap: mode !== 'production', // Disable sourcemaps in production
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            bootstrap: ['react-bootstrap', 'bootstrap'],
+          }
+        }
+      },
+      chunkSizeWarningLimit: 1000 // Increase warning limit for larger chunks
     },
     test: {
       globals: true,

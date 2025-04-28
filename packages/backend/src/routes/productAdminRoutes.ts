@@ -25,6 +25,17 @@ const adjustStockSchema = z.object({
   adjustment: z.number().int({ message: "Adjustment must be an integer" }),
 });
 
+// Define schema for batch product status update
+const batchProductStatusUpdateSchema = z.object({
+  productIds: z.array(z.number().int().positive()).min(1, { message: "At least one product ID is required" }),
+  status: z.object({
+    isPublished: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+  }).refine(data => Object.keys(data).length > 0, {
+    message: "At least one status field must be provided"
+  })
+});
+
 // GET /api/admin/products - Get all products with category info
 router.get('/', isAdmin, async (req: Request, res: Response) => {
   try {
@@ -339,5 +350,180 @@ router.delete('/:productId', isAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/products/batch-status - Update status for multiple products
+router.post('/batch-status', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validationResult = batchProductStatusUpdateSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        message: "Validation failed",
+        errors: validationResult.error.flatten().fieldErrors
+      });
+      return;
+    }
+
+    const { productIds, status } = validationResult.data;
+
+    // Use transaction for atomic operations
+    const results = await prisma.$transaction(async (tx) => {
+      const operationResults = [];
+      // Define updateData with proper typing and use record syntax
+      const updateData: Record<string, any> = {};
+
+      // Build update data object
+      if (status.isPublished !== undefined) {
+        updateData.isPublished = status.isPublished;
+      }
+      
+      if (status.isFeatured !== undefined) {
+        updateData.isFeatured = status.isFeatured;
+      }
+
+      // Process each product
+      for (const productId of productIds) {
+        try {
+          // Update product status
+          await tx.product.update({
+            where: { id: productId },
+            data: updateData
+          });
+
+          operationResults.push({
+            productId,
+            success: true,
+            message: 'Status updated successfully'
+          });
+        } catch (error) {
+          // Handle product not found error
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            operationResults.push({
+              productId,
+              success: false,
+              message: 'Product not found'
+            });
+          } else {
+            console.error(`Error updating product ${productId} status:`, error);
+            operationResults.push({
+              productId,
+              success: false,
+              message: 'Update operation failed'
+            });
+          }
+        }
+      }
+
+      return operationResults;
+    });
+
+    // Return results
+    res.status(200).json({
+      results,
+      summary: {
+        total: productIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error processing batch product status update:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
+});
+
+// POST /api/admin/products/batch-delete - Delete multiple products
+router.post('/batch-delete', isAdmin, async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const { productIds } = req.body;
+    
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      res.status(400).json({
+        message: "Product IDs must be provided as a non-empty array"
+      });
+      return;
+    }
+
+    // Parse and validate all product IDs
+    const validProductIds = productIds
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id) && id > 0);
+
+    if (validProductIds.length === 0) {
+      res.status(400).json({
+        message: "No valid product IDs provided"
+      });
+      return;
+    }
+
+    // Use transaction for atomic operations
+    const results = await prisma.$transaction(async (tx) => {
+      const operationResults = [];
+
+      // Process each product
+      for (const productId of validProductIds) {
+        try {
+          // Check if product has associated orders
+          const orderItemCount = await tx.orderItem.count({
+            where: { productId }
+          });
+
+          if (orderItemCount > 0) {
+            operationResults.push({
+              productId,
+              success: false,
+              message: `Cannot delete product ${productId}. It is associated with ${orderItemCount} orders.`
+            });
+            continue;
+          }
+
+          // Delete product 
+          await tx.product.delete({
+            where: { id: productId }
+          });
+
+          operationResults.push({
+            productId,
+            success: true,
+            message: 'Product deleted successfully'
+          });
+        } catch (error) {
+          // Handle product not found error
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            operationResults.push({
+              productId,
+              success: false,
+              message: 'Product not found'
+            });
+          } else {
+            console.error(`Error deleting product ${productId}:`, error);
+            operationResults.push({
+              productId,
+              success: false,
+              message: 'Delete operation failed'
+            });
+          }
+        }
+      }
+
+      return operationResults;
+    });
+
+    // Return results
+    res.status(200).json({
+      results,
+      summary: {
+        total: validProductIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error processing batch product delete:', error);
+    res.status(500).json({ message: 'An internal server error occurred' });
+  }
+});
 
 export default router;

@@ -1,0 +1,175 @@
+/* 
+ * Dashboard Styles for Admin Panel
+ */
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-stat-card {
+  background-color: var(--light-bg);
+  border-radius: var(--card-border-radius);
+  padding: 1.5rem;
+  border: 1px solid var(--subtle-border);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.stat-change {
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+}
+
+.stat-change.positive {
+  color: var(--success);
+}
+
+.stat-change.negative {
+  color: var(--danger);
+}
+
+.stat-icon {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: var(--primary-bg-subtle);
+  margin-bottom: 1rem;
+}
+
+.stat-icon svg,
+.stat-icon i {
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+.recent-activity,
+.recent-orders {
+  margin-bottom: 2rem;
+}
+
+.activity-list {
+  border: 1px solid var(--subtle-border);
+  border-radius: var(--card-border-radius);
+  background-color: var(--light-bg);
+  overflow: hidden;
+}
+
+.activity-item {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--subtle-border);
+  display: flex;
+  align-items: center;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-weight: var(--font-weight-medium);
+  margin-bottom: 0.25rem;
+}
+
+.activity-meta {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.activity-icon {
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+
+.activity-icon.orders {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--info);
+}
+
+.activity-icon.products {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.activity-icon.users {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.chart-container {
+  background-color: var(--light-bg);
+  border: 1px solid var(--subtle-border);
+  border-radius: var(--card-border-radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.chart-title {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 0;
+}
+
+.chart-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-options {
+    margin-top: 1rem;
+  }
+} 
