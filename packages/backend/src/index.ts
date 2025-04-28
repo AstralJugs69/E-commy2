@@ -27,6 +27,8 @@ import locationRoutes from './routes/locationRoutes';
 dotenv.config(); // Load .env file variables
 
 const app = express();
+// Trust proxy to properly handle X-Forwarded-For headers in Railway
+app.set('trust proxy', true);
 const port = process.env.PORT || 3001; // Use port from .env or default to 3001
 
 // Create HTTP server and Socket.IO instance

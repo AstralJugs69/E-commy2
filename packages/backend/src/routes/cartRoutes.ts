@@ -121,6 +121,8 @@ router.post('/item', isUser, async (req: Request, res: Response) => {
       });
 
       return upsertedItem;
+    }, {
+      timeout: 10000 // Increase timeout to 10 seconds
     });
 
     res.status(200).json(result);
@@ -229,6 +231,8 @@ router.post('/update/:productId', isUser, async (req: Request, res: Response) =>
       });
 
       return cartItem;
+    }, {
+      timeout: 10000 // Increase timeout to 10 seconds
     });
 
     res.status(200).json(result);
@@ -541,10 +545,12 @@ router.post('/batch', isUser, async (req: Request, res: Response) => {
         operations: processedResults,
         cart: updatedCart
       };
+    }, {
+      timeout: 15000 // Increase timeout to 15 seconds for batch operations
     });
 
     res.status(200).json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing batch cart operations:', error);
     res.status(500).json({ message: 'An internal server error occurred' });
   }
