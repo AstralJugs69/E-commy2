@@ -13,11 +13,12 @@
    "services": {
       "backend": {
            "build": {
-              "buildCommand": "cd packages/backend && npm run build",
+              "builder": "DOCKERFILE",
+              "dockerfile": "packages/backend/Dockerfile",
               "watchPatterns": ["packages/backend/**/*", "prisma/**/*"]
             },
           "deploy": {
-            "startCommand": "npm run start --workspace=backend",
+            "startCommand": "cd packages/backend && npm run start",
             "healthcheckPath": "/api/auth/validate-token",
             "healthcheckTimeout": 120,
             "healthcheckInterval": 30,
@@ -28,8 +29,9 @@
       },
        "customer-frontend": {
             "build": {
-              "buildCommand": "cd packages/customer-frontend && npm run build",
-               "watchPatterns": ["packages/customer-frontend/**/*"]
+              "builder": "DOCKERFILE",
+              "dockerfile": "packages/customer-frontend/Dockerfile",
+              "watchPatterns": ["packages/customer-frontend/**/*"]
             },
             "deploy": {
                 "startCommand": "echo 'Static site, no start command needed'",
@@ -42,7 +44,8 @@
         },
        "admin-frontend": {
            "build": {
-            "buildCommand": "cd packages/admin-frontend && npm run build", 
+            "builder": "DOCKERFILE",
+            "dockerfile": "packages/admin-frontend/Dockerfile",
               "watchPatterns": ["packages/admin-frontend/**/*"]
             },
            "deploy": {
