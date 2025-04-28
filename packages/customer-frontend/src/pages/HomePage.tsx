@@ -43,8 +43,8 @@ interface Category {
 interface PaginatedProductsResponse {
   data: Product[];
   meta: {
-    currentPage: number;
-    totalPages: number;
+  currentPage: number;
+  totalPages: number;
     totalItems: number;
     itemsPerPage: number;
     hasNextPage: boolean;

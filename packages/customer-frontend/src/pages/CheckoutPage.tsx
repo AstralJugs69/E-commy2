@@ -101,8 +101,8 @@ const CheckoutPage: React.FC = () => {
     }
 
     // Using the Geolocation API to get the precise location
-    navigator.geolocation.getCurrentPosition(
-      // Success handler
+      navigator.geolocation.getCurrentPosition(
+          // Success handler
       async (position) => {
         const { latitude, longitude } = position.coords;
         setLocation({
@@ -135,10 +135,10 @@ const CheckoutPage: React.FC = () => {
           toast.error('Failed to verify if your location is in our service area');
         }
         
-        setIsLoadingIPLocation(false);
-      },
+          setIsLoadingIPLocation(false);
+        },
       // Error handler
-      (error) => {
+        (error) => {
         console.error('Error getting location:', error);
         let errorMessage = 'Failed to get your location.';
         
@@ -161,15 +161,15 @@ const CheckoutPage: React.FC = () => {
         setIsLoadingIPLocation(false);
         
         // Fall back to IP-based location
-        fetchIPBasedLocation();
-      },
+          fetchIPBasedLocation();
+        },
       // Options
-      {
+        {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0
-      }
-    );
+        }
+      );
   };
 
   // Function to fetch IP-based location using free service
@@ -643,21 +643,21 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   </Alert>
                 )}
-
+                
                 {/* Location status indicator - only shown when no error is present */}
                 {!locationError && (
                   <>
                     {isLoadingLocation ? (
                       <Alert variant="info" className="mb-3">
-                        <Spinner animation="border" size="sm" className="me-2" />
+                      <Spinner animation="border" size="sm" className="me-2" />
                         Checking if your location is within our service zone...
-                      </Alert>
+                    </Alert>
                     ) : isLocationWithinServiceZone ? (
                       <Alert variant="success" className="mb-3">
                         <FaCheckCircle className="me-2" />
                         Your location is available for accurate delivery
-                      </Alert>
-                    ) : (
+                    </Alert>
+                  ) : (
                       <Alert variant="warning" className="mb-3">
                         <FaExclamationTriangle className="me-2" />
                         We couldn't determine if your location is within our service area
@@ -666,8 +666,8 @@ const CheckoutPage: React.FC = () => {
                             Retry Location Check
                           </Button>
                         </div>
-                      </Alert>
-                    )}
+                    </Alert>
+                  )}
                   </>
                 )}
                 
