@@ -31,8 +31,11 @@ interface AdminOrder {
   id: number;
   status: string;
   totalAmount: number;
-  shippingDetails: ShippingDetails;
-  items: OrderItem[];
+  customerName?: string;
+  customerPhone?: string;
+  deliveryDistrict?: string;
+  shippingDetails?: ShippingDetails;
+  items?: OrderItem[];
   createdAt: string; // ISO 8601 date string
 }
 
@@ -111,29 +114,31 @@ const OrderManagementPage = () => {
           ...order,
           shippingDetails: typeof order.shippingDetails === 'string'
             ? JSON.parse(order.shippingDetails)
-            : order.shippingDetails
+            : (order.shippingDetails || {}),
+          items: Array.isArray(order.items) ? order.items : []
         }));
         
         setOrders(processedOrders);
         setPagination(paginatedResponse.meta);
       } else {
         // Handle legacy/non-paginated response format
-      const ordersArray = Array.isArray(response.data) 
-        ? response.data 
-        : response.data.orders || [];
+        const ordersArray = Array.isArray(response.data) 
+          ? response.data 
+          : response.data.orders || [];
       
-      if (!Array.isArray(ordersArray)) {
-        throw new Error('Invalid response format: expected an array of orders');
-      }
+        if (!Array.isArray(ordersArray)) {
+          throw new Error('Invalid response format: expected an array of orders');
+        }
       
-      const processedOrders = ordersArray.map(order => ({
-        ...order,
-        shippingDetails: typeof order.shippingDetails === 'string'
-          ? JSON.parse(order.shippingDetails)
-          : order.shippingDetails
-      }));
+        const processedOrders = ordersArray.map(order => ({
+          ...order,
+          shippingDetails: typeof order.shippingDetails === 'string'
+            ? JSON.parse(order.shippingDetails)
+            : (order.shippingDetails || {}),
+          items: Array.isArray(order.items) ? order.items : []
+        }));
       
-      setOrders(processedOrders);
+        setOrders(processedOrders);
         setPagination(null);
       }
     } catch (err) {
@@ -438,25 +443,29 @@ const OrderManagementPage = () => {
                         </Link>
                       </td>
                       <td>
-                        <div className="fw-medium">{order.shippingDetails?.fullName || '(No Name)'}</div>
-                        {order.shippingDetails?.phone && (
+                        <div className="fw-medium">{order.shippingDetails?.fullName || order.customerName || '(No Name)'}</div>
+                        {(order.shippingDetails?.phone || order.customerPhone) && (
                           <div className="text-muted small d-flex align-items-center">
-                            <FaPhone className="me-1" size={12} /> {order.shippingDetails.phone}
+                            <FaPhone className="me-1" size={12} /> {order.shippingDetails?.phone || order.customerPhone}
                           </div>
                         )}
-                        {order.shippingDetails?.address && (
+                        {(order.shippingDetails?.address || order.deliveryDistrict) && (
                           <div className="text-muted small d-flex align-items-center">
                             <FaMapMarkerAlt className="me-1" size={12} /> 
-                            {`${order.shippingDetails.address}, ${order.shippingDetails.city || ''}`}
+                            {order.shippingDetails?.address 
+                              ? `${order.shippingDetails.address}, ${order.shippingDetails.city || ''}`
+                              : order.deliveryDistrict}
                           </div>
                         )}
                       </td>
                       <td>
-                        {order.items.map(item => (
+                        {order.items?.map(item => (
                           <div key={item.id} className="small">
                             <span className="fw-medium">{item.quantity}x</span> {item.productName}
                           </div>
-                        ))}
+                        )) || (
+                          <div className="small text-muted">No items</div>
+                        )}
                       </td>
                       <td className="text-end fw-medium">{formatCurrency(order.totalAmount)}</td>
                       <td>

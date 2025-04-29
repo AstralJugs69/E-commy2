@@ -9,6 +9,7 @@ import { FaPlus, FaMapMarkerAlt, FaCheckCircle, FaExclamationTriangle } from 're
 import api from '../utils/api';
 import { useTranslation } from 'react-i18next';
 import LocationMap from '../components/LocationMap';
+import { getCachedDistricts } from '../utils/dataCache';
 
 interface DeliveryLocation {
   id: number;
@@ -217,69 +218,71 @@ const CheckoutPage: React.FC = () => {
 
   // Fetch saved delivery locations
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setIsLoadingLocations(false);
+      return;
+    }
     
-    fetchLocations();
+    const loadLocations = async () => {
+      setIsLoadingLocations(true);
+      setLocationErrorState(null);
+
+      try {
+        const response = await api.get('/addresses');
+        
+        const locations = response.data;
+        setSavedLocations(locations);
+        
+        // If there's a default location, select it automatically
+        const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
+        if (defaultLocation) {
+          setSelectedLocationId(defaultLocation.id.toString());
+        } else if (locations.length > 0) {
+          // If no default but locations exist, select the first one
+          setSelectedLocationId(locations[0].id.toString());
+        } else {
+          // If no locations, leave as empty string
+          setSelectedLocationId('');
+        }
+      } catch (err) {
+        console.error('Error fetching delivery locations:', err);
+        setLocationErrorState('Failed to load your saved delivery locations.');
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    
+    loadLocations();
   }, [token]);
 
   // Fetch districts
   useEffect(() => {
-    fetchDistricts();
+    const loadDistricts = async () => {
+      setIsLoadingDistricts(true);
+      setDistrictError(null);
+      
+      try {
+        const fetchedDistricts = await getCachedDistricts();
+        setDistricts(fetchedDistricts);
+        
+        // If newLocationData.district is empty and we have districts, set the first one
+        if (!newLocationData.district && fetchedDistricts.length > 0) {
+          setNewLocationData(prev => ({
+            ...prev,
+            district: fetchedDistricts[0]
+          }));
+        }
+      } catch (err) {
+        console.error("Error loading districts:", err);
+        setDistrictError((err as Error).message);
+        setDistricts([]);
+      } finally {
+        setIsLoadingDistricts(false);
+      }
+    };
+    
+    loadDistricts();
   }, []);
-
-  // Function to fetch saved delivery locations
-  const fetchLocations = async () => {
-    setIsLoadingLocations(true);
-    setLocationErrorState(null);
-
-    try {
-      const response = await api.get('/addresses');
-      
-      const locations = response.data;
-      setSavedLocations(locations);
-      
-      // If there's a default location, select it automatically
-      const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
-      if (defaultLocation) {
-        setSelectedLocationId(defaultLocation.id.toString());
-      } else if (locations.length > 0) {
-        // If no default but locations exist, select the first one
-        setSelectedLocationId(locations[0].id.toString());
-      } else {
-        // If no locations, leave as empty string
-        setSelectedLocationId('');
-      }
-    } catch (err) {
-      console.error('Error fetching delivery locations:', err);
-      setLocationErrorState('Failed to load your saved delivery locations.');
-    } finally {
-      setIsLoadingLocations(false);
-    }
-  };
-
-  // Function to fetch districts
-  const fetchDistricts = async () => {
-    setIsLoadingDistricts(true);
-    setDistrictError(null);
-
-    try {
-      const response = await api.get('/districts');
-      setDistricts(response.data);
-      
-      // Initialize the new location form with the first district
-      if (response.data.length > 0) {
-        setNewLocationData(prev => ({
-          ...prev,
-          district: response.data[0]
-        }));
-      }
-    } catch (err) {
-      console.error('Error fetching districts:', err);
-      setDistrictError('Failed to load districts.');
-    } finally {
-      setIsLoadingDistricts(false);
-    }
-  };
 
   // New Location Modal handlers
   const handleShowAddModal = () => {
@@ -498,15 +501,15 @@ const CheckoutPage: React.FC = () => {
         return false;
       }
 
-      const response = await api.post('/location/check-service-zone', {
-        latitude: location.lat,
-        longitude: location.lng
+      const response = await api.post('/location/check-zone', {
+        lat: location.lat,
+        lng: location.lng
       });
 
       setIsLoadingLocation(false);
       
       // If not in service zone, set an appropriate error message
-      if (!response.data.isWithinServiceZone) {
+      if (!response.data.isInServiceZone) {
         setLocationError("Your location is outside our service areas. We cannot deliver to this address.");
         setIsLocationWithinServiceZone(false);
         return false;

@@ -7,13 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { useTranslation } from 'react-i18next';
-
-interface UserProfile {
-  id: number;
-  email: string;
-  name?: string | null;
-  createdAt?: string;
-}
+import { getCachedDistricts } from '../utils/dataCache';
 
 interface DeliveryLocation {
   id: number;
@@ -28,9 +22,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 
 const SettingsPage = () => {
   const { t } = useTranslation();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { userProfile, isAuthLoading, isAuthenticated } = useAuth();
   
   // Edit profile state
   const [isEditing, setIsEditing] = useState(false);
@@ -82,65 +74,55 @@ const SettingsPage = () => {
   // Derived label for district dropdown
   const currentDistrictLabel = locationForm.district || '-- Select District --';
 
-  const { token, isAuthenticated, isAuthLoading } = useAuth();
-
+  // Update formName when userProfile changes or modal opens
   useEffect(() => {
-    // Don't fetch if auth is still loading or user is not authenticated
-    if (isAuthLoading || !isAuthenticated || !token) {
-      setIsLoading(false);
-      return;
+    if (userProfile) {
+      setFormName(userProfile.name || '');
     }
-
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        setProfile(response.data);
-        setFormName(response.data.name || '');
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          if (err.response.status === 401) {
-            setError('Your session has expired. Please login again.');
-          } else {
-            setError(err.response.data.message || 'Failed to fetch profile information.');
-          }
-          console.error('Error fetching profile:', err.response.data);
-        } else {
-          setError('Network error. Please check your connection.');
-          console.error('Network error:', err);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [token, isAuthenticated, isAuthLoading]);
+  }, [userProfile, showEditProfileModal]);
 
   // Fetch delivery locations
   useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || !token) {
+    if (isAuthLoading || !isAuthenticated) {
       return;
     }
 
     fetchLocations();
-  }, [token, isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading]);
 
   // Fetch districts
   useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || !token) {
+    if (isAuthLoading || !isAuthenticated) {
+      setIsLoadingDistricts(false);
       return;
     }
 
-    fetchDistricts();
-  }, [token, isAuthenticated, isAuthLoading]);
+    const loadDistricts = async () => {
+      setIsLoadingDistricts(true);
+      setDistrictError(null);
+      
+      try {
+        const fetchedDistricts = await getCachedDistricts();
+        setDistricts(fetchedDistricts);
+        
+        // If locationForm.district is empty and we have districts, set the first one
+        if (!locationForm.district && fetchedDistricts.length > 0) {
+          setLocationForm(prev => ({
+            ...prev,
+            district: fetchedDistricts[0]
+          }));
+        }
+      } catch (err) {
+        console.error("Error loading districts:", err);
+        setDistrictError((err as Error).message);
+        setDistricts([]);
+      } finally {
+        setIsLoadingDistricts(false);
+      }
+    };
+    
+    loadDistricts();
+  }, [isAuthLoading, isAuthenticated]);
 
   // Extracted function to fetch delivery locations (for reuse with the "Try Again" button)
   const fetchLocations = async () => {
@@ -148,12 +130,7 @@ const SettingsPage = () => {
     setLocationError(null);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
+      const response = await api.get('/addresses');
       setDeliveryLocations(response.data);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
@@ -168,29 +145,9 @@ const SettingsPage = () => {
     }
   };
 
-  // Function to fetch districts
-  const fetchDistricts = async () => {
-    setIsLoadingDistricts(true);
-    setDistrictError(null);
-
-    try {
-      const response = await axios.get(`${API_BASE_URL}/districts`);
-      setDistricts(response.data);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        setDistrictError(err.response.data.message || 'Failed to fetch districts.');
-        console.error('Error fetching districts:', err.response.data);
-      } else {
-        setDistrictError('Network error. Please check your connection.');
-        console.error('Network error:', err);
-      }
-    } finally {
-      setIsLoadingDistricts(false);
-    }
-  };
-
   // Handler to toggle edit profile modal
   const handleEditToggle = () => {
+    setFormName(userProfile?.name || '');
     setShowEditProfileModal(true);
   };
 
@@ -198,8 +155,8 @@ const SettingsPage = () => {
   const handleCloseEditModal = () => {
     setShowEditProfileModal(false);
     // Reset form values if canceling
-    if (profile) {
-      setFormName(profile.name || '');
+    if (userProfile) {
+      setFormName(userProfile.name || '');
     }
     setEditError(null);
   };
@@ -209,7 +166,7 @@ const SettingsPage = () => {
     setIsSavingEdit(true);
     setEditError(null);
 
-    if (!token) {
+    if (!isAuthenticated) {
       setEditError("You're not logged in. Please login and try again.");
       setIsSavingEdit(false);
       return;
@@ -217,7 +174,7 @@ const SettingsPage = () => {
 
     // Only include fields that changed
     const updateData: { name?: string } = {};
-    if (profile?.name !== formName) {
+    if (userProfile?.name !== formName) {
       updateData.name = formName;
     }
 
@@ -229,21 +186,14 @@ const SettingsPage = () => {
     }
 
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/users/me`,
-        updateData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      // Update profile with the response data
-      setProfile(response.data);
+      await api.put('/users/me', updateData);
+      
+      // Profile will be updated via AuthContext
       setShowEditProfileModal(false);
       toast.success("Profile updated successfully!");
+      
+      // Re-fetch user profile after update (optional if needed)
+      // this would be handled by re-authenticating or refreshing token
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         setEditError(err.response.data.message || 'Failed to update profile.');
@@ -303,7 +253,7 @@ const SettingsPage = () => {
   const handleSaveLocation = async (e: FormEvent) => {
     e.preventDefault();
     
-    if (!token) {
+    if (!isAuthenticated) {
       toast.error("You're not logged in. Please login and try again.");
       return;
     }
@@ -327,38 +277,16 @@ const SettingsPage = () => {
       
       if (editingLocation) {
         // Update existing location
-        response = await axios.put(
-          `${API_BASE_URL}/addresses/${editingLocation.id}`,
-          locationForm,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        response = await api.put(`/addresses/${editingLocation.id}`, locationForm);
         toast.success("Delivery location updated successfully!");
       } else {
         // Create new location
-        response = await axios.post(
-          `${API_BASE_URL}/addresses`,
-          locationForm,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        response = await api.post('/addresses', locationForm);
         toast.success("Delivery location added successfully!");
       }
       
       // Refresh locations
-      const locationsResponse = await axios.get(`${API_BASE_URL}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const locationsResponse = await api.get('/addresses');
       
       setDeliveryLocations(locationsResponse.data);
       setShowLocationModal(false);
@@ -385,7 +313,7 @@ const SettingsPage = () => {
       return;
     }
     
-    if (!token) {
+    if (!isAuthenticated) {
       toast.error("You're not logged in. Please login and try again.");
       return;
     }
@@ -393,11 +321,7 @@ const SettingsPage = () => {
     setIsDeletingLocation(locationId);
     
     try {
-      await axios.delete(`${API_BASE_URL}/addresses/${locationId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.delete(`/addresses/${locationId}`);
       
       // Remove from state
       setDeliveryLocations((prevLocations) => 
@@ -419,7 +343,7 @@ const SettingsPage = () => {
   };
   
   const handleSetDefaultLocation = async (locationId: number) => {
-    if (!token) {
+    if (!isAuthenticated) {
       toast.error("You're not logged in. Please login and try again.");
       return;
     }
@@ -427,16 +351,7 @@ const SettingsPage = () => {
     setIsSettingDefault(locationId);
     
     try {
-      await axios.post(
-        `${API_BASE_URL}/addresses/${locationId}/set-default`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      await api.post(`/addresses/${locationId}/set-default`);
       
       // Update local state
       setDeliveryLocations((prevLocations) => 
@@ -533,7 +448,7 @@ const SettingsPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <Container className="py-4 text-center">
         <Spinner animation="border" role="status" variant="primary">
@@ -544,11 +459,11 @@ const SettingsPage = () => {
     );
   }
 
-  if (error) {
+  if (!isAuthLoading && !userProfile && isAuthenticated) {
     return (
       <Container className="py-4">
         <Alert variant="danger" className="shadow-sm">
-          {error}
+          Failed to load profile information. Please try refreshing the page.
         </Alert>
       </Container>
     );
@@ -558,202 +473,158 @@ const SettingsPage = () => {
     <Container className="py-3">
       <h2 className="mb-4 fw-semibold">{t('account.title')}</h2>
       
-      {error && (
-        <Alert variant="danger" className="mb-3">
-          {error}
-        </Alert>
-      )}
-      
-      {isLoading ? (
-        <div className="text-center my-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">{t('common.loading')}</span>
-          </Spinner>
-        </div>
-      ) : (
-        <Card className="settings-card shadow-sm border-0">
-          <Card.Body className="p-0">
-            <Tab.Container id="settings-tabs" activeKey={activeTab} onSelect={(k) => k && setActiveTab(k)}>
-              <Row className="g-0">
-                <Col md={12}>
-                  <Nav variant="tabs" className="border-0">
-                    <Nav.Item>
-                      <Nav.Link eventKey="account" className="rounded-0">
-                        <FaUser className="me-2" />
-                        {t('profile.account')}
-                      </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                      <Nav.Link eventKey="security" className="rounded-0">
-                        <FaShieldAlt className="me-2" />
-                        {t('account.security')}
-                      </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                      <Nav.Link eventKey="shipping" className="rounded-0">
-                        <FaMapMarkerAlt className="me-2" />
-                        {t('checkout.shipping')}
-                      </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                      <Nav.Link eventKey="preferences" className="rounded-0">
-                        <FaCog className="me-2" />
-                        {t('account.preferences')}
-                      </Nav.Link>
-                    </Nav.Item>
-                  </Nav>
-                </Col>
-                <Col md={12}>
-                  <Tab.Content className="p-4">
-                    {/* Account Tab */}
-                    <Tab.Pane eventKey="account">
-                      <ListGroup variant="flush" className="profile-action-list">
-                        <Link to="#" 
-                          onClick={(e) => { e.preventDefault(); handleEditToggle(); }} 
-                          className="d-flex justify-content-between align-items-center list-group-item"
-                        >
-                          <div className="d-flex align-items-center">
-                            <FaUserEdit className="text-secondary me-3" size={20} />
-                            <span className="fw-medium">{t('account.editProfile')}</span>
-                          </div>
-                          <FaChevronRight className="text-muted" />
-                        </Link>
-                        
-                        <Link to="/orders" 
-                          className="d-flex justify-content-between align-items-center list-group-item"
-                        >
-                          <div className="d-flex align-items-center">
-                            <FaList className="text-secondary me-3" size={20} />
-                            <span className="fw-medium">{t('navigation.myOrders')}</span>
-                          </div>
-                          <FaChevronRight className="text-muted" />
-                        </Link>
-                        
-                        <Link to="/wishlist" 
-                          className="d-flex justify-content-between align-items-center list-group-item"
-                        >
-                          <div className="d-flex align-items-center">
-                            <FaHeart className="text-secondary me-3" size={20} />
-                            <span className="fw-medium">{t('navigation.myWishlist')}</span>
-                          </div>
-                          <FaChevronRight className="text-muted" />
-                        </Link>
-                      </ListGroup>
-                    </Tab.Pane>
-                    
-                    {/* Shipping Tab */}
-                    <Tab.Pane eventKey="shipping" className="p-4">
-                      <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h4 className="mb-0 fs-5 fw-semibold">{t('account.deliveryLocations')}</h4>
-                        <Button 
-                          variant="outline-primary" 
-                          size="sm"
-                          onClick={handleShowLocationModal}
-                          className="d-flex align-items-center rounded-pill px-3 py-2"
-                          disabled={isLoadingLocations}
-                        >
-                          <FaPlus className="me-2" /> {t('account.addNewAddress')}
-                        </Button>
-                      </div>
-                      
-                      {isLoadingLocations ? (
-                        <div className="text-center py-5">
-                          <Spinner animation="border" role="status" variant="primary">
-                            <span className="visually-hidden">Loading delivery locations...</span>
-                          </Spinner>
-                          <p className="mt-3 text-muted">Loading your delivery locations...</p>
+      <Card className="settings-card shadow-sm border-0">
+        <Card.Body className="p-0">
+          <Tab.Container id="settings-tabs" activeKey={activeTab} onSelect={(k) => k && setActiveTab(k)}>
+            <Row className="g-0">
+              <Col md={12}>
+                <Nav variant="tabs" className="border-0">
+                  <Nav.Item>
+                    <Nav.Link eventKey="account" className="rounded-0">
+                      <FaUser className="me-2" />
+                      {t('profile.account')}
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="security" className="rounded-0">
+                      <FaShieldAlt className="me-2" />
+                      {t('account.security')}
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="shipping" className="rounded-0">
+                      <FaMapMarkerAlt className="me-2" />
+                      {t('checkout.shipping')}
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="preferences" className="rounded-0">
+                      <FaCog className="me-2" />
+                      {t('account.preferences')}
+                    </Nav.Link>
+                  </Nav.Item>
+                </Nav>
+              </Col>
+              <Col md={12}>
+                <Tab.Content className="p-4">
+                  {/* Account Tab */}
+                  <Tab.Pane eventKey="account">
+                    <ListGroup variant="flush" className="profile-action-list">
+                      <Link to="#" 
+                        onClick={(e) => { e.preventDefault(); handleEditToggle(); }} 
+                        className="d-flex justify-content-between align-items-center list-group-item"
+                      >
+                        <div className="d-flex align-items-center">
+                          <FaUserEdit className="text-secondary me-3" size={20} />
+                          <span className="fw-medium">{t('account.editProfile')}</span>
                         </div>
-                      ) : locationError ? (
-                        <Alert variant="danger" className="shadow-sm">
-                          <div className="d-flex align-items-center">
-                            <FaExclamationTriangle className="text-danger me-2" size={20} />
-                            <div>
-                              <p className="mb-1 fw-semibold">Error loading delivery locations</p>
-                              <p className="mb-0 small">{locationError}</p>
-                            </div>
+                        <FaChevronRight className="text-muted" />
+                      </Link>
+                      
+                      <Link to="/orders" 
+                        className="d-flex justify-content-between align-items-center list-group-item"
+                      >
+                        <div className="d-flex align-items-center">
+                          <FaList className="text-secondary me-3" size={20} />
+                          <span className="fw-medium">{t('navigation.myOrders')}</span>
+                        </div>
+                        <FaChevronRight className="text-muted" />
+                      </Link>
+                      
+                      <Link to="/wishlist" 
+                        className="d-flex justify-content-between align-items-center list-group-item"
+                      >
+                        <div className="d-flex align-items-center">
+                          <FaHeart className="text-secondary me-3" size={20} />
+                          <span className="fw-medium">{t('navigation.myWishlist')}</span>
+                        </div>
+                        <FaChevronRight className="text-muted" />
+                      </Link>
+                    </ListGroup>
+                  </Tab.Pane>
+                  
+                  {/* Shipping Tab */}
+                  <Tab.Pane eventKey="shipping" className="p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                      <h4 className="mb-0 fs-5 fw-semibold">{t('account.deliveryLocations')}</h4>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={handleShowLocationModal}
+                        className="d-flex align-items-center rounded-pill px-3 py-2"
+                        disabled={isLoadingLocations}
+                      >
+                        <FaPlus className="me-2" /> {t('account.addNewAddress')}
+                      </Button>
+                    </div>
+                    
+                    {isLoadingLocations ? (
+                      <div className="text-center py-5">
+                        <Spinner animation="border" role="status" variant="primary">
+                          <span className="visually-hidden">Loading delivery locations...</span>
+                        </Spinner>
+                        <p className="mt-3 text-muted">Loading your delivery locations...</p>
+                      </div>
+                    ) : locationError ? (
+                      <Alert variant="danger" className="shadow-sm">
+                        <div className="d-flex align-items-center">
+                          <FaExclamationTriangle className="text-danger me-2" size={20} />
+                          <div>
+                            <p className="mb-1 fw-semibold">Error loading delivery locations</p>
+                            <p className="mb-0 small">{locationError}</p>
                           </div>
-                          <div className="mt-3">
-                            <Button 
-                              variant="outline-danger" 
-                              size="sm" 
-                              onClick={() => fetchLocations()}
-                              className="rounded-pill px-3"
-                            >
-                              Try Again
-                            </Button>
-                          </div>
-                        </Alert>
-                      ) : deliveryLocations.length === 0 ? (
-                        <div className="address-empty-state shadow-sm">
-                          <div className="address-empty-state-icon">
-                            <FaMapMarkerAlt />
-                          </div>
-                          <p className="address-empty-state-text">
-                            You don't have any saved delivery locations yet. Add your first location to make checkout faster.
-                          </p>
+                        </div>
+                        <div className="mt-3">
                           <Button 
-                            variant="primary" 
-                            onClick={handleShowLocationModal}
-                            className="rounded-pill px-4"
+                            variant="outline-danger" 
+                            size="sm" 
+                            onClick={() => fetchLocations()}
+                            className="rounded-pill px-3"
                           >
-                            <FaPlus className="me-2" /> Add Your First Location
+                            Try Again
                           </Button>
                         </div>
-                      ) : (
-                        <ListGroup className="address-list shadow-sm">
-                          {deliveryLocations.map((location) => (
-                            <ListGroup.Item key={location.id} className="d-flex flex-column p-3">
-                              <div className="d-flex justify-content-between align-items-start mb-3">
-                                <div className="address-info">
-                                  <div className="fw-semibold">{location.name}</div>
-                                  <div>{location.phone}</div>
-                                  <div>{location.district}</div>
-                                </div>
-                                {location.isDefault && (
-                                  <Badge bg="success" pill className="default-badge">Default</Badge>
-                                )}
+                      </Alert>
+                    ) : deliveryLocations.length === 0 ? (
+                      <div className="address-empty-state shadow-sm">
+                        <div className="address-empty-state-icon">
+                          <FaMapMarkerAlt />
+                        </div>
+                        <p className="address-empty-state-text">
+                          You don't have any saved delivery locations yet. Add your first location to make checkout faster.
+                        </p>
+                        <Button 
+                          variant="primary" 
+                          onClick={handleShowLocationModal}
+                          className="rounded-pill px-4"
+                        >
+                          <FaPlus className="me-2" /> Add Your First Location
+                        </Button>
+                      </div>
+                    ) : (
+                      <ListGroup className="address-list shadow-sm">
+                        {deliveryLocations.map((location) => (
+                          <ListGroup.Item key={location.id} className="d-flex flex-column p-3">
+                            <div className="d-flex justify-content-between align-items-start mb-3">
+                              <div className="address-info">
+                                <div className="fw-semibold">{location.name}</div>
+                                <div>{location.phone}</div>
+                                <div>{location.district}</div>
                               </div>
-                              <div className="d-flex justify-content-end mt-2 address-actions">
-                                {!location.isDefault && (
-                                  <Button 
-                                    variant="outline-success" 
-                                    size="sm"
-                                    onClick={() => handleSetDefaultLocation(location.id)}
-                                    disabled={isSettingDefault !== null || isDeletingLocation !== null}
-                                    className="address-action-btn rounded-pill px-3"
-                                  >
-                                    {isSettingDefault === location.id ? (
-                                      <>
-                                        <Spinner
-                                          as="span"
-                                          animation="border"
-                                          size="sm"
-                                          role="status"
-                                          aria-hidden="true"
-                                          className="me-1"
-                                        />
-                                        <span className="visually-hidden">Setting as default...</span>
-                                      </>
-                                    ) : 'Set as Default'}
-                                  </Button>
-                                )}
+                              {location.isDefault && (
+                                <Badge bg="success" pill className="default-badge">Default</Badge>
+                              )}
+                            </div>
+                            <div className="d-flex justify-content-end mt-2 address-actions">
+                              {!location.isDefault && (
                                 <Button 
-                                  variant="outline-primary"
+                                  variant="outline-success" 
                                   size="sm"
-                                  onClick={() => handleEditLocation(location)}
-                                  disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                                  onClick={() => handleSetDefaultLocation(location.id)}
+                                  disabled={isSettingDefault !== null || isDeletingLocation !== null}
                                   className="address-action-btn rounded-pill px-3"
                                 >
-                                  <FaEdit className="me-1" /> Edit
-                                </Button>
-                                <Button 
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => handleDeleteLocation(location.id)}
-                                  disabled={isDeletingLocation !== null || isSettingDefault !== null}
-                                  className="address-action-btn rounded-pill px-3"
-                                >
-                                  {isDeletingLocation === location.id ? (
+                                  {isSettingDefault === location.id ? (
                                     <>
                                       <Spinner
                                         as="span"
@@ -763,138 +634,168 @@ const SettingsPage = () => {
                                         aria-hidden="true"
                                         className="me-1"
                                       />
-                                      <span className="visually-hidden">Deleting...</span>
+                                      <span className="visually-hidden">Setting as default...</span>
                                     </>
-                                  ) : (
-                                    <>
-                                      <FaTrash className="me-1" /> Delete
-                                    </>
-                                  )}
+                                  ) : 'Set as Default'}
                                 </Button>
-                              </div>
-                            </ListGroup.Item>
-                          ))}
-                        </ListGroup>
-                      )}
-                    </Tab.Pane>
-                    
-                    {/* Security Tab */}
-                    <Tab.Pane eventKey="security" className="p-4">
-                      <h4 className="mb-4 fs-5 fw-semibold">{t('account.changePassword')}</h4>
-                      
-                      {updateError && (
-                        <Alert variant="danger" className="mb-4">
-                          {updateError}
-                        </Alert>
-                      )}
-                      
-                      {updateSuccess && (
-                        <Alert variant="success" className="mb-4">
-                          {updateSuccess}
-                        </Alert>
-                      )}
-                      
-                      <Form onSubmit={handlePasswordChange}>
-                        <Row>
-                          <Col md={8} lg={6}>
-                            <Form.Group className="mb-3" controlId="formCurrentPassword">
-                              <Form.Label className="fw-medium">Current Password</Form.Label>
-                              <Form.Control
-                                type="password"
-                                placeholder="Enter your current password"
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                required
-                              />
-                            </Form.Group>
-                            
-                            <Form.Group className="mb-3" controlId="formNewPassword">
-                              <Form.Label className="fw-medium">New Password</Form.Label>
-                              <Form.Control
-                                type="password"
-                                placeholder="Enter new password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                required
-                              />
-                              <Form.Text className="text-muted">
-                                Password must be at least 6 characters long.
-                              </Form.Text>
-                            </Form.Group>
-                            
-                            <Form.Group className="mb-4" controlId="formConfirmPassword">
-                              <Form.Label className="fw-medium">Confirm New Password</Form.Label>
-                              <Form.Control
-                                type="password"
-                                placeholder="Confirm new password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                              />
-                            </Form.Group>
-                            
-                            <Button
-                              variant="primary"
-                              type="submit"
-                              disabled={isUpdatingPassword}
-                              className="fw-medium py-2 rounded-pill px-4"
-                            >
-                              {isUpdatingPassword ? (
-                                <>
-                                  <Spinner
-                                    as="span"
-                                    animation="border"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                    className="me-2"
-                                  />
-                                  {t('common.updating')}
-                                </>
-                              ) : (
-                                t('account.updatePassword')
                               )}
-                            </Button>
-                          </Col>
-                        </Row>
-                      </Form>
-                      
-                      <hr className="my-4" />
-                      
-                      <div className="mt-4">
-                        <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
-                        <ul className="text-muted">
-                          <li>Use a combination of letters, numbers, and special characters</li>
-                          <li>Avoid using easily guessable information like birthdays</li>
-                          <li>Use different passwords for different accounts</li>
-                          <li>Change your password periodically for enhanced security</li>
-                        </ul>
-                      </div>
-                    </Tab.Pane>
-                    
-                    {/* Preferences Tab */}
-                    <Tab.Pane eventKey="preferences">
-                      <ListGroup variant="flush" className="profile-action-list">
-                        <Link to="/about" 
-                          className="d-flex justify-content-between align-items-center list-group-item"
-                        >
-                          <div className="d-flex align-items-center">
-                            <FaInfoCircle className="text-secondary me-3" size={20} />
-                            <span className="fw-medium">{t('about.aboutHybridStore')}</span>
-                          </div>
-                          <FaChevronRight className="text-muted" />
-                        </Link>
-                        
-                        {/* Add more preference options here as needed */}
+                              <Button 
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleEditLocation(location)}
+                                disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                                className="address-action-btn rounded-pill px-3"
+                              >
+                                <FaEdit className="me-1" /> Edit
+                              </Button>
+                              <Button 
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDeleteLocation(location.id)}
+                                disabled={isDeletingLocation !== null || isSettingDefault !== null}
+                                className="address-action-btn rounded-pill px-3"
+                              >
+                                {isDeletingLocation === location.id ? (
+                                  <>
+                                    <Spinner
+                                      as="span"
+                                      animation="border"
+                                      size="sm"
+                                      role="status"
+                                      aria-hidden="true"
+                                      className="me-1"
+                                    />
+                                    <span className="visually-hidden">Deleting...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaTrash className="me-1" /> Delete
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </ListGroup.Item>
+                        ))}
                       </ListGroup>
-                    </Tab.Pane>
-                  </Tab.Content>
-                </Col>
-              </Row>
-            </Tab.Container>
-          </Card.Body>
-        </Card>
-      )}
+                    )}
+                  </Tab.Pane>
+                  
+                  {/* Security Tab */}
+                  <Tab.Pane eventKey="security" className="p-4">
+                    <h4 className="mb-4 fs-5 fw-semibold">{t('account.changePassword')}</h4>
+                    
+                    {updateError && (
+                      <Alert variant="danger" className="mb-4">
+                        {updateError}
+                      </Alert>
+                    )}
+                    
+                    {updateSuccess && (
+                      <Alert variant="success" className="mb-4">
+                        {updateSuccess}
+                      </Alert>
+                    )}
+                    
+                    <Form onSubmit={handlePasswordChange}>
+                      <Row>
+                        <Col md={8} lg={6}>
+                          <Form.Group className="mb-3" controlId="formCurrentPassword">
+                            <Form.Label className="fw-medium">Current Password</Form.Label>
+                            <Form.Control
+                              type="password"
+                              placeholder="Enter your current password"
+                              value={currentPassword}
+                              onChange={(e) => setCurrentPassword(e.target.value)}
+                              required
+                            />
+                          </Form.Group>
+                          
+                          <Form.Group className="mb-3" controlId="formNewPassword">
+                            <Form.Label className="fw-medium">New Password</Form.Label>
+                            <Form.Control
+                              type="password"
+                              placeholder="Enter new password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              required
+                            />
+                            <Form.Text className="text-muted">
+                              Password must be at least 6 characters long.
+                            </Form.Text>
+                          </Form.Group>
+                          
+                          <Form.Group className="mb-4" controlId="formConfirmPassword">
+                            <Form.Label className="fw-medium">Confirm New Password</Form.Label>
+                            <Form.Control
+                              type="password"
+                              placeholder="Confirm new password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              required
+                            />
+                          </Form.Group>
+                          
+                          <Button
+                            variant="primary"
+                            type="submit"
+                            disabled={isUpdatingPassword}
+                            className="fw-medium py-2 rounded-pill px-4"
+                          >
+                            {isUpdatingPassword ? (
+                              <>
+                                <Spinner
+                                  as="span"
+                                  animation="border"
+                                  size="sm"
+                                  role="status"
+                                  aria-hidden="true"
+                                  className="me-2"
+                                />
+                                {t('common.updating')}
+                              </>
+                            ) : (
+                              t('account.updatePassword')
+                            )}
+                          </Button>
+                        </Col>
+                      </Row>
+                    </Form>
+                    
+                    <hr className="my-4" />
+                    
+                    <div className="mt-4">
+                      <h5 className="mb-3 fs-6 fw-semibold">Password Security Tips</h5>
+                      <ul className="text-muted">
+                        <li>Use a combination of letters, numbers, and special characters</li>
+                        <li>Avoid using easily guessable information like birthdays</li>
+                        <li>Use different passwords for different accounts</li>
+                        <li>Change your password periodically for enhanced security</li>
+                      </ul>
+                    </div>
+                  </Tab.Pane>
+                  
+                  {/* Preferences Tab */}
+                  <Tab.Pane eventKey="preferences">
+                    <ListGroup variant="flush" className="profile-action-list">
+                      <Link to="/about" 
+                        className="d-flex justify-content-between align-items-center list-group-item"
+                      >
+                        <div className="d-flex align-items-center">
+                          <FaInfoCircle className="text-secondary me-3" size={20} />
+                          <span className="fw-medium">{t('about.aboutHybridStore')}</span>
+                        </div>
+                        <FaChevronRight className="text-muted" />
+                      </Link>
+                      
+                      {/* Add more preference options here as needed */}
+                    </ListGroup>
+                  </Tab.Pane>
+                </Tab.Content>
+              </Col>
+            </Row>
+          </Tab.Container>
+        </Card.Body>
+      </Card>
       
       {/* Edit Profile Modal */}
       <Modal show={showEditProfileModal} onHide={handleCloseEditModal} centered>
@@ -913,7 +814,7 @@ const SettingsPage = () => {
               <Form.Label className="fw-medium">Email</Form.Label>
               <Form.Control 
                 type="email" 
-                value={profile?.email || ''} 
+                value={userProfile?.email || ''} 
                 disabled 
                 className="bg-light"
               />

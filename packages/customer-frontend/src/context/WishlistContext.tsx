@@ -141,6 +141,13 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       throw new Error("User not authenticated");
     }
     
+    // Save original wishlist state for potential rollback
+    const originalWishlistItems = [...wishlistItems];
+    
+    // Optimistically update UI
+    setWishlistItems(prevItems => prevItems.filter(item => item.productId !== productId));
+    toast.success("Item removed from wishlist.");
+    
     setIsLoading(true);
     setError(null);
     
@@ -149,9 +156,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Update local state immediately for better UX
-      setWishlistItems(prevItems => prevItems.filter(item => item.productId !== productId));
-      toast.success("Item removed from wishlist.");
+      console.log('Item successfully removed from wishlist in backend');
     } catch (err) {
       console.error("Error removing from wishlist:", err);
       let errorMsg = "Failed to remove item from wishlist.";
@@ -160,7 +165,10 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         errorMsg = err.response.data.message || errorMsg;
       }
       
-      toast.error(errorMsg);
+      // Rollback to original state if API call fails
+      setWishlistItems(originalWishlistItems);
+      toast.error("Failed to remove item. Wishlist restored.");
+      setError(errorMsg);
       throw err;
     } finally {
       setIsLoading(false);

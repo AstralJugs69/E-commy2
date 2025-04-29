@@ -5,50 +5,13 @@
 
 Work commenced on the `feature/customer-address-management` branch (merged or state incorporated into `main`) and continued on the `refactor/code-polish-v2` branch for polish, fixes, and deployment setup.
 
-### 1.1 Refactor/Polish Phase (Branch: `refactor/code-polish-v2`)
+### 1.1 Current Focus
 
-**Goal:** Address technical debt, UX polish items, add i18n foundation, and deploy the application to Render.com.
-
-**Branch:** `refactor/code-polish-v2` (branched from main)
-
-**Status:** Core refactors, fixes, i18n setup, and Render deployment configuration completed. The application is deployed on Render's free tier. Further polish and i18n translation can continue.
-
+**Goal:** Analyze and optimize database queries and API request patterns across the backend and both frontends to improve performance, reduce the number of requests, and decrease backend resource usage (memory, CPU). The aim is to enhance efficiency for handling a larger user load.
+**Branch:** `refactor/api-perf-optimization` (branched from `main`).
+**Status:** Branch created. Starting analysis phase.
 **Completed on this branch:**
-
-*   **Backend - Phone Assignment:** Fixed potential race condition by moving phone number assignment (`Available` -> `Busy`) into the atomic `POST /api/orders` transaction. Removed the separate `GET /api/orders/assign-number/:orderId` route. Added `assignedPhoneNumberId` relation to `Order` model (Migration applied). (L13, L28)
-*   **Customer FE - Order Success Page:** Refined page to fetch and display the *specific* assigned verification phone number (as a `tel:` link) from order details, improving clarity. Removed generic reminder text.
-*   **FE - Image URL Handling:** Created `getImageUrl` utility functions in both Customer and Admin frontends to consistently handle image path construction (prepending API base URL for relative paths, using absolute URLs directly, providing placeholders). Updated components (`ProductCard`, `ProductDetailPage`, `CartPage`, `WishlistPage`, Admin tables/details) to use this utility. (L23)
-*   **Customer FE - Product Detail Page:** Implemented `react-bootstrap Carousel` to display multiple product images. Adjusted layout to improve visibility of Add-to-Cart button and resized "Back to Products" button.
-*   **Customer FE - Cart Page:** Fixed quantity adjustment logic using +/- buttons and context function, respecting stock/min limits. Removed direct input field.
-*   **Backend - Rate Limiting:** Adjusted `express-rate-limit` settings. Shortened general/write windows to 40s with adjusted limits (50/20). Increased login attempts slightly (15 per 15min). Verified stricter limits remain for password reset/register.
-*   **Admin FE - Password Change:** Added "Profile Settings" page (`/admin/profile`) allowing logged-in admins to change their own password (requires current password). Refactored Admin FE Auth to use `AuthContext`.
-*   **Customer FE - Password Change:** Added "Security" tab to Settings page (`/settings`) allowing logged-in customers to change their own password (requires current password).
-*   **Customer FE - Checkout Location:** Implemented Delivery Location selection dropdown on Checkout page. Added modal (`Add New Location`) to create new locations during checkout (using `POST /api/addresses`). Updated order submission (`POST /api/orders`) to send `deliveryLocationId`. Fetches districts for dropdown via `GET /api/districts`.
-*   **Customer FE - PWA Enhancements:** Added `PWAPrompt` component using `useRegisterSW` to handle update notifications (toast with refresh button). Added manual "Install App" button to Layout Navbar, triggered by `beforeinstallprompt` event. Added necessary PWA icons (`192x192`, `512x512`, `apple-touch-icon`, `favicon`) to `/public` folder. Verified basic installability and update prompt.
-*   **Admin FE - Category Image Upload:** Modified Category modal to use file upload via existing `/api/admin/upload` endpoint (using 'productImages' field name). Backend processes to WebP. Category CRUD now uses the returned image URL.
-*   **UI Consistency - Buttons:** Standardized button variants and sizes within Customer FE and Admin FE according to their respective themes and action types. (L10, L24)
-*   **UI Consistency - Forms (Admin FE):** Standardized labels, input padding, spacing, and feedback display across admin forms/modals.
-*   **UI Consistency - Forms (Customer FE):** Standardized labels, input padding, spacing, and feedback display across customer forms/modals.
-*   **Backend - Compression:** Added `compression` middleware to `index.ts` to enable gzip/brotli response compression.
-*   **i18n Setup (Customer FE):** Installed necessary libraries, configured `i18n.ts`, created placeholder locale files (`en`, `am`, `om`), added language switcher UI, internationalized `Layout.tsx`. (Full i18n refactor of other components deferred).
-*   **Deployment to Render.com:**
-    *   Deployed PostgreSQL (Free Tier - **WARNING: 90-day data limit**).
-    *   Created multi-stage `Dockerfile` and `.dockerignore` for backend.
-    *   Deployed Backend as Docker Web Service (Free Tier - Sleeps). Configured build commands (`npm install --production=false`), start commands (`npx prisma migrate deploy && ...`). Configured ENV VARS (`DATABASE_URL`, `JWT_SECRET`, `NODE_ENV`, `CORS_ORIGIN`).
-    *   Deployed Customer Frontend as Static Site. Configured `VITE_API_URL`.
-    *   Deployed Admin Frontend as Static Site. Configured `VITE_API_URL`.
-    *   Resolved deployment issues (missing types, migration execution, frontend API URL).
-
-**Next Steps / Deferred:**
-
-*   Complete i18n refactoring across all Customer FE components/pages.
-*   Obtain and implement actual Amharic/Oromo translations.
-*   Further UI/UX Polish (Feedback consistency, focus states, mobile responsiveness tuning, microcopy).
-*   Accessibility: Perform manual checks and address minor findings.
-*   Testing: Increase test coverage (backend integration, frontend components/flows).
-*   Consider migrating Render free tier DB to a permanent solution (e.g., Neon, paid Render plan) before the 90-day limit.
-*   Consider upgrading Render backend service to prevent sleeping if required for production use.
-
+*   (Nothing yet)
 
 ### 1.2 Completed: Customer Address Management Foundation
 
@@ -175,7 +138,8 @@ Bridges manual/phone orders and full e-commerce. Caters to businesses needing ve
 
 ## 5. Development Log, Key Decisions & Issues (Reflects `refactor/code-polish-v2`)
 
-*   (Inherited logs from previous states...)
+*   **Branch `refactor/api-perf-optimization` created** from main to focus on performance analysis and optimization of API requests and database queries.
+*   **Branch `feature/precise-location-gps` created/resumed** from main to implement precise GPS location features.
 *   **Branch `refactor/code-polish-v2` created** from main for polish/refactoring.
 *   **Fixed Phone Assignment Race Condition:** Moved assignment logic into `POST /api/orders` transaction. Added `assignedPhoneNumberId` to `Order` model. Removed separate assignment endpoint. (L13, L28)
 *   **Refined Order Success Page:** Updated Customer FE page to fetch and display the specific assigned verification number from order details. Improved clarity.

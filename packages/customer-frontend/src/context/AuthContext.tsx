@@ -1,8 +1,17 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import api from '../utils/api';
+
+interface UserProfile {
+  id: number;
+  email: string;
+  name?: string | null; // Name is optional
+  createdAt?: string; // Optional creation date
+  // Add any other relevant fields returned by /auth/me
+}
 
 interface AuthContextType {
   token: string | null;
-  userId: number | null; // Or string if your IDs are strings
+  userProfile: UserProfile | null;
   login: (token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
@@ -18,52 +27,94 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true); // Add loading state
-  // TODO: Add userId state if needed after decoding token
+
+  // Function to fetch user profile data
+  const fetchUserProfile = async (currentToken: string) => {
+    try {
+      const response = await api.get('/auth/me', {
+        headers: {
+          Authorization: `Bearer ${currentToken}`
+        }
+      });
+      
+      if (response.data) {
+        setUserProfile(response.data);
+        console.log('User profile fetched:', response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      setUserProfile(null);
+      
+      // If token is invalid/expired, logout the user
+      if (err.response && err.response.status === 401) {
+        console.log('Token invalid or expired, logging out');
+        logout();
+      }
+    }
+  };
 
   // Load token from storage on initial mount
   useEffect(() => {
     setIsAuthLoading(true); // Start loading
-    try {
-      const storedToken = localStorage.getItem('customer_token');
-      if (storedToken) {
-        setToken(storedToken);
-        // TODO: Decode token and set user ID if needed
-        // const decoded = jwtDecode(storedToken); // Example using jwt-decode
-        // setUserId(decoded.userId);
+    
+    (async () => {
+      try {
+        const storedToken = localStorage.getItem('customer_token');
+        if (storedToken) {
+          setToken(storedToken);
+          // Fetch user profile if token exists
+          await fetchUserProfile(storedToken);
+        } else {
+          // Ensure userProfile is null when no token exists
+          setUserProfile(null);
+        }
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+        // Reset states on critical error
+        setToken(null);
+        setUserProfile(null);
+      } finally {
+        setIsAuthLoading(false); // Always finish loading regardless of outcome
       }
-    } catch (error) {
-       console.error("Error reading token from localStorage:", error);
-    } finally {
-       setIsAuthLoading(false); // Finish loading regardless of outcome
-    }
+    })();
   }, []); // Run once on mount
 
-  const login = (newToken: string) => {
+  const login = async (newToken: string) => {
     try {
-        localStorage.setItem('customer_token', newToken);
-        setToken(newToken);
-        // TODO: Decode token and set user ID if needed
+      localStorage.setItem('customer_token', newToken);
+      setToken(newToken);
+      
+      // Fetch user profile after login
+      await fetchUserProfile(newToken);
     } catch (error) {
-        console.error("Error saving token to localStorage:", error);
-        // Handle potential storage errors (e.g., storage full)
+      console.error("Error during login process:", error);
+      // Handle potential storage errors (e.g., storage full)
     }
   };
 
   const logout = () => {
     try {
-        localStorage.removeItem('customer_token');
-        setToken(null);
-        // TODO: Clear userId state if implemented
+      localStorage.removeItem('customer_token');
+      setToken(null);
+      setUserProfile(null);
     } catch (error) {
-        console.error("Error removing token from localStorage:", error);
+      console.error("Error removing token from localStorage:", error);
     }
   };
 
   const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider value={{ token, userId: null, login, logout, isAuthenticated, isAuthLoading }}> {/* Add isAuthLoading to value */}
+    <AuthContext.Provider value={{ 
+      token, 
+      userProfile, 
+      login, 
+      logout, 
+      isAuthenticated, 
+      isAuthLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

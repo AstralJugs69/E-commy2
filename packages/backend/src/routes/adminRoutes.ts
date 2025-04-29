@@ -120,76 +120,146 @@ router.get('/stats', isAdmin, async (req: Request, res: Response) => {
 
 // GET /api/admin/orders - Fetch all orders for admin view (now with status filter)
 router.get('/orders', isAdmin, async (req: Request, res: Response) => {
-  // Parse status filter - can be a single string or an array of strings
-  const statusParam = req.query.status;
-  const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
-  
-  // Get pagination parameters
-  const paginationParams = getPaginationParams(req);
-  
-  // Convert status parameter to array regardless of input type
-  let statusFilters: string[] = [];
-  
-  if (statusParam) {
-    if (Array.isArray(statusParam)) {
-      // If it's already an array (e.g., ?status=Verified&status=Processing)
-      statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
-    } else {
-      // If it's a single string (e.g., ?status=Verified)
-      const statusString = statusParam as string;
-      if (statusString.trim() !== '') {
-        statusFilters = [statusString.trim()];
+  try {
+    // Extract query parameters
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'createdAt';
+    const sortOrder = typeof req.query.sortOrder === 'string' ? req.query.sortOrder.toLowerCase() : 'desc';
+    const statusParam = req.query.status;
+    const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
+    
+    // Get pagination parameters (default limit of 15 for admin)
+    const paginationParams = getPaginationParams(req, 15);
+    
+    // Build the where clause for filtering
+    const whereClause: Prisma.OrderWhereInput = {};
+    
+    // Handle status filter - convert to array regardless of input type
+    let statusFilters: string[] = [];
+    if (statusParam) {
+      if (Array.isArray(statusParam)) {
+        // If it's already an array (e.g., ?status=Verified&status=Processing)
+        statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
+      } else {
+        // If it's a single string (e.g., ?status=Verified)
+        const statusString = statusParam as string;
+        if (statusString.trim() !== '') {
+          statusFilters = [statusString.trim()];
+        }
       }
     }
-  }
-  
-  console.log(`GET /api/admin/orders route hit. Status filters: ${statusFilters.join(', ')}, DateFilter: ${dateFilter}, Page: ${paginationParams.page}, Limit: ${paginationParams.limit}`);
-
-  try {
-    // Build dynamic where clause
-    const whereClause: Prisma.OrderWhereInput = {}; // Initialize empty where clause
-
+    
     if (statusFilters.length > 0) {
-      // Add status condition if filters are provided
       whereClause.status = {
         in: statusFilters
       };
-      console.log(`Applying status filters: ${statusFilters.join(', ')}`);
     }
-
+    
     // Add date filtering
     if (dateFilter === 'today') {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0); // Start of today
-        const todayEnd = new Date();
-        todayEnd.setHours(23, 59, 59, 999); // End of today
-
-        whereClause.createdAt = {
-            gte: todayStart,
-            lte: todayEnd,
-        };
-        console.log(`Applying date filter: today (${todayStart.toISOString()} to ${todayEnd.toISOString()})`);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0); // Start of today
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999); // End of today
+      
+      whereClause.createdAt = {
+        gte: todayStart,
+        lte: todayEnd,
+      };
+    } else if (dateFilter === 'last7days') {
+      const last7DaysStart = new Date();
+      last7DaysStart.setDate(last7DaysStart.getDate() - 7);
+      last7DaysStart.setHours(0, 0, 0, 0);
+      
+      whereClause.createdAt = {
+        gte: last7DaysStart,
+      };
+    } else if (dateFilter === 'last30days') {
+      const last30DaysStart = new Date();
+      last30DaysStart.setDate(last30DaysStart.getDate() - 30);
+      last30DaysStart.setHours(0, 0, 0, 0);
+      
+      whereClause.createdAt = {
+        gte: last30DaysStart,
+      };
     }
-    // Add 'all' case or specific date range handling later if needed
-    // Default behavior (if no dateFilter or dateFilter=='all') is no date filtering
-
+    
+    // Add search filtering
+    if (search) {
+      const searchConditions: Prisma.OrderWhereInput[] = [
+        { 
+          user: { 
+            email: { 
+              contains: search, 
+              mode: 'insensitive' 
+            } 
+          } 
+        },
+        { 
+          deliveryLocation: { 
+            name: { 
+              contains: search, 
+              mode: 'insensitive' 
+            } 
+          } 
+        },
+        { 
+          deliveryLocation: { 
+            phone: { 
+              contains: search, 
+              mode: 'insensitive' 
+            } 
+          } 
+        }
+      ];
+      
+      // Try to convert search to a number for order ID search
+      try {
+        const searchId = parseInt(search, 10);
+        if (!isNaN(searchId)) {
+          searchConditions.push({ id: searchId });
+        }
+      } catch (e) {
+        // Ignore parsing errors - just don't add the ID condition
+      }
+      
+      whereClause.OR = searchConditions;
+    }
+    
+    // Define allowed sort fields
+    const allowedSortFields = ['id', 'totalAmount', 'createdAt', 'status'];
+    
+    // Validate sortBy and sortOrder
+    const validatedSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validatedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+    
+    // Build the orderBy clause for database-sortable fields
+    const orderByClause: Prisma.OrderOrderByWithRelationInput = {};
+    orderByClause[validatedSortBy as keyof Prisma.OrderOrderByWithRelationInput] = validatedSortOrder;
+    
+    console.log('Fetching orders with filters:', {
+      search,
+      sortBy: validatedSortBy,
+      sortOrder: validatedSortOrder,
+      status: statusFilters,
+      dateFilter,
+      page: paginationParams.page,
+      limit: paginationParams.limit
+    });
+    
     // First, count total matching orders
     const totalOrdersCount = await prisma.order.count({
       where: whereClause
     });
-
-    // Fetch orders from the database with relevant fields
-    console.log('Fetching orders from database with where clause:', whereClause);
+    
+    // Fetch orders from the database with minimal fields for list view
     const orders = await prisma.order.findMany({
-      where: whereClause, // Apply the dynamic where clause
+      where: whereClause,
       select: {
         id: true,
         status: true,
         totalAmount: true,
         createdAt: true,
-        updatedAt: true,
-        userId: true,
-        deliveryLocationId: true,
         deliveryLocation: {
           select: {
             name: true,
@@ -201,23 +271,13 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
           select: {
             email: true
           }
-        },
-        items: {
-          select: {
-            id: true,
-            productName: true,
-            quantity: true,
-            price: true
-          }
         }
       },
-      orderBy: {
-        createdAt: 'desc' 
-      },
+      orderBy: orderByClause,
       skip: paginationParams.skip,
       take: paginationParams.limit
     });
-
+    
     // Process orders to extract customer information from delivery location
     const processedOrders = orders.map(order => {
       let customerName = '(N/A)';
@@ -232,16 +292,17 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       }
       
       return {
-        ...order,
+        id: order.id,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        createdAt: order.createdAt,
         customerName,
-        deliveryInfo: {
-          name: customerName,
-          phone: customerPhone,
-          district: deliveryDistrict
-        }
+        customerPhone,
+        deliveryDistrict,
+        userEmail: order.user?.email || ''
       };
     });
-
+    
     console.log(`Found ${orders.length} orders matching filter (page ${paginationParams.page} of ${Math.ceil(totalOrdersCount / paginationParams.limit)})`);
     
     // Create standardized paginated response
@@ -675,44 +736,87 @@ router.post('/serviceareas', isAdmin, async (req: Request, res: Response) => {
 // GET /api/admin/users - Fetch all users with order counts
 router.get('/users', isAdmin, async (req: Request, res: Response) => {
   try {
-    // Fetch users from the database with order counts and relevant orders for total spent calculation
-    const usersWithAggregates = await prisma.user.findMany({
+    // Extract query parameters
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'createdAt';
+    const sortOrder = typeof req.query.sortOrder === 'string' ? req.query.sortOrder.toLowerCase() : 'desc';
+    
+    // Get pagination parameters (default limit of 15 for admin)
+    const paginationParams = getPaginationParams(req, 15);
+    
+    // Build the where clause for filtering
+    const whereClause: Prisma.UserWhereInput = {};
+    if (search) {
+      whereClause.email = { contains: search, mode: 'insensitive' };
+    }
+    
+    // Define allowed database sort fields
+    const allowedDbSortFields = ['id', 'email', 'createdAt'];
+    
+    // Validate sortBy and sortOrder
+    const validatedDbSortBy = allowedDbSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validatedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+    
+    // Build the orderBy clause for database-sortable fields
+    const orderByClause: Prisma.UserOrderByWithRelationInput = {};
+    orderByClause[validatedDbSortBy as keyof Prisma.UserOrderByWithRelationInput] = validatedSortOrder;
+    
+    // Get total count
+    const totalItems = await prisma.user.count({
+      where: whereClause
+    });
+    
+    // Fetch users for the current page
+    const usersForPage = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         email: true,
         createdAt: true,
         _count: { // Include the count of related records
           select: { orders: true } // Select the count of orders for each user
-        },
-        orders: { // Include orders for aggregation (only relevant fields)
-          where: {
-            // Define which statuses count towards "Total Spent"
-            status: { in: ['Verified', 'Processing', 'Shipped', 'Delivered'] }
-          },
-          select: {
-            totalAmount: true
-          }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: orderByClause,
+      skip: paginationParams.skip,
+      take: paginationParams.limit
     });
     
-    // Manually calculate total spent for each user
-    const users = usersWithAggregates.map(user => {
-      const totalSpent = user.orders.reduce((sum, order) => sum + order.totalAmount, 0);
-      // Return a new object without the full orders array, just the calculated total
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { orders, ...userWithoutOrders } = user; // Exclude the orders array from final response
+    // Calculate totalSpent for each user on the current page
+    const usersWithTotalSpent = await Promise.all(usersForPage.map(async (user) => {
+      const result = await prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: {
+          userId: user.id,
+          status: { in: ['Verified', 'Processing', 'Shipped', 'Delivered'] }
+        }
+      });
+      
+      const totalSpent = result._sum.totalAmount ?? 0;
       return {
-        ...userWithoutOrders,
-        totalSpent: totalSpent
+        ...user,
+        totalSpent
       };
-    });
+    }));
+    
+    // Sort by complex fields if necessary (post-fetch sort)
+    if (sortBy === 'orderCount') {
+      usersWithTotalSpent.sort((a, b) => {
+        const countA = a._count?.orders ?? 0;
+        const countB = b._count?.orders ?? 0;
+        return sortOrder === 'asc' ? countA - countB : countB - countA;
+      });
+    } else if (sortBy === 'totalSpent') {
+      usersWithTotalSpent.sort((a, b) => {
+        return sortOrder === 'asc' ? a.totalSpent - b.totalSpent : b.totalSpent - a.totalSpent;
+      });
+    }
+    
+    // Create the standardized paginated response
+    const paginatedResponse = createPaginatedResponse(usersWithTotalSpent, totalItems, paginationParams);
     
     // Return the processed user list as JSON
-    res.status(200).json(users);
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     // Handle potential database errors
     console.error("Error fetching users:", error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge, Row, Col, Card, Tabs, Tab } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Modal, Form, InputGroup, Image, Badge, Row, Col, Card, Tabs, Tab, Pagination } from 'react-bootstrap';
 import toast from 'react-hot-toast';
 import { FaImage } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
@@ -10,6 +10,7 @@ import { FaSearch } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaTag } from 'react-icons/fa';
 import { BsImage } from 'react-icons/bs';
+import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 import axios from 'axios';
@@ -48,6 +49,16 @@ const ProductManagementPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Pagination, sorting, and filtering state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [sortBy, setSortBy] = useState('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
 
   // Categories list state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -97,6 +108,18 @@ const ProductManagementPage: React.FC = () => {
     fetchCategories();
   }, []);
 
+  // Debounce search term changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== searchInputValue) {
+        setSearchTerm(searchInputValue);
+        fetchProducts(1, searchInputValue);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInputValue]);
+
   const fetchCategories = async () => {
     setIsCategoriesLoading(true);
     setCategoriesError(null);
@@ -117,14 +140,43 @@ const ProductManagementPage: React.FC = () => {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (
+    page: number = currentPage, 
+    search: string = searchTerm, 
+    newSortBy: string = sortBy, 
+    newSortOrder: 'asc' | 'desc' = sortOrder
+  ) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Use admin endpoint to get products with category information
-      const response = await api.get('/admin/products');
-      setProducts(response.data);
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', itemsPerPage.toString());
+      params.append('sortBy', newSortBy);
+      params.append('sortOrder', newSortOrder);
+      
+      if (search.trim()) {
+        params.append('search', search.trim());
+      }
+
+      // Use admin endpoint with query parameters
+      const response = await api.get(`/admin/products?${params.toString()}`);
+      
+      // Update products state with data
+      setProducts(response.data.data);
+      
+      // Update pagination state
+      setCurrentPage(response.data.meta.currentPage);
+      setTotalPages(response.data.meta.totalPages);
+      setTotalItems(response.data.meta.totalItems);
+      setItemsPerPage(response.data.meta.itemsPerPage);
+      
+      // Update sorting state if changed
+      if (newSortBy !== sortBy) setSortBy(newSortBy);
+      if (newSortOrder !== sortOrder) setSortOrder(newSortOrder);
+      
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
@@ -446,6 +498,125 @@ const ProductManagementPage: React.FC = () => {
     }
   };
 
+  // Handle sorting column click
+  const handleSortColumn = (column: string) => {
+    const newSortOrder = column === sortBy && sortOrder === 'desc' ? 'asc' : 'desc';
+    fetchProducts(1, searchTerm, column, newSortOrder);
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (column: string) => {
+    if (column !== sortBy) return <FaSort className="ms-1 text-muted" size={12} />;
+    return sortOrder === 'asc' ? <FaSortUp className="ms-1" size={14} /> : <FaSortDown className="ms-1" size={14} />;
+  };
+
+  // Create clickable column header
+  const SortableColumnHeader = ({ column, label }: { column: string, label: string }) => (
+    <div 
+      className="d-flex align-items-center" 
+      style={{ cursor: 'pointer' }} 
+      onClick={() => handleSortColumn(column)}
+    >
+      {label}
+      {getSortIcon(column)}
+    </div>
+  );
+
+  // Handle search clear
+  const handleClearSearch = () => {
+    setSearchInputValue('');
+    setSearchTerm('');
+    fetchProducts(1, '');
+  };
+
+  // Render pagination items
+  const renderPaginationItems = () => {
+    const items = [];
+
+    // Add First and Previous buttons
+    items.push(
+      <Pagination.First 
+        key="first" 
+        disabled={currentPage === 1} 
+        onClick={() => fetchProducts(1)} 
+      />
+    );
+    items.push(
+      <Pagination.Prev 
+        key="prev" 
+        disabled={currentPage === 1} 
+        onClick={() => fetchProducts(currentPage - 1)} 
+      />
+    );
+
+    // Add page numbers with ellipsis for large ranges
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    // Adjust when near the end
+    if (endPage - startPage < 4 && totalPages > 5) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    // Add first page and ellipsis if needed
+    if (startPage > 1) {
+      items.push(
+        <Pagination.Item key={1} onClick={() => fetchProducts(1)}>
+          1
+        </Pagination.Item>
+      );
+      if (startPage > 2) {
+        items.push(<Pagination.Ellipsis key="ellipsis1" />);
+      }
+    }
+
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <Pagination.Item 
+          key={i} 
+          active={i === currentPage} 
+          onClick={() => fetchProducts(i)}
+        >
+          {i}
+        </Pagination.Item>
+      );
+    }
+
+    // Add last page and ellipsis if needed
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        items.push(<Pagination.Ellipsis key="ellipsis2" />);
+      }
+      items.push(
+        <Pagination.Item 
+          key={totalPages} 
+          onClick={() => fetchProducts(totalPages)}
+        >
+          {totalPages}
+        </Pagination.Item>
+      );
+    }
+
+    // Add Next and Last buttons
+    items.push(
+      <Pagination.Next 
+        key="next" 
+        disabled={currentPage === totalPages} 
+        onClick={() => fetchProducts(currentPage + 1)} 
+      />
+    );
+    items.push(
+      <Pagination.Last 
+        key="last" 
+        disabled={currentPage === totalPages} 
+        onClick={() => fetchProducts(totalPages)} 
+      />
+    );
+
+    return items;
+  };
+
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -461,6 +632,23 @@ const ProductManagementPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Search input */}
+      <div className="mb-4">
+        <InputGroup>
+          <Form.Control
+            placeholder="Search products by name..."
+            value={searchInputValue}
+            onChange={(e) => setSearchInputValue(e.target.value)}
+          />
+          <Button variant="outline-secondary" onClick={handleClearSearch}>
+            <FaTimes />
+          </Button>
+          <Button variant="primary" onClick={() => fetchProducts(1, searchInputValue)}>
+            <FaSearch />
+          </Button>
+        </InputGroup>
+      </div>
+
       {isLoading ? (
         <div className="text-center py-5">
           <Spinner animation="border" variant="primary" className="mb-3" />
@@ -472,101 +660,126 @@ const ProductManagementPage: React.FC = () => {
             <div className="empty-state">
               <FaBox className="empty-state-icon" />
               <p className="empty-state-text">No Products Found</p>
-              <p className="mb-4 text-muted">You haven't added any products yet.</p>
-              <Button 
-                variant="primary" 
-                onClick={handleShowAddModal} 
-                className="px-4 d-flex align-items-center gap-2 mx-auto"
-              >
-                <FaPlus size={14} /> Add Your First Product
-              </Button>
+              <p className="mb-4 text-muted">{searchTerm ? 'No products match your search criteria.' : 'You haven\'t added any products yet.'}</p>
+              {!searchTerm && (
+                <Button 
+                  variant="primary" 
+                  onClick={handleShowAddModal} 
+                  className="px-4 d-flex align-items-center gap-2 mx-auto"
+                >
+                  <FaPlus size={14} /> Add Your First Product
+                </Button>
+              )}
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover responsive className="align-middle shadow-sm">
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px' }}>ID</th>
-                    <th style={{ width: '80px' }}>Image</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th className="text-end">Price</th>
-                    <th className="text-end">Cost Price</th>
-                    <th className="text-center">Stock</th>
-                    <th style={{ width: '180px' }} className="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.id}</td>
-                      <td className="text-center">
-                        {product.images && product.images.length > 0 ? (
-                          <img 
-                            src={getImageUrl(product.images[0].url)} 
-                            alt={product.name} 
-                            className="product-thumbnail rounded shadow-sm" 
-                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              (e.target as HTMLImageElement).src = getImageUrl("/placeholder.png");
-                            }}
-                          />
-                        ) : (
-                          <div className="product-thumbnail d-flex align-items-center justify-content-center bg-light rounded shadow-sm" style={{ width: '50px', height: '50px' }}>
-                            <FaImage className="text-secondary" />
-                          </div>
-                        )}
-                      </td>
-                      <td>{truncateText(product.name, 30)}</td>
-                      <td>
-                        {product.category?.name ? (
-                          <Badge bg="info" className="fw-normal px-2 py-1">{product.category.name}</Badge>
-                        ) : (
-                          <span className="text-muted small">Uncategorized</span>
-                        )}
-                      </td>
-                      <td className="text-end fw-medium">{formatCurrency(product.price)}</td>
-                      <td className="text-end">{product.costPrice != null ? formatCurrency(product.costPrice) : 'N/A'}</td>
-                      <td className="text-center">
-                        <Badge 
-                          bg={product.stock === undefined || product.stock === null ? 'secondary' : 
-                              product.stock <= 0 ? 'danger' : 
-                              product.stock < 10 ? 'warning' : 'success'}
-                          className="px-2 py-1"
-                        >
-                          {product.stock === undefined || product.stock === null ? 'N/A' : product.stock}
-                        </Badge>
-                      </td>
-                      <td>
-                        <div className="d-flex gap-1 justify-content-end">
-                          <Button 
-                            variant="outline-secondary" 
-                            size="sm" 
-                            onClick={() => handleShowStockModal(product)}
-                          >
-                            Stock
-                          </Button>
-                          <Button 
-                            variant="outline-primary" 
-                            size="sm" 
-                            onClick={() => handleShowEditModal(product)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="danger" 
-                            size="sm"
-                            onClick={() => handleShowDeleteModal(product)}
-                          >
-                            Delete
-                          </Button>
+            <>
+              <div className="table-responsive">
+                <Table hover responsive className="align-middle shadow-sm">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px' }}>
+                        <SortableColumnHeader column="id" label="ID" />
+                      </th>
+                      <th style={{ width: '80px' }}>Image</th>
+                      <th>
+                        <SortableColumnHeader column="name" label="Name" />
+                      </th>
+                      <th>Category</th>
+                      <th className="text-end">
+                        <div className="d-flex justify-content-end">
+                          <SortableColumnHeader column="price" label="Price" />
                         </div>
-                      </td>
+                      </th>
+                      <th className="text-end">Cost Price</th>
+                      <th className="text-center">
+                        <div className="d-flex justify-content-center">
+                          <SortableColumnHeader column="stock" label="Stock" />
+                        </div>
+                      </th>
+                      <th style={{ width: '180px' }} className="text-end">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {products.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.id}</td>
+                        <td className="text-center">
+                          {product.images && product.images.length > 0 ? (
+                            <img 
+                              src={getImageUrl(product.images[0].url)} 
+                              alt={product.name} 
+                              className="product-thumbnail rounded shadow-sm" 
+                              style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                                (e.target as HTMLImageElement).src = getImageUrl("/placeholder.png");
+                              }}
+                            />
+                          ) : (
+                            <div className="product-thumbnail d-flex align-items-center justify-content-center bg-light rounded shadow-sm" style={{ width: '50px', height: '50px' }}>
+                              <FaImage className="text-secondary" />
+                            </div>
+                          )}
+                        </td>
+                        <td>{truncateText(product.name, 30)}</td>
+                        <td>
+                          {product.category?.name ? (
+                            <Badge bg="info" className="fw-normal px-2 py-1">{product.category.name}</Badge>
+                          ) : (
+                            <span className="text-muted small">Uncategorized</span>
+                          )}
+                        </td>
+                        <td className="text-end fw-medium">{formatCurrency(product.price)}</td>
+                        <td className="text-end">{product.costPrice != null ? formatCurrency(product.costPrice) : 'N/A'}</td>
+                        <td className="text-center">
+                          <Badge 
+                            bg={product.stock === undefined || product.stock === null ? 'secondary' : 
+                                product.stock <= 0 ? 'danger' : 
+                                product.stock < 10 ? 'warning' : 'success'}
+                            className="px-2 py-1"
+                          >
+                            {product.stock === undefined || product.stock === null ? 'N/A' : product.stock}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="d-flex gap-1 justify-content-end">
+                            <Button 
+                              variant="outline-secondary" 
+                              size="sm" 
+                              onClick={() => handleShowStockModal(product)}
+                            >
+                              Stock
+                            </Button>
+                            <Button 
+                              variant="outline-primary" 
+                              size="sm" 
+                              onClick={() => handleShowEditModal(product)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="danger" 
+                              size="sm"
+                              onClick={() => handleShowDeleteModal(product)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+
+              {/* Pagination controls */}
+              <div className="d-flex justify-content-between align-items-center mt-4">
+                <div className="text-muted">
+                  Showing {products.length} of {totalItems} products 
+                  {searchTerm && <span> (filtered by "{searchTerm}")</span>}
+                </div>
+                <Pagination>{renderPaginationItems()}</Pagination>
+              </div>
+            </>
           )}
         </>
       )}
