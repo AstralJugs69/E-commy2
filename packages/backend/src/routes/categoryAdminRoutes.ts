@@ -2,6 +2,7 @@ import { Router, Request, Response, RequestHandler } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { isAdmin } from '../middleware/authMiddleware';
+import { getPaginationParams, createPaginatedResponse } from '../utils/pagination';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -63,18 +64,58 @@ router.post('/', isAdmin, (async (req: Request, res: Response) => {
 
 /**
  * @route GET /api/admin/categories
- * @description Get all categories
+ * @description Get all categories with pagination, sorting, and filtering
  * @access Admin
  */
 router.get('/', isAdmin, (async (req: Request, res: Response) => {
   try {
-    const categories = await prisma.category.findMany({
-      orderBy: {
-        name: 'asc'
-      }
-    });
-
-    res.status(200).json(categories);
+    // Extract query parameters
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'name';
+    const sortOrder = typeof req.query.sortOrder === 'string' ? req.query.sortOrder.toLowerCase() : 'asc';
+    
+    // Get pagination parameters (default limit of 15 for admin)
+    const paginationParams = getPaginationParams(req, 15);
+    
+    // Build the where clause for filtering
+    const whereClause: Prisma.CategoryWhereInput = {};
+    if (search) {
+      whereClause.name = { contains: search, mode: 'insensitive' };
+    }
+    
+    // Build the orderBy clause for sorting
+    const orderByClause: Prisma.CategoryOrderByWithRelationInput = {};
+    
+    // Validate sortBy against allowed fields
+    const allowedSortFields = ['id', 'name'];
+    const validatedSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'name';
+    
+    // Validate sortOrder
+    const validatedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+    
+    // Set the orderBy clause dynamically
+    orderByClause[validatedSortBy as keyof Prisma.CategoryOrderByWithRelationInput] = validatedSortOrder;
+    
+    // Execute the queries in parallel
+    const [totalItems, categories] = await prisma.$transaction([
+      prisma.category.count({ where: whereClause }),
+      prisma.category.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl: true,
+        },
+        orderBy: orderByClause,
+        skip: paginationParams.skip,
+        take: paginationParams.limit
+      })
+    ]);
+    
+    // Create and return the paginated response
+    const paginatedResponse = createPaginatedResponse(categories, totalItems, paginationParams);
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'An error occurred while fetching categories.' });

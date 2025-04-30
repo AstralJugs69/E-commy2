@@ -188,19 +188,19 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('Quantity successfully updated in backend cart');
       } else {
         // For new items, we need the server to provide item details
-        const response = await axios.post(
-          `${API_BASE_URL}/cart/item`,
-          { productId, quantity },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        console.log('Add to cart response:', response.data);
+      const response = await axios.post(
+        `${API_BASE_URL}/cart/item`,
+        { productId, quantity },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Add to cart response:', response.data);
 
         // Refresh cart data from server for new items only
-        await fetchCart();
-        
+      await fetchCart();
+      
         // Show success message for new items (after API call)
-        toast.success(`${quantity} item(s) added to cart`);
+      toast.success(`${quantity} item(s) added to cart`);
       }
     } catch (err) {
       console.error("Error adding item to cart:", err);
@@ -229,7 +229,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCartItems(originalCartItems);
         toast.error("Failed to add item. Cart restored.");
       } else {
-        toast.error(errorMsg);
+      toast.error(errorMsg);
       }
       
       setError(errorMsg);

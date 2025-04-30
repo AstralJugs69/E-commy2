@@ -125,47 +125,47 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'createdAt';
     const sortOrder = typeof req.query.sortOrder === 'string' ? req.query.sortOrder.toLowerCase() : 'desc';
-    const statusParam = req.query.status;
-    const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
-    
+  const statusParam = req.query.status;
+  const dateFilter = req.query.dateFilter as string | undefined; // 'today', 'all', etc.
+  
     // Get pagination parameters (default limit of 15 for admin)
     const paginationParams = getPaginationParams(req, 15);
-    
+  
     // Build the where clause for filtering
     const whereClause: Prisma.OrderWhereInput = {};
-    
+  
     // Handle status filter - convert to array regardless of input type
     let statusFilters: string[] = [];
-    if (statusParam) {
-      if (Array.isArray(statusParam)) {
-        // If it's already an array (e.g., ?status=Verified&status=Processing)
-        statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
-      } else {
-        // If it's a single string (e.g., ?status=Verified)
-        const statusString = statusParam as string;
-        if (statusString.trim() !== '') {
-          statusFilters = [statusString.trim()];
-        }
+  if (statusParam) {
+    if (Array.isArray(statusParam)) {
+      // If it's already an array (e.g., ?status=Verified&status=Processing)
+      statusFilters = statusParam.map(s => s as string).filter(s => s.trim() !== '');
+    } else {
+      // If it's a single string (e.g., ?status=Verified)
+      const statusString = statusParam as string;
+      if (statusString.trim() !== '') {
+        statusFilters = [statusString.trim()];
       }
     }
-    
+  }
+
     if (statusFilters.length > 0) {
       whereClause.status = {
         in: statusFilters
       };
     }
-    
+
     // Add date filtering
     if (dateFilter === 'today') {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0); // Start of today
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999); // End of today
-      
-      whereClause.createdAt = {
-        gte: todayStart,
-        lte: todayEnd,
-      };
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+
+        whereClause.createdAt = {
+            gte: todayStart,
+            lte: todayEnd,
+        };
     } else if (dateFilter === 'last7days') {
       const last7DaysStart = new Date();
       last7DaysStart.setDate(last7DaysStart.getDate() - 7);
@@ -246,12 +246,12 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       page: paginationParams.page,
       limit: paginationParams.limit
     });
-    
+
     // First, count total matching orders
     const totalOrdersCount = await prisma.order.count({
       where: whereClause
     });
-    
+
     // Fetch orders from the database with minimal fields for list view
     const orders = await prisma.order.findMany({
       where: whereClause,
@@ -277,7 +277,7 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
       skip: paginationParams.skip,
       take: paginationParams.limit
     });
-    
+
     // Process orders to extract customer information from delivery location
     const processedOrders = orders.map(order => {
       let customerName = '(N/A)';
@@ -302,7 +302,7 @@ router.get('/orders', isAdmin, async (req: Request, res: Response) => {
         userEmail: order.user?.email || ''
       };
     });
-    
+
     console.log(`Found ${orders.length} orders matching filter (page ${paginationParams.page} of ${Math.ceil(totalOrdersCount / paginationParams.limit)})`);
     
     // Create standardized paginated response
@@ -539,18 +539,63 @@ const createPhoneNumberSchema = z.object({
 // GET /api/admin/phonenumbers - Fetch all phone numbers
 router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
   try {
-    // Fetch all records from the PhoneNumber table
-    const phoneNumbers = await prisma.phoneNumber.findMany({
-      // Select only the necessary fields for the admin view
-      select: {
-        id: true,
-        numberString: true,
-        status: true
-      }
-    });
+    // Extract query parameters
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const status = typeof req.query.status === 'string' ? req.query.status : '';
+    const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : 'id';
+    const sortOrder = typeof req.query.sortOrder === 'string' ? req.query.sortOrder.toLowerCase() : 'asc';
     
-    // Return the list as JSON
-    res.status(200).json(phoneNumbers);
+    // Get pagination parameters (default limit of 15 for admin)
+    const paginationParams = getPaginationParams(req, 15);
+    
+    // Build the where clause for filtering
+    const whereClause: Prisma.PhoneNumberWhereInput = {};
+    
+    // Add search filter if provided
+    if (search) {
+      whereClause.numberString = { contains: search, mode: 'insensitive' };
+    }
+    
+    // Add status filter if provided and valid
+    const allowedStatuses = ['Available', 'Busy', 'Offline'];
+    if (status && allowedStatuses.includes(status)) {
+      whereClause.status = status;
+    }
+    
+    // Build the orderBy clause for sorting
+    const orderByClause: Prisma.PhoneNumberOrderByWithRelationInput = {};
+    
+    // Validate sortBy against allowed fields
+    const allowedSortFields = ['id', 'numberString', 'status'];
+    const validatedSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'id';
+    
+    // Validate sortOrder
+    const validatedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+    
+    // Set the orderBy clause dynamically
+    orderByClause[validatedSortBy as keyof Prisma.PhoneNumberOrderByWithRelationInput] = validatedSortOrder;
+    
+    // Execute the queries in parallel for better performance
+    const [totalItems, phoneNumbers] = await prisma.$transaction([
+      prisma.phoneNumber.count({ where: whereClause }),
+      prisma.phoneNumber.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          numberString: true,
+          status: true
+        },
+        orderBy: orderByClause,
+        skip: paginationParams.skip,
+        take: paginationParams.limit
+      })
+    ]);
+    
+    // Create paginated response
+    const paginatedResponse = createPaginatedResponse(phoneNumbers, totalItems, paginationParams);
+    
+    // Return the paginated list as JSON
+    res.status(200).json(paginatedResponse);
   } catch (error) {
     // Handle potential database errors
     console.error("Error fetching phone numbers:", error);
@@ -776,7 +821,7 @@ router.get('/users', isAdmin, async (req: Request, res: Response) => {
         _count: { // Include the count of related records
           select: { orders: true } // Select the count of orders for each user
         }
-      },
+        },
       orderBy: orderByClause,
       skip: paginationParams.skip,
       take: paginationParams.limit
@@ -786,12 +831,12 @@ router.get('/users', isAdmin, async (req: Request, res: Response) => {
     const usersWithTotalSpent = await Promise.all(usersForPage.map(async (user) => {
       const result = await prisma.order.aggregate({
         _sum: { totalAmount: true },
-        where: {
+          where: {
           userId: user.id,
-          status: { in: ['Verified', 'Processing', 'Shipped', 'Delivered'] }
-        }
-      });
-      
+            status: { in: ['Verified', 'Processing', 'Shipped', 'Delivered'] }
+      }
+    });
+    
       const totalSpent = result._sum.totalAmount ?? 0;
       return {
         ...user,

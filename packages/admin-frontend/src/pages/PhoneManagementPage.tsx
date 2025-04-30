@@ -1,8 +1,10 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import axios from 'axios';
-import { Container, Table, Button, Alert, Spinner, Badge, Form, Modal, InputGroup } from 'react-bootstrap';
+import { Container, Table, Button, Alert, Spinner, Badge, Form, Modal, InputGroup, Row, Col, Pagination } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
+import { FaSearch, FaTimes, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 
 interface PhoneNumber {
   id: number;
@@ -10,12 +12,39 @@ interface PhoneNumber {
   status: 'Available' | 'Busy' | 'Offline';
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+interface PaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  itemsPerPage: number;
+  totalItems: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
 
 const PhoneManagementPage = () => {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Filtering state
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   
   // Add Phone Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -60,33 +89,16 @@ const PhoneManagementPage = () => {
     setIsAdding(true);
     setAddError(null);
     
-    // Get token
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setAddError('Authentication token not found. Please log in again.');
-      setIsAdding(false);
-      handleAuthError();
-      return;
-    }
-
-    // Ensure the token is properly formatted
-    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
     try {
       // Call API to add phone number
-      await axios.post(
-        `${API_BASE_URL}/admin/phonenumbers`, 
-        { numberString: newPhoneNumber },
-        {
-          headers: {
-            Authorization: formattedToken
-          }
-        }
+      await api.post(
+        '/admin/phonenumbers', 
+        { numberString: newPhoneNumber }
       );
       
       // Success handling
       toast.success('Phone number added successfully');
-      fetchPhoneNumbers(); // Refresh list
+      fetchPhoneNumbers(currentPage); // Refresh list
       handleCloseAddModal(); // Close modal
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -125,43 +137,61 @@ const PhoneManagementPage = () => {
     }
   };
 
-  const fetchPhoneNumbers = async () => {
+  const fetchPhoneNumbers = async (
+    page = 1, 
+    newSearch = search,
+    newSortBy = sortBy,
+    newSortOrder = sortOrder,
+    newStatusFilter = statusFilter
+  ) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem('admin_token');
+      // Build query params for pagination, search, status filter, and sorting
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', itemsPerPage.toString());
       
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        handleAuthError();
-        return;
+      // Add search filter if provided
+      if (newSearch) {
+        params.append('search', newSearch);
       }
-
-      // Ensure the token is properly formatted - it may or may not include 'Bearer ' prefix
-      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       
-      const response = await axios.get(`${API_BASE_URL}/admin/phonenumbers`, {
-        headers: {
-          Authorization: formattedToken
-        }
-      });
+      // Add status filter if provided
+      if (newStatusFilter) {
+        params.append('status', newStatusFilter);
+      }
+      
+      // Add sorting parameters
+      params.append('sortBy', newSortBy);
+      params.append('sortOrder', newSortOrder);
+      
+      const response = await api.get(`/admin/phonenumbers?${params.toString()}`);
 
-      setPhoneNumbers(response.data);
+      // Handle paginated response format
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // New paginated response format
+        const paginatedResponse = response.data as PaginatedResponse<PhoneNumber>;
+        setPhoneNumbers(paginatedResponse.data);
+        setCurrentPage(paginatedResponse.meta.currentPage);
+        setTotalPages(paginatedResponse.meta.totalPages);
+        setTotalItems(paginatedResponse.meta.totalItems);
+        setItemsPerPage(paginatedResponse.meta.itemsPerPage);
+      } else if (Array.isArray(response.data)) {
+        // Legacy format (direct array)
+        setPhoneNumbers(response.data);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalItems(response.data.length);
+      } else {
+        throw new Error('Unexpected response format from API');
+      }
     } catch (err) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 401) {
           // Handle unauthorized error specifically
           console.error('Authentication error:', err.response.data);
-          
-          // Debug: For 401 errors, we want to see the full details
-          console.error('Request details:', {
-            url: err.config?.url,
-            method: err.config?.method,
-            headers: err.config?.headers,
-            data: err.config?.data
-          });
-          
           handleAuthError();
         } else if (err.response) {
           // Other API errors
@@ -177,14 +207,83 @@ const PhoneManagementPage = () => {
         setError('An unexpected error occurred. Please try again later.');
         console.error('Error fetching phone numbers:', err);
       }
+      // Set phoneNumbers to empty array to prevent map error
+      setPhoneNumbers([]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchPhoneNumbers(page);
+  };
+
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearch(searchInput);
+    setCurrentPage(1);
+    fetchPhoneNumbers(1, searchInput);
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setCurrentPage(1);
+    fetchPhoneNumbers(1, '');
+  };
+
+  // Handle status filter
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+    fetchPhoneNumbers(1, search, sortBy, sortOrder, status);
+  };
+
+  // Handle column sorting
+  const handleSort = (column: string) => {
+    let newSortOrder: 'asc' | 'desc';
+    if (sortBy === column) {
+      // If clicking the same column, toggle sort order
+      newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      setSortOrder(newSortOrder);
+    } else {
+      // If clicking a different column, set it as sort column with default asc order
+      setSortBy(column);
+      newSortOrder = 'asc';
+      setSortOrder(newSortOrder);
+    }
+    fetchPhoneNumbers(currentPage, search, column, newSortOrder, statusFilter);
+  };
+
+  // Render sort icon for column header
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) {
+      return <FaSort className="ms-1 text-muted" />;
+    }
+    return sortOrder === 'asc' ? <FaSortUp className="ms-1" /> : <FaSortDown className="ms-1" />;
+  };
+
+  // Debounce search input to avoid too many API calls
   useEffect(() => {
-    fetchPhoneNumbers();
-  }, []);
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput);
+        setCurrentPage(1);
+        fetchPhoneNumbers(1, searchInput);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Fetch phone numbers on initial load and when filters/sort change
+  useEffect(() => {
+    fetchPhoneNumbers(1, search, sortBy, sortOrder, statusFilter);
+  }, []); // Empty dependency array for initial load only
 
   const handleStatusToggle = async (id: number, currentStatus: PhoneNumber['status']) => {
     // Determine next status in the cycle: Available -> Busy -> Offline -> Available
@@ -197,30 +296,14 @@ const PhoneManagementPage = () => {
       nextStatus = 'Available';
     }
 
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication token not found. Please log in again.');
-      handleAuthError();
-      return;
-    }
-
-    // Ensure the token is properly formatted
-    const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
     setError(null);
 
     try {
-      await axios.post(`${API_BASE_URL}/admin/phonenumbers/${id}/status`, 
-        { status: nextStatus },
-        {
-          headers: {
-            Authorization: formattedToken
-          }
-        }
-      );
+      await api.post(`/admin/phonenumbers/${id}/status`, { status: nextStatus });
 
-      // Refresh the phone numbers list
-      fetchPhoneNumbers();
+      // Refresh the phone numbers list for current page
+      fetchPhoneNumbers(currentPage, search, sortBy, sortOrder, statusFilter);
+      toast.success(`Phone number status updated to ${nextStatus}`);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 401) {
@@ -231,15 +314,18 @@ const PhoneManagementPage = () => {
           // Other API errors
           setError(err.response.data.message || 'Failed to update phone status');
           console.error('Error updating phone status:', err.response.data);
+          toast.error('Failed to update phone status');
         } else {
           // Network errors
           setError('Network error. Please check your connection and try again.');
           console.error('Network error:', err);
+          toast.error('Network error');
         }
       } else {
         // Other unexpected errors
         setError('An unexpected error occurred. Please try again later.');
         console.error('Error updating phone status:', err);
+        toast.error('An unexpected error occurred');
       }
     }
   };
@@ -261,10 +347,78 @@ const PhoneManagementPage = () => {
     }
   };
 
-  // Function to manually refresh token and redirect to login
+  // Function to manually refresh and redirect to login
   const handleManualRefresh = () => {
     localStorage.removeItem('admin_token');
     navigate('/login', { replace: true });
+  };
+
+  // Render pagination component
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="d-flex justify-content-center mt-4">
+        <Pagination>
+          <Pagination.First 
+            onClick={() => handlePageChange(1)}
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          />
+          
+          {/* First page */}
+          <Pagination.Item
+            active={currentPage === 1}
+            onClick={() => handlePageChange(1)}
+          >
+            1
+          </Pagination.Item>
+          
+          {/* Ellipsis if not showing first few pages */}
+          {currentPage > 3 && <Pagination.Ellipsis disabled />}
+          
+          {/* Pages around current page */}
+          {Array.from({ length: totalPages })
+            .map((_, index) => index + 1)
+            .filter(page => page !== 1 && page !== totalPages) // Exclude first and last pages which are always shown
+            .filter(page => page >= currentPage - 1 && page <= currentPage + 1) // Show only pages around current page
+            .map(page => (
+              <Pagination.Item
+                key={page}
+                active={currentPage === page}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </Pagination.Item>
+            ))}
+          
+          {/* Ellipsis if not showing last few pages */}
+          {currentPage < totalPages - 2 && <Pagination.Ellipsis disabled />}
+          
+          {/* Last page if more than one page */}
+          {totalPages > 1 && (
+            <Pagination.Item
+              active={currentPage === totalPages}
+              onClick={() => handlePageChange(totalPages)}
+            >
+              {totalPages}
+            </Pagination.Item>
+          )}
+          
+          <Pagination.Next
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          />
+        </Pagination>
+      </div>
+    );
   };
 
   return (
@@ -298,7 +452,7 @@ const PhoneManagementPage = () => {
         <>
           <div className="mb-3 d-flex justify-content-between align-items-center">
             <div>
-              <Button variant="outline-secondary" size="sm" onClick={fetchPhoneNumbers} className="me-2">
+              <Button variant="outline-secondary" size="sm" onClick={() => fetchPhoneNumbers(currentPage)} className="me-2">
                 Refresh Data
               </Button>
               <Button 
@@ -314,22 +468,107 @@ const PhoneManagementPage = () => {
             </Button>
           </div>
           
-          <Table striped bordered hover responsive size="sm">
+          {/* Search and filter row */}
+          <Row className="mb-3">
+            <Col md={6}>
+              <Form onSubmit={handleSearch}>
+                <InputGroup>
+                  <Form.Control
+                    type="text"
+                    placeholder="Search phone numbers..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                  {searchInput && (
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={handleClearSearch}
+                      title="Clear search"
+                    >
+                      <FaTimes />
+                    </Button>
+                  )}
+                  <Button type="submit" variant="outline-primary">
+                    <FaSearch />
+                  </Button>
+                </InputGroup>
+              </Form>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Select 
+                  value={statusFilter} 
+                  onChange={(e) => handleStatusFilterChange(e.target.value)}
+                  aria-label="Filter by status"
+                  className="py-2"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Available">Available</option>
+                  <option value="Busy">Busy</option>
+                  <option value="Offline">Offline</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            {totalItems > 0 && (
+              <div className="text-muted">
+                Showing {phoneNumbers.length} of {totalItems} phone numbers
+              </div>
+            )}
+            <div className="text-muted small">
+              {statusFilter && <span className="me-2">Status: <Badge bg="info">{statusFilter}</Badge></span>}
+              {search && <span>Search: <Badge bg="info">{search}</Badge></span>}
+            </div>
+          </div>
+          
+          <Table striped bordered hover responsive size="sm" className="shadow-sm">
             <thead>
               <tr>
-                <th>Number</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th 
+                  style={{ cursor: 'pointer', width: '70px' }} 
+                  onClick={() => handleSort('id')}
+                  className="user-select-none"
+                >
+                  <div className="d-flex align-items-center">
+                    ID {renderSortIcon('id')}
+                  </div>
+                </th>
+                <th 
+                  style={{ cursor: 'pointer' }} 
+                  onClick={() => handleSort('numberString')}
+                  className="user-select-none"
+                >
+                  <div className="d-flex align-items-center">
+                    Number {renderSortIcon('numberString')}
+                  </div>
+                </th>
+                <th 
+                  style={{ cursor: 'pointer', width: '120px' }} 
+                  onClick={() => handleSort('status')}
+                  className="user-select-none"
+                >
+                  <div className="d-flex align-items-center">
+                    Status {renderSortIcon('status')}
+                  </div>
+                </th>
+                <th style={{ width: '150px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {phoneNumbers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="text-center">No phone numbers found.</td>
+                  <td colSpan={4} className="text-center py-4">
+                    {search || statusFilter 
+                      ? "No phone numbers match your search criteria."
+                      : "No phone numbers found."}
+                  </td>
                 </tr>
               ) : (
                 phoneNumbers.map((phone) => (
                   <tr key={phone.id}>
+                    <td>{phone.id}</td>
                     <td>{phone.numberString}</td>
                     <td>
                       <Badge bg={getStatusBadgeVariant(phone.status)}>
@@ -350,6 +589,9 @@ const PhoneManagementPage = () => {
               )}
             </tbody>
           </Table>
+          
+          {/* Pagination controls */}
+          {renderPagination()}
         </>
       )}
       

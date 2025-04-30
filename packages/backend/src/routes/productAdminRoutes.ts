@@ -72,30 +72,30 @@ router.get('/', isAdmin, async (req: Request, res: Response) => {
       prisma.product.count({ where: whereClause }),
       prisma.product.findMany({
         where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          costPrice: true,
-          description: true,
-          images: {
-            select: {
-              id: true,
-              url: true
-            }
-          },
-          stock: true,
-          category: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          createdAt: true,
-          updatedAt: true,
-          reviewCount: true,
-          averageRating: true
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        costPrice: true,
+        description: true,
+        images: {
+          select: {
+            id: true,
+            url: true
+          }
         },
+        stock: true,
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        createdAt: true,
+        updatedAt: true,
+        reviewCount: true,
+        averageRating: true
+      },
         orderBy: orderByClause,
         skip: paginationParams.skip,
         take: paginationParams.limit

@@ -1,15 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup, Pagination } from 'react-bootstrap';
+import { Container, Table, Alert, Spinner, Badge, Form, Row, Col, Button, ButtonGroup, Pagination, InputGroup } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaShoppingBag } from 'react-icons/fa';
-import { FaFilter } from 'react-icons/fa';
-import { FaInfoCircle } from 'react-icons/fa';
-import { FaCalendarAlt } from 'react-icons/fa';
-import { FaPhone } from 'react-icons/fa';
-import { FaMapMarkerAlt } from 'react-icons/fa';
-import { FaTimes } from 'react-icons/fa';
+import { FaShoppingBag, FaFilter, FaInfoCircle, FaCalendarAlt, FaPhone, FaMapMarkerAlt, FaTimes, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { formatCurrency, formatDateTime, getStatusBadgeVariant } from '../utils/formatters';
+import api from '../utils/api';
 
 interface OrderItem {
   id: number;
@@ -53,8 +48,6 @@ interface PaginatedResponse {
   meta: PaginationMeta;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
 // Define allowed order statuses (must match backend)
 const allowedOrderStatuses = ["Pending Call", "Verified", "Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -66,19 +59,20 @@ const OrderManagementPage = () => {
   const [statusFilters, setStatusFilters] = useState<string[]>([]); // Changed to array
   const [dateFilter, setDateFilter] = useState<string>('today'); // Default to 'today'
   const [isUpdating, setIsUpdating] = useState(false);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  
+  // Enhanced state for pagination and sorting
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
 
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = useCallback(async (page = 1) => {
     setIsLoading(true);
     setError(null);
-
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const params = new URLSearchParams();
@@ -94,19 +88,20 @@ const OrderManagementPage = () => {
       
       // Add pagination parameters
       params.append('page', page.toString());
-      params.append('limit', '10'); // You can adjust the limit or make it configurable
+      params.append('limit', itemsPerPage.toString());
       
-      const queryString = params.toString();
-      const apiUrl = `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ''}`;
-
-      const response = await axios.get(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Add sorting parameters
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
       
-      // Handle both paginated and non-paginated responses
-      if (response.data && response.data.data && response.data.meta) {
+      // Add search parameter if provided
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      const response = await api.get(`/admin/orders?${params.toString()}`);
+      
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
         // This is a paginated response
         const paginatedResponse = response.data as PaginatedResponse;
         
@@ -119,17 +114,14 @@ const OrderManagementPage = () => {
         }));
         
         setOrders(processedOrders);
-        setPagination(paginatedResponse.meta);
-      } else {
+        setCurrentPage(paginatedResponse.meta.currentPage);
+        setTotalPages(paginatedResponse.meta.totalPages);
+        setTotalItems(paginatedResponse.meta.totalItems);
+        setItemsPerPage(paginatedResponse.meta.itemsPerPage);
+      } else if (response.data && Array.isArray(response.data)) {
         // Handle legacy/non-paginated response format
-        const ordersArray = Array.isArray(response.data) 
-          ? response.data 
-          : response.data.orders || [];
-      
-        if (!Array.isArray(ordersArray)) {
-          throw new Error('Invalid response format: expected an array of orders');
-        }
-      
+        const ordersArray = response.data;
+        
         const processedOrders = ordersArray.map(order => ({
           ...order,
           shippingDetails: typeof order.shippingDetails === 'string'
@@ -137,31 +129,66 @@ const OrderManagementPage = () => {
             : (order.shippingDetails || {}),
           items: Array.isArray(order.items) ? order.items : []
         }));
-      
+        
         setOrders(processedOrders);
-        setPagination(null);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalItems(ordersArray.length);
+        setItemsPerPage(ordersArray.length);
+      } else if (response.data && response.data.orders && Array.isArray(response.data.orders)) {
+        // Another possible legacy format
+        const ordersArray = response.data.orders;
+        
+        const processedOrders = ordersArray.map(order => ({
+          ...order,
+          shippingDetails: typeof order.shippingDetails === 'string'
+            ? JSON.parse(order.shippingDetails)
+            : (order.shippingDetails || {}),
+          items: Array.isArray(order.items) ? order.items : []
+        }));
+        
+        setOrders(processedOrders);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalItems(ordersArray.length);
+        setItemsPerPage(ordersArray.length);
+      } else {
+        // If we get here, we don't have a recognized response format
+        setOrders([]);
+        console.error('Unrecognized API response format:', response.data);
       }
-    } catch (err) {
+    } catch (err: any) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
-          setError(err.response.data.message || 'Failed to fetch orders.');
+          setError(err.response.data?.message || 'Failed to fetch orders.');
         }
         console.error('Error fetching orders:', err.response.data);
       } else {
         setError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      // Set orders to empty array to prevent "map of undefined" error
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilters, dateFilter, itemsPerPage, sortBy, sortOrder, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1); // Reset to page 1 when filters change
     fetchOrders(1);
-  }, [statusFilters, dateFilter]); // Re-fetch when filters change
+  }, [statusFilters, dateFilter, sortBy, sortOrder, searchTerm, fetchOrders]);
+
+  // Debounce search input to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInputValue);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchInputValue]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -174,33 +201,19 @@ const OrderManagementPage = () => {
     setIsUpdating(true);
     setError(null);
     
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsUpdating(false);
-      return;
-    }
-    
     setUpdatingOrderIds(prev => [...prev, orderId]);
     
     try {
-      await axios.put(
-        `${API_BASE_URL}/admin/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
       
+      // Refresh orders with current page and filters
       await fetchOrders(currentPage);
-    } catch (err) {
+    } catch (err: any) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
           setError('Your session has expired. Please log in again.');
         } else {
-          setError(err.response.data.message || `Failed to update order ${orderId} status.`);
+          setError(err.response.data?.message || `Failed to update order ${orderId} status.`);
         }
         console.error('Error updating order status:', err.response.data);
       } else {
@@ -227,12 +240,34 @@ const OrderManagementPage = () => {
     setStatusFilters([]);
   };
 
-  // Create pagination component based on meta
+  // Clear search input
+  const clearSearch = () => {
+    setSearchInputValue('');
+    setSearchTerm('');
+  };
+
+  // Handle column sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle sort order if same column is clicked
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to descending order
+      setSortBy(column);
+      setSortOrder('desc');
+    }
+  };
+
+  // Render sort icon for the column
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) {
+      return <FaSort className="ms-1 text-muted" />;
+    }
+    return sortOrder === 'asc' ? <FaSortUp className="ms-1" /> : <FaSortDown className="ms-1" />;
+  };
+
+  // Create pagination component
   const renderPagination = () => {
-    if (!pagination) return null;
-    
-    const { currentPage, totalPages } = pagination;
-    
     if (totalPages <= 1) return null;
     
     // Function to determine which page items to show
@@ -317,7 +352,7 @@ const OrderManagementPage = () => {
       </div>
       
       <Row className="mb-3 align-items-center">
-        <Col>
+        <Col md={6}>
           <ButtonGroup size="sm" className="mb-3">
             <Button
               variant={dateFilter === 'today' ? 'primary' : 'outline-secondary'}
@@ -331,14 +366,49 @@ const OrderManagementPage = () => {
             >
               All Orders
             </Button>
-            {/* Add more date range buttons later if needed */}
+            <Button
+              variant={dateFilter === 'week' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('week')}
+            >
+              This Week
+            </Button>
+            <Button
+              variant={dateFilter === 'month' ? 'primary' : 'outline-secondary'}
+              onClick={() => setDateFilter('month')}
+            >
+              This Month
+            </Button>
           </ButtonGroup>
+        </Col>
+        <Col md={6}>
+          <InputGroup>
+            <Form.Control
+              placeholder="Search orders by ID, customer name, or address..."
+              value={searchInputValue}
+              onChange={(e) => setSearchInputValue(e.target.value)}
+            />
+            {searchInputValue && (
+              <Button 
+                variant="outline-secondary" 
+                onClick={clearSearch}
+                title="Clear search"
+              >
+                <FaTimes />
+              </Button>
+            )}
+            <Button variant="outline-primary">
+              <FaSearch />
+            </Button>
+          </InputGroup>
         </Col>
       </Row>
       
       <Row className="mb-4">
-        <Col md={6} lg={8}>
+        <Col md={12}>
           <div className="d-flex flex-wrap gap-2 align-items-center">
+            <span className="me-2 d-flex align-items-center">
+              <FaFilter className="me-1" /> Status:
+            </span>
             {allowedOrderStatuses.map(status => (
               <Button
                 key={status}
@@ -366,31 +436,6 @@ const OrderManagementPage = () => {
         </Col>
       </Row>
       
-      {statusFilters.length > 0 && (
-        <div className="mb-3">
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            <span className="text-muted me-2">Active filters:</span>
-            {statusFilters.map(status => (
-              <Badge 
-                key={status} 
-                bg={getStatusBadgeVariant(status)} 
-                className="py-2 px-3 d-flex align-items-center"
-              >
-                {status}
-                <Button 
-                  variant="link" 
-                  className="p-0 ms-2 text-white" 
-                  onClick={() => toggleStatusFilter(status)}
-                  aria-label={`Remove ${status} filter`}
-                >
-                  <FaTimes size={12} />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-      
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       
       {isLoading ? (
@@ -405,18 +450,29 @@ const OrderManagementPage = () => {
               <FaShoppingBag className="empty-state-icon" />
               <p className="empty-state-text">No Orders Found</p>
               <p className="mb-4 text-muted">
-                {statusFilters.length > 0
-                  ? `No orders match the selected status filters.` 
+                {statusFilters.length > 0 || searchTerm
+                  ? `No orders match the selected filters or search criteria.` 
                   : "You don't have any customer orders yet."}
               </p>
-              {statusFilters.length > 0 && (
-                <Button 
-                  variant="primary" 
-                  onClick={clearStatusFilters}
-                  className="px-4 d-flex align-items-center gap-2 mx-auto"
-                >
-                  Clear Filters
-                </Button>
+              {(statusFilters.length > 0 || searchTerm) && (
+                <div className="d-flex gap-2 justify-content-center">
+                  {statusFilters.length > 0 && (
+                    <Button 
+                      variant="outline-primary" 
+                      onClick={clearStatusFilters}
+                    >
+                      Clear Status Filters
+                    </Button>
+                  )}
+                  {searchTerm && (
+                    <Button 
+                      variant="outline-primary" 
+                      onClick={clearSearch}
+                    >
+                      Clear Search
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -425,12 +481,44 @@ const OrderManagementPage = () => {
               <Table hover responsive className="align-middle shadow-sm">
                 <thead>
                   <tr>
-                    <th style={{ width: '80px' }}>ID</th>
+                    <th 
+                      style={{ width: '80px', cursor: 'pointer' }}
+                      onClick={() => handleSort('id')}
+                      className="user-select-none"
+                    >
+                      <div className="d-flex align-items-center">
+                        ID {renderSortIcon('id')}
+                      </div>
+                    </th>
                     <th>Customer</th>
                     <th>Items</th>
-                    <th className="text-end">Total</th>
-                    <th>Status</th>
-                    <th>Date</th>
+                    <th 
+                      className="text-end user-select-none"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleSort('totalAmount')}
+                    >
+                      <div className="d-flex align-items-center justify-content-end">
+                        Total {renderSortIcon('totalAmount')}
+                      </div>
+                    </th>
+                    <th 
+                      className="user-select-none"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="d-flex align-items-center">
+                        Status {renderSortIcon('status')}
+                      </div>
+                    </th>
+                    <th 
+                      className="user-select-none"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      <div className="d-flex align-items-center">
+                        Date {renderSortIcon('createdAt')}
+                      </div>
+                    </th>
                     <th style={{ width: '180px' }}>Actions</th>
                   </tr>
                 </thead>
@@ -459,11 +547,13 @@ const OrderManagementPage = () => {
                         )}
                       </td>
                       <td>
-                        {order.items?.map(item => (
-                          <div key={item.id} className="small">
-                            <span className="fw-medium">{item.quantity}x</span> {item.productName}
-                          </div>
-                        )) || (
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map(item => (
+                            <div key={item.id} className="small">
+                              <span className="fw-medium">{item.quantity}x</span> {item.productName}
+                            </div>
+                          ))
+                        ) : (
                           <div className="small text-muted">No items</div>
                         )}
                       </td>
@@ -504,12 +594,10 @@ const OrderManagementPage = () => {
               {/* Pagination controls */}
               {renderPagination()}
               
-              {/* Display total items if pagination is available */}
-              {pagination && (
-                <div className="text-center mt-3 text-muted small">
-                  Showing {orders.length} of {pagination.totalItems} orders
-                </div>
-              )}
+              {/* Display total items */}
+              <div className="text-center mt-3 text-muted small">
+                Showing {orders.length} of {totalItems} orders
+              </div>
             </>
           )}
         </>

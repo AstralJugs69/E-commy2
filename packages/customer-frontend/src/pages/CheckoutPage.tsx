@@ -224,62 +224,62 @@ const CheckoutPage: React.FC = () => {
     }
     
     const loadLocations = async () => {
-      setIsLoadingLocations(true);
-      setLocationErrorState(null);
+    setIsLoadingLocations(true);
+    setLocationErrorState(null);
 
-      try {
-        const response = await api.get('/addresses');
-        
-        const locations = response.data;
-        setSavedLocations(locations);
-        
-        // If there's a default location, select it automatically
-        const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
-        if (defaultLocation) {
-          setSelectedLocationId(defaultLocation.id.toString());
-        } else if (locations.length > 0) {
-          // If no default but locations exist, select the first one
-          setSelectedLocationId(locations[0].id.toString());
-        } else {
-          // If no locations, leave as empty string
-          setSelectedLocationId('');
-        }
-      } catch (err) {
-        console.error('Error fetching delivery locations:', err);
-        setLocationErrorState('Failed to load your saved delivery locations.');
-      } finally {
-        setIsLoadingLocations(false);
+    try {
+      const response = await api.get('/addresses');
+      
+      const locations = response.data;
+      setSavedLocations(locations);
+      
+      // If there's a default location, select it automatically
+      const defaultLocation = locations.find((loc: DeliveryLocation) => loc.isDefault);
+      if (defaultLocation) {
+        setSelectedLocationId(defaultLocation.id.toString());
+      } else if (locations.length > 0) {
+        // If no default but locations exist, select the first one
+        setSelectedLocationId(locations[0].id.toString());
+      } else {
+        // If no locations, leave as empty string
+        setSelectedLocationId('');
       }
-    };
-    
+    } catch (err) {
+      console.error('Error fetching delivery locations:', err);
+      setLocationErrorState('Failed to load your saved delivery locations.');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
     loadLocations();
   }, [token]);
 
   // Fetch districts
   useEffect(() => {
     const loadDistricts = async () => {
-      setIsLoadingDistricts(true);
-      setDistrictError(null);
-      
-      try {
+    setIsLoadingDistricts(true);
+    setDistrictError(null);
+
+    try {
         const fetchedDistricts = await getCachedDistricts();
         setDistricts(fetchedDistricts);
-        
+      
         // If newLocationData.district is empty and we have districts, set the first one
         if (!newLocationData.district && fetchedDistricts.length > 0) {
-          setNewLocationData(prev => ({
-            ...prev,
+        setNewLocationData(prev => ({
+          ...prev,
             district: fetchedDistricts[0]
-          }));
-        }
-      } catch (err) {
+        }));
+      }
+    } catch (err) {
         console.error("Error loading districts:", err);
         setDistrictError((err as Error).message);
         setDistricts([]);
-      } finally {
-        setIsLoadingDistricts(false);
-      }
-    };
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
     
     loadDistricts();
   }, []);

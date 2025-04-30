@@ -60,47 +60,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthLoading(true); // Start loading
     
     (async () => {
-      try {
-        const storedToken = localStorage.getItem('customer_token');
-        if (storedToken) {
-          setToken(storedToken);
+    try {
+      const storedToken = localStorage.getItem('customer_token');
+      if (storedToken) {
+        setToken(storedToken);
           // Fetch user profile if token exists
           await fetchUserProfile(storedToken);
         } else {
           // Ensure userProfile is null when no token exists
           setUserProfile(null);
-        }
-      } catch (error) {
+      }
+    } catch (error) {
         console.error("Error during auth initialization:", error);
         // Reset states on critical error
         setToken(null);
         setUserProfile(null);
-      } finally {
+    } finally {
         setIsAuthLoading(false); // Always finish loading regardless of outcome
-      }
+    }
     })();
   }, []); // Run once on mount
 
   const login = async (newToken: string) => {
     try {
-      localStorage.setItem('customer_token', newToken);
-      setToken(newToken);
+        localStorage.setItem('customer_token', newToken);
+        setToken(newToken);
       
       // Fetch user profile after login
       await fetchUserProfile(newToken);
     } catch (error) {
       console.error("Error during login process:", error);
-      // Handle potential storage errors (e.g., storage full)
+        // Handle potential storage errors (e.g., storage full)
     }
   };
 
   const logout = () => {
     try {
-      localStorage.removeItem('customer_token');
-      setToken(null);
+        localStorage.removeItem('customer_token');
+        setToken(null);
       setUserProfile(null);
     } catch (error) {
-      console.error("Error removing token from localStorage:", error);
+        console.error("Error removing token from localStorage:", error);
     }
   };
 

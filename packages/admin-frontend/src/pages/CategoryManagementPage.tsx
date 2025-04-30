@@ -1,7 +1,7 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import axios from 'axios';
 import api from '../utils/api';
-import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
+import { Container, Table, Form, Button, Alert, Spinner, Modal, Row, Col, Toast, ToastContainer, Pagination } from 'react-bootstrap';
 import { FaPlus } from 'react-icons/fa';
 import { FaEdit } from 'react-icons/fa';
 import { FaTrashAlt } from 'react-icons/fa';
@@ -12,7 +12,21 @@ interface Category {
   id: number;
   name: string;
   description: string | null;
-  imageUrl?: string;
+  imageUrl?: string | null;
+}
+
+interface PaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  itemsPerPage: number;
+  totalItems: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -21,6 +35,13 @@ const CategoryManagementPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({ name: '', description: '' });
@@ -56,28 +77,41 @@ const CategoryManagementPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    fetchCategories(currentPage);
+  }, [search]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (page = 1) => {
     setIsLoading(true);
     setError(null);
     
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setError('Authentication required. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
-    
     try {
-      const response = await api.get('/admin/categories', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Build query params for pagination and search
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
       
-      setCategories(response.data);
+      if (search) {
+        params.append('search', search);
+      }
+      
+      const response = await api.get(`/admin/categories?${params.toString()}`);
+      
+      // Check if response matches the paginated format
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // This is the new paginated response format
+        const paginatedResponse = response.data as PaginatedResponse<Category>;
+        setCategories(paginatedResponse.data);
+        setCurrentPage(paginatedResponse.meta.currentPage);
+        setTotalPages(paginatedResponse.meta.totalPages);
+        setTotalItems(paginatedResponse.meta.totalItems);
+      } else if (Array.isArray(response.data)) {
+        // Handle legacy format (just array of categories)
+        setCategories(response.data);
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalItems(response.data.length);
+      } else {
+        throw new Error('Unexpected response format from API');
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 401) {
@@ -90,9 +124,33 @@ const CategoryManagementPage: React.FC = () => {
         setError('Network error. Please check your connection.');
         console.error('Network error:', err);
       }
+      // Set categories to empty array to prevent map error
+      setCategories([]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchCategories(page);
+  };
+
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearch(searchInput);
+    setCurrentPage(1);
+    fetchCategories(1);
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setCurrentPage(1);
+    fetchCategories(1);
   };
 
   const handleShowAddModal = () => {
@@ -251,7 +309,7 @@ const CategoryManagementPage: React.FC = () => {
       }
       
       handleCloseModals();
-      fetchCategories();
+      fetchCategories(currentPage);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 400) {
@@ -296,7 +354,7 @@ const CategoryManagementPage: React.FC = () => {
       
       showNotification('Category deleted successfully!');
       handleCloseModals();
-      fetchCategories();
+      fetchCategories(currentPage);
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 409) {
@@ -315,17 +373,13 @@ const CategoryManagementPage: React.FC = () => {
   };
 
   return (
-    <Container fluid className="py-3">
-      <Row className="mb-3 align-items-center">
-        <Col>
-          <h1 className="h3">Category Management</h1>
-        </Col>
-        <Col xs="auto">
-          <Button variant="primary" onClick={handleShowAddModal}>
-            <FaPlus className="me-1" /> Add Category
-          </Button>
-        </Col>
-      </Row>
+    <Container className="py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Category Management</h2>
+        <Button onClick={handleShowAddModal} variant="primary">
+          <FaPlus className="me-1" /> Add Category
+        </Button>
+      </div>
 
       {/* Toast notification */}
       <ToastContainer className="p-3" position="top-end">
@@ -346,6 +400,41 @@ const CategoryManagementPage: React.FC = () => {
       </ToastContainer>
 
       {error && <Alert variant="danger">{error}</Alert>}
+      
+      {/* Search and filter row */}
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form onSubmit={handleSearch}>
+            <Form.Group className="d-flex">
+              <Form.Control
+                type="text"
+                placeholder="Search by category name..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="me-2"
+              />
+              <Button type="submit" variant="outline-primary" className="me-2">
+                Search
+              </Button>
+              {search && (
+                <Button 
+                  variant="outline-secondary" 
+                  onClick={handleClearSearch}
+                >
+                  Clear
+                </Button>
+              )}
+            </Form.Group>
+          </Form>
+        </Col>
+        <Col md={6} className="text-end">
+          {totalItems > 0 && (
+            <div className="text-muted small pt-2">
+              Showing {categories.length} of {totalItems} categories
+            </div>
+          )}
+        </Col>
+      </Row>
 
       {isLoading ? (
         <div className="text-center my-5">
@@ -354,52 +443,112 @@ const CategoryManagementPage: React.FC = () => {
           </Spinner>
         </div>
       ) : categories.length === 0 ? (
-        <Alert variant="info">No categories found. Add a new category to get started.</Alert>
+        <Alert variant="info">
+          {search ? `No categories found matching "${search}".` : "No categories found. Add a new category to get started."}
+        </Alert>
       ) : (
-        <Table striped bordered hover responsive>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Image URL</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map(category => (
-              <tr key={category.id}>
-                <td>{category.id}</td>
-                <td>{category.name}</td>
-                <td>{category.description || '-'}</td>
-                <td>{category.imageUrl ? (
-                  <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
-                    {category.imageUrl}
-                  </a>
-                ) : (
-                  <span className="text-muted">No image</span>
-                )}</td>
-                <td>
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm" 
-                    className="me-2" 
-                    onClick={() => handleShowEditModal(category)}
-                  >
-                    <FaEdit /> Edit
-                  </Button>
-                  <Button 
-                    variant="danger" 
-                    size="sm" 
-                    onClick={() => handleShowDeleteModal(category)}
-                  >
-                    <FaTrashAlt /> Delete
-                  </Button>
-                </td>
+        <>
+          <Table striped bordered hover responsive>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Image URL</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {categories.map(category => (
+                <tr key={category.id}>
+                  <td>{category.id}</td>
+                  <td>{category.name}</td>
+                  <td>{category.description || '-'}</td>
+                  <td>{category.imageUrl ? (
+                    <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
+                      {category.imageUrl}
+                    </a>
+                  ) : (
+                    <span className="text-muted">No image</span>
+                  )}</td>
+                  <td>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm" 
+                      className="me-2" 
+                      onClick={() => handleShowEditModal(category)}
+                    >
+                      <FaEdit /> Edit
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      size="sm" 
+                      onClick={() => handleShowDeleteModal(category)}
+                    >
+                      <FaTrashAlt /> Delete
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+          
+          {/* Render pagination if more than one page */}
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-center mt-4">
+              <Pagination>
+                <Pagination.Prev 
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                />
+                
+                {/* First page */}
+                <Pagination.Item
+                  active={currentPage === 1}
+                  onClick={() => handlePageChange(1)}
+                >
+                  1
+                </Pagination.Item>
+                
+                {/* Ellipsis if not showing first few pages */}
+                {currentPage > 3 && <Pagination.Ellipsis disabled />}
+                
+                {/* Pages around current page */}
+                {Array.from({ length: totalPages })
+                  .map((_, index) => index + 1)
+                  .filter(page => page !== 1 && page !== totalPages) // Exclude first and last pages which are always shown
+                  .filter(page => page >= currentPage - 1 && page <= currentPage + 1) // Show only pages around current page
+                  .map(page => (
+                    <Pagination.Item
+                      key={page}
+                      active={currentPage === page}
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </Pagination.Item>
+                  ))}
+                
+                {/* Ellipsis if not showing last few pages */}
+                {currentPage < totalPages - 2 && <Pagination.Ellipsis disabled />}
+                
+                {/* Last page if more than one page */}
+                {totalPages > 1 && (
+                  <Pagination.Item
+                    active={currentPage === totalPages}
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </Pagination.Item>
+                )}
+                
+                <Pagination.Next
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                />
+              </Pagination>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add/Edit Category Modal */}

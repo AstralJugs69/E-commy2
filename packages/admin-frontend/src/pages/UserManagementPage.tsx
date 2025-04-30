@@ -22,7 +22,7 @@ const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -61,10 +61,10 @@ const UserManagementPage: React.FC = () => {
     newSortBy: string = sortBy, 
     newSortOrder: 'asc' | 'desc' = sortOrder
   ) => {
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
+      try {
       // Build query parameters
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -94,22 +94,22 @@ const UserManagementPage: React.FC = () => {
       if (newSortBy !== sortBy) setSortBy(newSortBy);
       if (newSortOrder !== sortOrder) setSortOrder(newSortOrder);
       
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response) {
-        if (err.response.status === 401) {
-          setError('Your session has expired. Please log in again.');
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          if (err.response.status === 401) {
+            setError('Your session has expired. Please log in again.');
+          } else {
+            setError(err.response.data.message || 'Failed to fetch users.');
+          }
+          console.error('Error fetching users:', err.response.data);
         } else {
-          setError(err.response.data.message || 'Failed to fetch users.');
+          setError('Network error. Please check your connection.');
+          console.error('Network error:', err);
         }
-        console.error('Error fetching users:', err.response.data);
-      } else {
-        setError('Network error. Please check your connection.');
-        console.error('Network error:', err);
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   // Handle sorting column click
   const handleSortColumn = (column: string) => {
