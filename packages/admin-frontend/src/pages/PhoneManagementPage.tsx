@@ -88,7 +88,7 @@ const PhoneManagementPage = () => {
     
     setIsAdding(true);
     setAddError(null);
-    
+
     try {
       // Call API to add phone number
       await api.post(
@@ -180,7 +180,7 @@ const PhoneManagementPage = () => {
         setItemsPerPage(paginatedResponse.meta.itemsPerPage);
       } else if (Array.isArray(response.data)) {
         // Legacy format (direct array)
-        setPhoneNumbers(response.data);
+      setPhoneNumbers(response.data);
         setCurrentPage(1);
         setTotalPages(1);
         setTotalItems(response.data.length);

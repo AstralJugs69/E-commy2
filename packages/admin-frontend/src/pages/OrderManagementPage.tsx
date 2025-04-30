@@ -98,7 +98,7 @@ const OrderManagementPage = () => {
       if (searchTerm) {
         params.append('search', searchTerm);
       }
-      
+
       const response = await api.get(`/admin/orders?${params.toString()}`);
       
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
@@ -138,16 +138,16 @@ const OrderManagementPage = () => {
       } else if (response.data && response.data.orders && Array.isArray(response.data.orders)) {
         // Another possible legacy format
         const ordersArray = response.data.orders;
-        
-        const processedOrders = ordersArray.map(order => ({
-          ...order,
-          shippingDetails: typeof order.shippingDetails === 'string'
-            ? JSON.parse(order.shippingDetails)
+      
+      const processedOrders = ordersArray.map((order: any) => ({
+        ...order,
+        shippingDetails: typeof order.shippingDetails === 'string'
+          ? JSON.parse(order.shippingDetails)
             : (order.shippingDetails || {}),
           items: Array.isArray(order.items) ? order.items : []
-        }));
-        
-        setOrders(processedOrders);
+      }));
+      
+      setOrders(processedOrders);
         setCurrentPage(1);
         setTotalPages(1);
         setTotalItems(ordersArray.length);
@@ -456,11 +456,11 @@ const OrderManagementPage = () => {
               </p>
               {(statusFilters.length > 0 || searchTerm) && (
                 <div className="d-flex gap-2 justify-content-center">
-                  {statusFilters.length > 0 && (
-                    <Button 
+              {statusFilters.length > 0 && (
+                <Button 
                       variant="outline-primary" 
-                      onClick={clearStatusFilters}
-                    >
+                  onClick={clearStatusFilters}
+                >
                       Clear Status Filters
                     </Button>
                   )}
@@ -470,7 +470,7 @@ const OrderManagementPage = () => {
                       onClick={clearSearch}
                     >
                       Clear Search
-                    </Button>
+                </Button>
                   )}
                 </div>
               )}
@@ -549,9 +549,9 @@ const OrderManagementPage = () => {
                       <td>
                         {order.items && order.items.length > 0 ? (
                           order.items.map(item => (
-                            <div key={item.id} className="small">
-                              <span className="fw-medium">{item.quantity}x</span> {item.productName}
-                            </div>
+                          <div key={item.id} className="small">
+                            <span className="fw-medium">{item.quantity}x</span> {item.productName}
+                          </div>
                           ))
                         ) : (
                           <div className="small text-muted">No items</div>
@@ -595,9 +595,9 @@ const OrderManagementPage = () => {
               {renderPagination()}
               
               {/* Display total items */}
-              <div className="text-center mt-3 text-muted small">
+                <div className="text-center mt-3 text-muted small">
                 Showing {orders.length} of {totalItems} orders
-              </div>
+                </div>
             </>
           )}
         </>

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import api from '../utils/api';
+import axios, { AxiosError } from 'axios';
 
 interface UserProfile {
   id: number;
@@ -43,12 +44,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserProfile(response.data);
         console.log('User profile fetched:', response.data);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error fetching user profile:', err);
       setUserProfile(null);
       
-      // If token is invalid/expired, logout the user
-      if (err.response && err.response.status === 401) {
+      // Check if err is an AxiosError with a response property
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
         console.log('Token invalid or expired, logging out');
         logout();
       }

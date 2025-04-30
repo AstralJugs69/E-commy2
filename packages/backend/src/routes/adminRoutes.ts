@@ -580,10 +580,10 @@ router.get('/phonenumbers', isAdmin, async (req: Request, res: Response) => {
       prisma.phoneNumber.count({ where: whereClause }),
       prisma.phoneNumber.findMany({
         where: whereClause,
-        select: {
-          id: true,
-          numberString: true,
-          status: true
+      select: {
+        id: true,
+        numberString: true,
+        status: true
         },
         orderBy: orderByClause,
         skip: paginationParams.skip,

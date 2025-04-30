@@ -105,7 +105,7 @@ const CategoryManagementPage: React.FC = () => {
         setTotalItems(paginatedResponse.meta.totalItems);
       } else if (Array.isArray(response.data)) {
         // Handle legacy format (just array of categories)
-        setCategories(response.data);
+      setCategories(response.data);
         setCurrentPage(1);
         setTotalPages(1);
         setTotalItems(response.data.length);
@@ -377,8 +377,8 @@ const CategoryManagementPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Category Management</h2>
         <Button onClick={handleShowAddModal} variant="primary">
-          <FaPlus className="me-1" /> Add Category
-        </Button>
+            <FaPlus className="me-1" /> Add Category
+          </Button>
       </div>
 
       {/* Toast notification */}
@@ -448,50 +448,50 @@ const CategoryManagementPage: React.FC = () => {
         </Alert>
       ) : (
         <>
-          <Table striped bordered hover responsive>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Image URL</th>
-                <th>Actions</th>
+        <Table striped bordered hover responsive>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Image URL</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map(category => (
+              <tr key={category.id}>
+                <td>{category.id}</td>
+                <td>{category.name}</td>
+                <td>{category.description || '-'}</td>
+                <td>{category.imageUrl ? (
+                  <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
+                    {category.imageUrl}
+                  </a>
+                ) : (
+                  <span className="text-muted">No image</span>
+                )}</td>
+                <td>
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
+                    className="me-2" 
+                    onClick={() => handleShowEditModal(category)}
+                  >
+                    <FaEdit /> Edit
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    size="sm" 
+                    onClick={() => handleShowDeleteModal(category)}
+                  >
+                    <FaTrashAlt /> Delete
+                  </Button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {categories.map(category => (
-                <tr key={category.id}>
-                  <td>{category.id}</td>
-                  <td>{category.name}</td>
-                  <td>{category.description || '-'}</td>
-                  <td>{category.imageUrl ? (
-                    <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
-                      {category.imageUrl}
-                    </a>
-                  ) : (
-                    <span className="text-muted">No image</span>
-                  )}</td>
-                  <td>
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm" 
-                      className="me-2" 
-                      onClick={() => handleShowEditModal(category)}
-                    >
-                      <FaEdit /> Edit
-                    </Button>
-                    <Button 
-                      variant="danger" 
-                      size="sm" 
-                      onClick={() => handleShowDeleteModal(category)}
-                    >
-                      <FaTrashAlt /> Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+            ))}
+          </tbody>
+        </Table>
           
           {/* Render pagination if more than one page */}
           {totalPages > 1 && (
