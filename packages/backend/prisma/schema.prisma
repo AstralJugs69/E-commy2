@@ -30,13 +30,14 @@ model User {
 }
 
 model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  imageUrl    String?
-  products    Product[]
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  description      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  imageUrl         String?
+  isSystemCategory Boolean   @default(false)
+  products         Product[]
 }
 
 model Product {

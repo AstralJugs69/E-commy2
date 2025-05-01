@@ -36,6 +36,12 @@ router.post('/', isAdmin, (async (req: Request, res: Response) => {
 
     const { name, description, imageUrl } = validationResult.data;
 
+    // Prevent manual creation of "All" system category
+    if (name === "All") {
+      res.status(400).json({ message: "Cannot manually create the 'All' system category." });
+      return;
+    }
+
     // Create the category with type safety
     const categoryData: Prisma.CategoryCreateInput = {
       name,
@@ -106,6 +112,7 @@ router.get('/', isAdmin, (async (req: Request, res: Response) => {
           name: true,
           description: true,
           imageUrl: true,
+          isSystemCategory: true,
         },
         orderBy: orderByClause,
         skip: paginationParams.skip,
@@ -147,11 +154,24 @@ router.put('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
       return;
     }
 
-    // Check if category exists (use findUniqueOrThrow for cleaner error handling)
-    await prisma.category.findUniqueOrThrow({
-      where: { id: categoryId }
-    }).catch(() => { throw { status: 404, message: 'Category not found.' } });
+    // Fetch the existing category to check its system flag and name
+    const existingCategory = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { isSystemCategory: true, name: true }
+    });
 
+    if (!existingCategory) {
+      res.status(404).json({ message: 'Category not found.' });
+      return;
+    }
+
+    // Check if trying to change the name of a system category
+    if (existingCategory.isSystemCategory && 
+        validationResult.data.name !== undefined && 
+        validationResult.data.name !== existingCategory.name) {
+      res.status(400).json({ message: 'Cannot change the name of a system category.' });
+      return;
+    }
 
     // Create update data with proper typing
     const updateData: Prisma.CategoryUpdateInput = {};
@@ -210,11 +230,23 @@ router.delete('/:categoryId', isAdmin, (async (req: Request, res: Response) => {
     // Check if category exists and if it has products in one go
     const existingCategory = await prisma.category.findUnique({
       where: { id: categoryId },
-      include: { _count: { select: { products: true } } } // Count associated products
+      include: { 
+        _count: { 
+          select: { 
+            products: true 
+          } 
+        } 
+      }
     });
 
     if (!existingCategory) {
       res.status(404).json({ message: 'Category not found.' });
+      return;
+    }
+
+    // Prevent deletion of system categories
+    if (existingCategory.isSystemCategory) {
+      res.status(400).json({ message: "Cannot delete a system category." });
       return;
     }
 

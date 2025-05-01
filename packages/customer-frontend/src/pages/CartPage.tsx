@@ -45,7 +45,7 @@ const CartPage = () => {
   
   const handleCheckout = () => {
     if (!isAuthenticated) {
-      toast.error('Please log in to checkout');
+      toast.error(t('auth.loginRequired', 'Please log in to checkout'));
       navigate('/login');
     } else {
       navigate('/checkout');
@@ -68,7 +68,7 @@ const CartPage = () => {
   
   // Extract error message from Axios error
   const getErrorMessage = (error: any): string => {
-    let message = 'Failed to update quantity.';
+    let message = t('cart.errors.updateFailed', 'Failed to update quantity.');
     
     if (axios.isAxiosError(error) && error.response) {
       if (error.response.data && error.response.data.message) {
@@ -102,7 +102,7 @@ const CartPage = () => {
     
     // Client-side validation
     if (newQuantity < 1) {
-      const errorMsg = 'Quantity cannot be less than 1';
+      const errorMsg = t('cart.errors.minQuantity', 'Quantity cannot be less than 1');
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
       
@@ -116,7 +116,7 @@ const CartPage = () => {
     
     // Simple stock check
     if (newQuantity > stockLimit) {
-      const errorMsg = `Cannot add more than available stock (${stockLimit})`;
+      const errorMsg = t('cart.errors.stockLimit', 'Cannot add more than available stock ({{count}})', { count: stockLimit });
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
       
@@ -183,17 +183,17 @@ const CartPage = () => {
   if (!isAuthenticated) {
     return (
       <Container className="py-4">
-        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
+        <h2 className="mb-4 fw-semibold">{t('cartPage.title', 'Shopping Cart')}</h2>
         <Card className="shadow-sm border-0 mb-4">
           <Card.Body className="p-5 text-center">
             <div className="empty-state">
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
-              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart', 'Your cart is empty')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage', "Looks like you haven't added anything to your cart yet.")}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                {t('cart.startShopping')}
+                {t('cart.startShopping', 'Start Shopping')}
               </Link>
             </div>
           </Card.Body>
@@ -206,9 +206,9 @@ const CartPage = () => {
   if (isLoading && cartItems.length === 0) {
     return (
       <Container className="py-4 text-center">
-        <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
+        <h2 className="mb-4 fw-semibold">{t('cartPage.title', 'Shopping Cart')}</h2>
         <Spinner animation="border" role="status" className="my-5">
-          <span className="visually-hidden">{t('common.loading')}</span>
+          <span className="visually-hidden">{t('common.loading', 'Loading...')}</span>
         </Spinner>
       </Container>
     );
@@ -216,7 +216,7 @@ const CartPage = () => {
   
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">{t('cart.title')}</h2>
+      <h2 className="mb-4 fw-semibold">{t('cartPage.title', 'Shopping Cart')}</h2>
       
       {errorMessage && (
         <Alert variant="danger" className="mb-3" onClose={() => setErrorMessage(null)} dismissible>
@@ -231,10 +231,10 @@ const CartPage = () => {
               <div className="empty-state-icon mb-4">
                 <FaTrash size={40} />
               </div>
-              <h3 className="empty-state-text mb-3">{t('cart.emptyCart')}</h3>
-              <p className="text-muted mb-4">{t('cart.emptyCartMessage')}</p>
+              <h3 className="empty-state-text mb-3">{t('cart.emptyCart', 'Your cart is empty')}</h3>
+              <p className="text-muted mb-4">{t('cart.emptyCartMessage', "Looks like you haven't added anything to your cart yet.")}</p>
               <Link to="/" className="btn btn-primary rounded-pill px-4 py-2">
-                {t('cart.startShopping')}
+                {t('cart.startShopping', 'Start Shopping')}
               </Link>
             </div>
           </Card.Body>
@@ -260,7 +260,7 @@ const CartPage = () => {
                     {/* Name Col */}
                     <Col xs={6} sm={7}>
                       <h6 className="mb-1">{item.name}</h6>
-                      <div className="text-muted small mb-2">{formatCurrency(item.price)} each</div>
+                      <div className="text-muted small mb-2">{formatCurrency(item.price)} {t('cart.priceEachSuffix', 'each')}</div>
                       
                       {/* Quantity Input - Mobile Only */}
                       <div className="d-sm-none">
@@ -279,7 +279,7 @@ const CartPage = () => {
                             disabled={updatingItemId === item.id || isLoading}
                           />
                           <small className="ms-2 text-muted">
-                            of {item.stock} available
+                            {t('cart.stockAvailable', 'of {{count}} available', { count: item.stock })}
                           </small>
                         </div>
                       </div>
@@ -302,7 +302,7 @@ const CartPage = () => {
                           disabled={updatingItemId === item.id || isLoading}
                         />
                         <small className="ms-2 text-muted">
-                          of {item.stock} available
+                          {t('cart.stockAvailable', 'of {{count}} available', { count: item.stock })}
                         </small>
                       </div>
                     </Col>
@@ -331,7 +331,7 @@ const CartPage = () => {
           <div className="d-flex flex-column mt-4">
             {/* Cart Summary */}
             <div className="d-flex justify-content-end mb-3">
-              <h4 className="fw-semibold">{t('common.total')}: {formatCurrency(getCartTotal())}</h4>
+              <h4 className="fw-semibold">{t('common.total', 'Total:')}: {formatCurrency(getCartTotal())}</h4>
             </div>
             
             {/* Action Buttons */}
@@ -342,14 +342,14 @@ const CartPage = () => {
                   onClick={() => clearCart()}
                   disabled={isLoading}
                 >
-                {t('cart.clearCart')}
+                {t('cart.clearCart', 'Clear Cart')}
                 </Button>
               
                 <Link 
                   to="/" 
                 className="btn btn-outline-primary w-100 py-2"
                 >
-                {t('cart.continueShopping')}
+                {t('cart.continueShopping', 'Continue Shopping')}
                 </Link>
               
                 <Button 
@@ -358,7 +358,7 @@ const CartPage = () => {
                   onClick={handleCheckout}
                 disabled={isLoading || cartIsEmpty}
                 >
-                {t('cart.proceedToCheckout')}
+                {t('cart.proceedToCheckout', 'Proceed to Checkout')}
                 </Button>
               </div>
           </div>

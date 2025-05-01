@@ -16,7 +16,7 @@ i18n
     debug: process.env.NODE_ENV === 'development', 
     
     // Default language
-    fallbackLng: 'en', 
+    fallbackLng: 'am', 
     
     // Supported languages
     supportedLngs: ['en', 'am', 'om'], 

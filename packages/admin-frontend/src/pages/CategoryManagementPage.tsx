@@ -13,6 +13,7 @@ interface Category {
   name: string;
   description: string | null;
   imageUrl?: string | null;
+  isSystemCategory?: boolean;
 }
 
 interface PaginationMeta {
@@ -59,6 +60,7 @@ const CategoryManagementPage: React.FC = () => {
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [editingCategoryIsSystem, setEditingCategoryIsSystem] = useState(false);
   
   // Delete state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -159,6 +161,7 @@ const CategoryManagementPage: React.FC = () => {
     setFormErrors({});
     setIsEditMode(false);
     setEditCategoryId(null);
+    setEditingCategoryIsSystem(false);
     setSelectedFile(null);
     setCurrentImageUrl('');
     setUploadError(null);
@@ -175,6 +178,7 @@ const CategoryManagementPage: React.FC = () => {
     setFormErrors({});
     setIsEditMode(true);
     setEditCategoryId(category.id);
+    setEditingCategoryIsSystem(!!category.isSystemCategory);
     setSelectedFile(null);
     setUploadError(null);
     setShowAddEditModal(true);
@@ -462,7 +466,12 @@ const CategoryManagementPage: React.FC = () => {
             {categories.map(category => (
               <tr key={category.id}>
                 <td>{category.id}</td>
-                <td>{category.name}</td>
+                <td>
+                  {category.name}
+                  {category.isSystemCategory && (
+                    <span className="ms-2 badge bg-secondary">System</span>
+                  )}
+                </td>
                 <td>{category.description || '-'}</td>
                 <td>{category.imageUrl ? (
                   <a href={getImageUrl(category.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>
@@ -484,6 +493,8 @@ const CategoryManagementPage: React.FC = () => {
                     variant="danger" 
                     size="sm" 
                     onClick={() => handleShowDeleteModal(category)}
+                    disabled={category.isSystemCategory || isDeleting}
+                    title={category.isSystemCategory ? "Cannot delete system category" : "Delete category"}
                   >
                     <FaTrashAlt /> Delete
                   </Button>
@@ -567,10 +578,16 @@ const CategoryManagementPage: React.FC = () => {
                 onChange={handleInputChange}
                 isInvalid={!!formErrors.name}
                 className="py-2"
+                disabled={isEditMode && editingCategoryIsSystem}
               />
               <Form.Control.Feedback type="invalid">
                 {formErrors.name}
               </Form.Control.Feedback>
+              {isEditMode && editingCategoryIsSystem && (
+                <Form.Text className="text-muted">
+                  System category names cannot be changed.
+                </Form.Text>
+              )}
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label className="fw-medium text-neutral-700">Description</Form.Label>

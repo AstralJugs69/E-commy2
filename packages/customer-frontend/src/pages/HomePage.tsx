@@ -128,7 +128,15 @@ const HomePage = () => {
       try {
         const response = await api.get<HomepageData>('/homepage');
         setFeaturedProducts(response.data.featuredProducts || []);
-        setCategories(response.data.categories || []);
+        
+        // Sort categories to place "All" first
+        const fetchedCategories = response.data.categories || [];
+        fetchedCategories.sort((a, b) => {
+          if (a.name === 'All') return -1; // 'All' comes first
+          if (b.name === 'All') return 1;
+          return a.name.localeCompare(b.name); // Sort others alphabetically
+        });
+        setCategories(fetchedCategories);
         
         // If no search/filters are active, use the newProducts as initial product list
         if (!searchTerm && !selectedCategoryId) {
@@ -155,10 +163,15 @@ const HomePage = () => {
   }, []);
 
   // Special handler for category selection
-  const handleCategorySelect = (categoryId: string) => {
+  const handleCategorySelect = (categoryId: string, categoryName?: string) => {
     // Only update if it's actually a different selection
     if (categoryId !== selectedCategoryId) {
-      setSelectedCategoryId(categoryId);
+      // If the category name is "All", set selectedCategoryId to empty string
+      if (categoryName === 'All') {
+        setSelectedCategoryId('');
+      } else {
+        setSelectedCategoryId(categoryId);
+      }
       // This will trigger the useEffect that depends on selectedCategoryId
     }
   };
@@ -332,28 +345,12 @@ const HomePage = () => {
           </div>
         ) : (
           <div className="category-scroll-container mb-3">
-            {/* All Categories Option */}
-            <div className={`category-item-wrapper ${selectedCategoryId === '' ? 'active' : ''}`}>
-              <div 
-                className="category-item"
-                onClick={() => handleCategorySelect('')}
-              >
-                <img 
-                  src="/placeholder-image.svg" 
-                  alt={t('homePage.allCategories')} 
-                  className="category-image" 
-                  onError={(e) => {e.currentTarget.src = '/placeholder-image.svg'}}
-                />
-                <p className="category-name text-truncate w-100">{t('homePage.allCategories')}</p>
-              </div>
-            </div>
-            
             {/* Individual Categories */}
             {categories.map((category) => (
-              <div key={category.id} className={`category-item-wrapper ${selectedCategoryId === category.id.toString() ? 'active' : ''}`}>
+              <div key={category.id} className={`category-item-wrapper ${selectedCategoryId === category.id.toString() || (category.name === 'All' && selectedCategoryId === '') ? 'active' : ''}`}>
                 <div 
                   className="category-item"
-                  onClick={() => handleCategorySelect(category.id.toString())}
+                  onClick={() => handleCategorySelect(category.id.toString(), category.name)}
                 >
                   <img 
                     src={getImageUrl(category.imageUrl)} 
@@ -582,9 +579,7 @@ const HomePage = () => {
         <>
           {totalProducts > 0 && (
             <p className="text-muted mb-3">
-              {totalProducts === 1 
-                ? t('homePage.productFound_one')
-                : t('homePage.productFound_other', { count: totalProducts })}
+              {t('homePage.productFound', { count: totalProducts })}
               {searchTerm && ` ${t('homePage.matching')} "${searchTerm}"`}
             </p>
           )}

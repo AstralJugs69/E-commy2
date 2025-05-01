@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from 'react-bootstrap';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useTranslation } from 'react-i18next';
 
 // Define a more specific type for the beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
@@ -15,6 +16,7 @@ interface PWAPromptProps {
 }
 
 function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) {
+  const { t } = useTranslation();
   // Track install state at the top level, not inside useEffect
   const [isInstalled, setIsInstalled] = useState(false);
   
@@ -32,7 +34,7 @@ function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) 
     },
     onRegisterError(error: Error) {
       console.error('SW registration error:', error);
-      toast.error('App offline features may not work properly.');
+      toast.error(t('errors.offlineFeatures', 'App offline features may not work properly.'));
     },
   });
 
@@ -70,7 +72,7 @@ function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) 
           onInstallPromptAvailable(null);
         }
         console.log('PWA was installed');
-        toast.success('App installed successfully!');
+        toast.success(t('pwa.installedSuccess', 'App installed successfully!'));
       };
 
       // Check if app is already installed
@@ -97,36 +99,36 @@ function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) 
         window.removeEventListener('appinstalled', handleAppInstalled);
       };
     }
-  }, [installPrompt, onInstallPromptAvailable, isInstalled]);
+  }, [installPrompt, onInstallPromptAvailable, isInstalled, t]);
 
   // Handle update notifications
   React.useEffect(() => {
     if (needRefresh) {
       // Show a persistent toast prompting the user to update
       toast(
-        (t) => (
+        (toastData) => (
           <div className="d-flex flex-column align-items-center">
-            <span className="mb-2">A new version is available! Refresh to update.</span>
+            <span className="mb-2">{t('pwa.updateAvailable', 'A new version is available! Refresh to update.')}</span>
             <div className="d-flex gap-2 mt-2">
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => {
                   updateServiceWorker(true); // Passing true reloads the page
-                  toast.dismiss(t.id); // Dismiss this toast on click
+                  toast.dismiss(toastData.id); // Dismiss this toast on click
                 }}
               >
-                Refresh Now
+                {t('common.refreshNow', 'Refresh Now')}
               </Button>
               <Button
                 variant="outline-secondary"
                 size="sm"
                 onClick={() => {
-                  toast.dismiss(t.id);
+                  toast.dismiss(toastData.id);
                   setNeedRefresh(false);
                 }}
               >
-                Later
+                {t('common.later', 'Later')}
               </Button>
             </div>
           </div>
@@ -137,7 +139,7 @@ function PWAPrompt({ onInstallPromptAvailable, installPrompt }: PWAPromptProps) 
         }
       );
     }
-  }, [needRefresh, setNeedRefresh, updateServiceWorker]);
+  }, [needRefresh, setNeedRefresh, updateServiceWorker, t]);
 
   // This component doesn't render anything directly in the DOM
   return null;

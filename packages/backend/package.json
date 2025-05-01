@@ -10,12 +10,16 @@
     "setup": "npm install && npm install compression@1.7.4 @types/compression@1.7.5",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts",
     "test": "npx vitest run",
     "test:watch": "npx vitest",
     "coverage": "npx vitest run --coverage",
     "generate-token": "node generate-token.js",
     "kill-server-win": "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :3001') do taskkill /F /PID %a",
     "kill-server": "node -e \"try{require('child_process').execSync(process.platform === 'win32' ? 'for /f \\\"tokens=5\\\" %a in (\\'netstat -ano ^| findstr :3001\\') do taskkill /F /PID %a' : 'lsof -ti:3001,3002 | xargs kill -9')}catch(e){console.log('No processes found')}\""
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

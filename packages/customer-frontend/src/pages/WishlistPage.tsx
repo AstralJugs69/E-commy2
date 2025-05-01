@@ -79,12 +79,12 @@ const WishlistPage: React.FC = () => {
 
   return (
     <Container className="py-4">
-      <h2 className="mb-4 fw-semibold">{t('wishlist.title')}</h2>
+      <h2 className="mb-4 fw-semibold">{t('wishlistPage.title', 'My Wishlist')}</h2>
       
       <div className="mb-4">
         <Link to="/" className="text-decoration-none">
           <Button variant="outline-secondary" size="sm" className="rounded-pill px-3 py-2">
-            <FaChevronLeft className="me-2" /> {t('cart.continueShopping')}
+            <FaChevronLeft className="me-2" /> {t('cart.continueShopping', 'Continue Shopping')}
           </Button>
         </Link>
       </div>
@@ -92,7 +92,7 @@ const WishlistPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center my-5">
           <Spinner animation="border" role="status" variant="primary">
-            <span className="visually-hidden">{t('common.loading')}</span>
+            <span className="visually-hidden">{t('common.loading', 'Loading...')}</span>
           </Spinner>
           <p className="mt-3">{t('wishlist.loadingWishlist', 'Loading your wishlist...')}</p>
         </div>
@@ -101,18 +101,14 @@ const WishlistPage: React.FC = () => {
       ) : wishlistItems.length === 0 ? (
         <EmptyState
           icon={<FaRegHeart />}
-          title={t('wishlist.emptyWishlist')}
-          message={t('wishlist.emptyWishlistMessage')}
+          title={t('wishlist.emptyWishlist', 'Your Wishlist is Empty')}
+          message={t('wishlist.emptyWishlistMessage', 'Add items you love to your wishlist by clicking the heart icon.')}
           actionButton={<Link to="/" className="btn btn-primary px-4 rounded-pill">{t('wishlist.browseProducts', 'Browse Products')}</Link>}
         />
       ) : (
         <>
           <p className="text-muted mb-4">
-            {t('wishlist.itemCount', '{{count}} items in your wishlist', { 
-              count: wishlistItems.length,
-              defaultValue_plural: '{{count}} items in your wishlist',
-              defaultValue_one: '1 item in your wishlist'
-            })}
+            {t('wishlist.itemCount', { count: wishlistItems.length })}
           </p>
           
           <Row className="g-3 my-3">
@@ -155,7 +151,7 @@ const WishlistPage: React.FC = () => {
                         className="position-absolute top-0 end-0 m-2 rounded-circle p-1 shadow-sm"
                         style={{ width: '32px', height: '32px' }}
                         onClick={(e) => handleRemoveFromWishlist(e, item.product.id, item.product.name)}
-                        aria-label={t('wishlist.removeFromWishlist')}
+                        aria-label={t('wishlist.removeFromWishlist', 'Remove from Wishlist')}
                       >
                         <FaTrash className="text-danger" style={{ fontSize: '14px' }} />
                       </Button>

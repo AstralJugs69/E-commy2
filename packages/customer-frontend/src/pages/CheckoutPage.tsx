@@ -420,6 +420,18 @@ const CheckoutPage: React.FC = () => {
           }
         }
         
+        // Check for daily order limit error (429 Too Many Requests)
+        if (error.response.status === 429 && error.response.data?.message?.includes('limit of 3 orders')) {
+          const limitMessage = error.response.data.message;
+          console.error("DAILY ORDER LIMIT REACHED:", limitMessage);
+          toast.error(limitMessage);
+          setError(limitMessage);
+          setLoading(false);
+          setIsRetrying(false); // Ensure retrying stops
+          toast.dismiss('retry-toast'); // Dismiss any active retry toast
+          return; // Stop further error handling for this specific case
+        }
+        
         // Check for zone availability error
         const isZoneAvailabilityError = 
           (errorMessage.toLowerCase().includes('service not available') || 

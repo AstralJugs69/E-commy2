@@ -57,6 +57,36 @@ router.post('/', isUser, async (req: Request, res: Response) => {
       return;
     }
 
+    // Daily order limit check
+    const DAILY_ORDER_LIMIT = 3;
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Sets time to 00:00:00.000
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const orderCountToday = await prisma.order.count({
+      where: {
+        userId: userId, // The current user
+        createdAt: {
+          gte: startOfDay, // Greater than or equal to start of day
+          lte: endOfDay    // Less than or equal to end of day
+        }
+        // Excluding cancelled orders is optional - uncomment if needed
+        // status: {
+        //   not: 'Cancelled'
+        // }
+      }
+    });
+
+    console.log(`User ${userId} order count for today (${startOfDay.toDateString()}): ${orderCountToday}`);
+
+    if (orderCountToday >= DAILY_ORDER_LIMIT) {
+      console.log(`User ${userId} has reached the daily order limit of ${DAILY_ORDER_LIMIT}. Rejecting order.`);
+      res.status(429).json({ // 429 Too Many Requests is appropriate
+        message: `You have reached the maximum limit of ${DAILY_ORDER_LIMIT} orders per day. Please try again tomorrow.`
+      });
+      return; // Stop further execution
+    }
+
     // If location data is provided, validate it against service zones
     if (location) {
       console.log(`Validating order location: [${location.lat}, ${location.lng}]`);

@@ -357,6 +357,15 @@ const Layout = ({ installPrompt, children }: LayoutProps) => {
         {children || <Outlet />}
       </main>
       
+      {/* Footer */}
+      <footer className="py-3 bg-light border-top mt-auto">
+        <Container className="text-center">
+          <p className="mb-0 text-muted">
+            &copy; {new Date().getFullYear()} {t('footer.allRightsReserved', 'All rights reserved.')}
+          </p>
+        </Container>
+      </footer>
+      
       {/* Bottom Navigation Bar - Mobile Only */}
       <nav className="d-lg-none fixed-bottom bg-white border-top py-2 mobile-nav">
         <div className="d-flex justify-content-around align-items-center">

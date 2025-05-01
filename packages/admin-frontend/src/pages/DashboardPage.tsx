@@ -31,6 +31,7 @@ interface AdminStats {
   totalZones: number;
   totalRevenue: number;
   ordersLast7Days: number;
+  [key: string]: any; // Add index signature to allow string indexing
 }
 
 interface DeliveryLocation {
@@ -242,14 +243,27 @@ const DashboardPage = () => {
           return [newOrder, ...prevOrders];
         });
         
-        // Refresh dashboard stats to reflect the new order
-        fetchDashboardData();
+        // Update stats locally instead of refetching all dashboard data
+        setStats(prevStats => {
+          if (!prevStats) return null; // Handle initial null state
+          return {
+            ...prevStats,
+            totalOrders: prevStats.totalOrders + 1,
+            pendingOrders: prevStats.pendingOrders + 1,
+            // Update ordersLast7Days if the order was created in the last 7 days
+            // We can safely assume a new order was created today, so it's within the last 7 days
+            ordersLast7Days: prevStats.ordersLast7Days + 1
+          };
+        });
       });
       
       // Listen for order status update events
       socket.on('order_status_updated', (updatedOrder) => {
         console.log('Order status updated via WebSocket:', updatedOrder);
         toast.success(`Order #${updatedOrder.id} updated to ${updatedOrder.status}!`);
+        
+        // Capture the old status before updating the order
+        let oldStatus: string | null = null;
         
         // Update the order in the active orders list
         setActiveOrders((prevOrders) => {
@@ -258,6 +272,9 @@ const DashboardPage = () => {
           
           // If the order is not in the list, don't update anything
           if (orderIndex === -1) return prevOrders;
+          
+          // Capture the old status before updating
+          oldStatus = prevOrders[orderIndex].status;
           
           // Create a copy of the previous orders array
           const updatedOrders = [...prevOrders];
@@ -271,8 +288,40 @@ const DashboardPage = () => {
           return updatedOrders;
         });
         
-        // Refresh dashboard stats to reflect the updated order status
-        fetchDashboardData();
+        // Update stats locally based on the status change
+        if (oldStatus) {
+          setStats(prevStats => {
+            if (!prevStats) return prevStats; // Cannot update without previous stats
+            
+            const newStats = { ...prevStats };
+            const newStatus = updatedOrder.status;
+            
+            // Decrement count for the old status
+            if (oldStatus === 'Pending Call') newStats.pendingOrders--;
+            else if (oldStatus === 'Verified') newStats.verifiedOrders--;
+            else if (oldStatus === 'Processing') newStats.processingOrders--;
+            else if (oldStatus === 'Shipped') newStats.shippedOrders--;
+            else if (oldStatus === 'Delivered') newStats.deliveredOrders--;
+            else if (oldStatus === 'Cancelled') newStats.cancelledOrders--;
+            
+            // Increment count for the new status
+            if (newStatus === 'Pending Call') newStats.pendingOrders++;
+            else if (newStatus === 'Verified') newStats.verifiedOrders++;
+            else if (newStatus === 'Processing') newStats.processingOrders++;
+            else if (newStatus === 'Shipped') newStats.shippedOrders++;
+            else if (newStatus === 'Delivered') newStats.deliveredOrders++;
+            else if (newStatus === 'Cancelled') newStats.cancelledOrders++;
+            
+            // Ensure counts don't go below zero (safety check)
+            Object.keys(newStats).forEach(key => {
+              if (key.endsWith('Orders') && typeof newStats[key] === 'number') {
+                newStats[key] = Math.max(0, newStats[key]);
+              }
+            });
+            
+            return newStats;
+          });
+        }
       });
       
       // Set socket connection status

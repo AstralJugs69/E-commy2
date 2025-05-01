@@ -4,6 +4,7 @@ import { Alert, Card, Spinner } from 'react-bootstrap';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 // Define interface for location
 interface Location {
@@ -55,6 +56,7 @@ const outOfServiceIcon = L.icon({
 });
 
 const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) => {
+  const { t } = useTranslation();
   const [serviceZones, setServiceZones] = useState<ServiceZone[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,20 +79,29 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
         setServiceZones(response.data);
       } catch (err) {
         console.error('Error fetching service zones:', err);
-        setError('Unable to load service zones');
+        setError(t('location.errorLoadingZones', 'Unable to load service zones'));
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchServiceZones();
-  }, [location]);
+  }, [location, t]);
   
   // Return early if no location is provided
   if (!location) {
     return (
       <Alert variant="info">
-        Location data is not available. Please allow location access for delivery services.
+        {t('location.invalidCoords', 'Invalid location coordinates')}
+      </Alert>
+    );
+  }
+  
+  // Validate coordinates are within a reasonable range
+  if (location.lat < -90 || location.lat > 90 || location.lng < -180 || location.lng > 180) {
+    return (
+      <Alert variant="warning">
+        {t('location.coordsOutOfRange', 'Location coordinates outside valid range')}
       </Alert>
     );
   }
@@ -105,7 +116,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
   return (
     <Card className="mb-4">
       <Card.Body>
-        <Card.Title>Your Location</Card.Title>
+        <Card.Title>{t('location.yourLocation', 'Your Location')}</Card.Title>
         <div style={{ height: '300px', width: '100%' }}>
           <MapContainer 
             center={[mapCenter.lat, mapCenter.lng]} 
@@ -123,12 +134,12 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
               icon={markerIcon}
             >
               <Popup>
-                <strong>Your Location</strong><br />
+                <strong>{t('location.yourLocation', 'Your Location')}</strong><br />
                 {isInServiceZone === true && (
-                  <span className="text-success">Within delivery service area</span>
+                  <span className="text-success">{t('location.inServiceZone', 'Within delivery service area')}</span>
                 )}
                 {isInServiceZone === false && (
-                  <span className="text-danger">Outside delivery service area</span>
+                  <span className="text-danger">{t('location.outOfServiceZone', 'Outside delivery service area')}</span>
                 )}
               </Popup>
             </Marker>
@@ -150,7 +161,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
                   >
                     <Popup>
                       <strong>{zone.name}</strong><br />
-                      Service Zone
+                      {t('location.serviceZone', 'Service Zone')}
                     </Popup>
                   </GeoJSON>
                 );
@@ -163,7 +174,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
           
           {isLoading && (
             <div className="text-center mt-2">
-              <small><Spinner animation="border" size="sm" /> Loading service areas...</small>
+              <small><Spinner animation="border" size="sm" /> {t('location.loadingZones', 'Loading service zones...')}</small>
             </div>
           )}
           
@@ -175,9 +186,9 @@ const LocationMap: React.FC<LocationMapProps> = ({ location, isInServiceZone }) 
         </div>
         {isInServiceZone === false && (
           <Alert variant="warning" className="mt-3">
-            <Alert.Heading>Location Notice</Alert.Heading>
-            <p>Your location appears to be outside our current delivery zones.</p>
-            <p className="mb-0">Please contact customer support for assistance.</p>
+            <Alert.Heading>{t('location.locationNoticeTitle', 'Location Notice')}</Alert.Heading>
+            <p>{t('location.locationNoticeText', 'Your location appears to be outside our current delivery zones.')}</p>
+            <p className="mb-0">{t('location.contactSupportText', 'Please contact customer support for assistance.')}</p>
           </Alert>
         )}
       </Card.Body>

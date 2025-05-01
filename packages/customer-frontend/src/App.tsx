@@ -4,6 +4,7 @@ import { Spinner, Container } from 'react-bootstrap';
 import Layout from './components/Layout'; // Import the layout
 import { useAuth } from './context/AuthContext';
 import PWAPrompt from './components/PWAPrompt'; // Import PWAPrompt component
+import { useTranslation } from 'react-i18next';
 
 // Define the BeforeInstallPromptEvent type
 interface BeforeInstallPromptEvent extends Event {
@@ -28,11 +29,15 @@ const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 
 // Loading fallback component
-const LoadingFallback = () => (
+const LoadingFallback = () => {
+  const { t } = useTranslation();
+  return (
   <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100vh - 200px)' }}> 
     <Spinner animation="border" variant="primary" />
+      <span className="ms-2">{t('common.loading', 'Loading...')}</span>
   </Container>
 );
+};
 
 function App() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);

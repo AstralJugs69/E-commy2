@@ -6,8 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaStore } from 'react-icons/fa';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 const LoginPage = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +31,7 @@ const LoginPage = () => {
     
     // Basic frontend validation
     if (!email.trim() || !password.trim()) {
-      setValidationError('Email and password are required');
+      setValidationError(t('loginPage.validation.requiredFields', 'Email and password are required'));
       setIsLoading(false);
       return;
     }
@@ -50,13 +52,13 @@ const LoginPage = () => {
         console.log('Login successful!');
         
         // Show success toast
-        toast.success('Login successful!');
+        toast.success(t('loginPage.success', 'Login successful!'));
         
         // Navigate to home page
         navigate('/', { replace: true });
       } else {
         // Handle unexpected response format
-        toast.error('Invalid server response - token missing');
+        toast.error(t('loginPage.errors.missingToken', 'Invalid server response - token missing'));
         console.error('Server response missing token', response.data);
       }
     } catch (error) {
@@ -64,11 +66,11 @@ const LoginPage = () => {
       if (axios.isAxiosError(error) && error.response) {
         // Server responded with an error
         console.error('Login API error:', error.response.status, error.response.data);
-        toast.error(error.response.data.message || 'Authentication failed');
+        toast.error(error.response.data.message || t('loginPage.errors.authFailed', 'Authentication failed'));
       } else {
         // Network or other error
         console.error('Login network error:', error);
-        toast.error('Network or server error. Please try again later.');
+        toast.error(t('loginPage.errors.network', 'Network or server error. Please try again later.'));
       }
     } finally {
       // Reset loading state
@@ -92,7 +94,7 @@ const LoginPage = () => {
         <Col xs={12} sm={10} md={8} lg={5} xl={4}>
           <Card className="shadow-sm border-0 auth-card">
             <Card.Body className="p-4">
-              <h2 className="text-center mb-4 fw-semibold">Sign In</h2>
+              <h2 className="text-center mb-4 fw-semibold">{t('loginPage.title', 'Sign In')}</h2>
               
               {validationError && (
                 <Alert variant="danger" className="mb-4">
@@ -103,7 +105,7 @@ const LoginPage = () => {
               <Form onSubmit={handleLogin}>
                 {/* Email input */}
                 <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label className="fw-medium text-neutral-700">Email Address</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">{t('common.emailLabel', 'Email Address')}</Form.Label>
                   <Form.Control
                     type="email"
                     placeholder="you@example.com"
@@ -116,7 +118,7 @@ const LoginPage = () => {
                 
                 {/* Password input */}
                 <Form.Group className="mb-3" controlId="formBasicPassword">
-                  <Form.Label className="fw-medium text-neutral-700">Password</Form.Label>
+                  <Form.Label className="fw-medium text-neutral-700">{t('common.passwordLabel', 'Password')}</Form.Label>
                   <Form.Control
                     type="password"
                     placeholder="••••••••"
@@ -129,7 +131,7 @@ const LoginPage = () => {
                 
                 {/* Forgot Password Link */}
                 <div className="text-end mb-4">
-                  <Link to="/request-password-reset" className="text-decoration-none small">Forgot Password?</Link>
+                  <Link to="/request-password-reset" className="text-decoration-none small">{t('loginPage.forgotPassword', 'Forgot Password?')}</Link>
                 </div>
                 
                 {/* Submit button */}
@@ -142,16 +144,16 @@ const LoginPage = () => {
                   {isLoading ? (
                     <>
                       <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                      Signing in...
+                      {t('loginPage.button.signingIn', 'Signing in...')}
                     </>
                   ) : (
-                    'Sign In'
+                    t('loginPage.button.signIn', 'Sign In')
                   )}
                 </Button>
               </Form>
               
               <p className="mt-4 text-center mb-0">
-                Don't have an account? <Link to="/register" className="text-decoration-none fw-medium">Create account</Link>
+                {t('loginPage.prompt.noAccount', "Don't have an account?")} <Link to="/register" className="text-decoration-none fw-medium">{t('loginPage.link.createAccount', 'Create account')}</Link>
               </p>
             </Card.Body>
           </Card>
