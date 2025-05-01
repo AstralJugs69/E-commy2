@@ -856,7 +856,9 @@ const SettingsPage = () => {
       <Modal show={showLocationModal} onHide={handleCloseLocationModal} centered>
         <Modal.Header closeButton className="border-bottom">
           <Modal.Title className="fw-semibold">
-            {editingLocation ? t('account.editAddress') : t('account.addNewAddress')}
+            {editingLocation 
+              ? t('account.editAddress', 'Edit Location')
+              : t('account.addNewAddress', 'Add New Location')}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
@@ -870,10 +872,10 @@ const SettingsPage = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Location Name</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.locationName', 'Location Name')}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Home, Work, etc."
+                    placeholder={t('account.addressForm.locationNamePlaceholder', 'Home, Work, etc.')}
                     name="name"
                     value={locationForm.name}
                     onChange={handleLocationFormChange}
@@ -890,10 +892,10 @@ const SettingsPage = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Phone Number</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.phoneNumber', 'Phone Number')}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Phone number"
+                    placeholder={t('account.addressForm.phonePlaceholder', 'Phone number')}
                     name="phone"
                     value={locationForm.phone}
                     onChange={handleLocationFormChange}
@@ -910,7 +912,7 @@ const SettingsPage = () => {
             <Row className="mb-4">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">District</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.district', 'District')}</Form.Label>
                   <Dropdown 
                     className="district-dropdown"
                     onSelect={eventKey => setLocationForm(prev => ({ ...prev, district: eventKey || '' }))}
@@ -921,17 +923,17 @@ const SettingsPage = () => {
                       className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle"
                       disabled={isLoadingDistricts}
                     >
-                      {currentDistrictLabel}
+                      {locationForm.district || t('account.addressForm.selectDistrict', '-- Select District --')}
                     </Dropdown.Toggle>
                     <Dropdown.Menu 
                       style={{ maxHeight: '200px', overflowY: 'auto' }} 
                       className="w-100 district-dropdown-menu animate-dropdown"
                     >
-                      <Dropdown.Header>Select District</Dropdown.Header>
+                      <Dropdown.Header>{t('account.addressForm.selectDistrict', 'Select District')}</Dropdown.Header>
                       {isLoadingDistricts ? (
-                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                        <Dropdown.Item disabled>{t('common.loading', 'Loading...')}</Dropdown.Item>
                       ) : districtError ? (
-                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                        <Dropdown.Item disabled className="text-danger">{t('account.addressForm.errorLoadingDistricts', 'Error loading districts')}</Dropdown.Item>
                       ) : districts.length > 0 ? (
                         districts.map(d => (
                           <Dropdown.Item 
@@ -944,7 +946,7 @@ const SettingsPage = () => {
                           </Dropdown.Item>
                         ))
                       ) : (
-                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                        <Dropdown.Item disabled>{t('account.addressForm.noDistricts', 'No districts available')}</Dropdown.Item>
                       )}
                     </Dropdown.Menu>
                   </Dropdown>
@@ -965,9 +967,9 @@ const SettingsPage = () => {
                 {isSavingLocation ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                    Saving...
+                    {t('common.saving', 'Saving...')}
                   </>
-                ) : (editingLocation ? 'Update Location' : 'Add Location')}
+                ) : (editingLocation ? t('account.updateLocation', 'Update Location') : t('account.addLocation', 'Add Location'))}
               </Button>
             </div>
           </Form>

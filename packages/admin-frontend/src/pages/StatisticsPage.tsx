@@ -8,6 +8,7 @@ import { FaBox } from 'react-icons/fa';
 import { FaDollarSign } from 'react-icons/fa';
 import { FaCalendarAlt } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 // Import ChartJS dependencies but lazy load the actual chart components
 import {
   Chart as ChartJS,
@@ -40,11 +41,15 @@ ChartJS.register(
 );
 
 // Chart loading fallback component
-const ChartLoadingFallback = () => (
-  <div className="d-flex justify-content-center align-items-center py-4">
-    <Spinner animation="border" variant="primary" />
-  </div>
-);
+const ChartLoadingFallback = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="d-flex justify-content-center align-items-center py-4">
+      <Spinner animation="border" variant="primary" />
+      <span className="visually-hidden">{t("common.loading")}</span>
+    </div>
+  );
+};
 
 interface AdminStats {
   totalOrders: number;
@@ -70,6 +75,7 @@ interface AdminStats {
 }
 
 const StatisticsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +101,7 @@ const StatisticsPage: React.FC = () => {
         const admin_token = localStorage.getItem('admin_token');
         
         if (!admin_token) {
-          setError('Authentication token not found. Please log in again.');
+          setError(t('statistics.errors.authTokenMissing'));
           setTimeout(() => {
             navigate('/login');
           }, 3000);
@@ -118,19 +124,19 @@ const StatisticsPage: React.FC = () => {
           if (err.response.status === 401) {
             // Handle unauthorized error
             localStorage.removeItem('admin_token');
-            setError('Your session has expired. Please log in again.');
+            setError(t('statistics.errors.sessionExpired'));
             setTimeout(() => {
               navigate('/login');
             }, 3000);
           } else if (err.response) {
-            setError(err.response.data.message || 'Failed to fetch dashboard data');
+            setError(err.response.data.message || t('statistics.errors.fetchFailed'));
             console.error('Error fetching dashboard data:', err.response.data);
           } else {
-            setError('Network error. Please check your connection.');
+            setError(t('statistics.errors.networkError'));
             console.error('Network error:', err);
           }
         } else {
-          setError('An unexpected error occurred.');
+          setError(t('statistics.errors.unexpected'));
           console.error('Error fetching dashboard data:', err);
         }
       } finally {
@@ -139,7 +145,7 @@ const StatisticsPage: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [navigate]);
+  }, [navigate, t]);
 
   // Fetch sales data for chart
   useEffect(() => {
@@ -151,7 +157,7 @@ const StatisticsPage: React.FC = () => {
         const admin_token = localStorage.getItem('admin_token');
         
         if (!admin_token) {
-          setSalesChartError('Authentication token not found.');
+          setSalesChartError(t('statistics.errors.authTokenMissing'));
           return;
         }
 
@@ -200,7 +206,7 @@ const StatisticsPage: React.FC = () => {
             labels,
             datasets: [
               {
-                label: 'Total Sales (€)',
+                label: t('statistics.charts.sales.label'),
                 data: salesValues,
                 borderColor: 'rgba(25, 135, 84, 1)', // success green
                 backgroundColor: 'rgba(25, 135, 84, 0.2)',
@@ -211,21 +217,21 @@ const StatisticsPage: React.FC = () => {
             ]
           });
         } else {
-          setSalesChartError('Invalid data format received from server.');
+          setSalesChartError(t('statistics.errors.invalidDataFormat'));
         }
       } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
-            setSalesChartError('Your session has expired.');
+            setSalesChartError(t('statistics.errors.sessionExpired'));
           } else if (err.response) {
-            setSalesChartError(err.response.data.message || 'Failed to fetch sales data');
+            setSalesChartError(err.response.data.message || t('statistics.errors.salesDataFetchFailed'));
             console.error('Error fetching sales data:', err.response.data);
           } else {
-            setSalesChartError('Network error. Please check your connection.');
+            setSalesChartError(t('statistics.errors.networkError'));
             console.error('Network error:', err);
           }
         } else {
-          setSalesChartError('An unexpected error occurred.');
+          setSalesChartError(t('statistics.errors.unexpected'));
           console.error('Error fetching sales data:', err);
         }
       } finally {
@@ -234,7 +240,7 @@ const StatisticsPage: React.FC = () => {
     };
 
     fetchSalesChartData();
-  }, [timePeriod]);
+  }, [timePeriod, t]);
 
   // Fetch users data for chart
   useEffect(() => {
@@ -246,7 +252,7 @@ const StatisticsPage: React.FC = () => {
         const admin_token = localStorage.getItem('admin_token');
         
         if (!admin_token) {
-          setUsersChartError('Authentication token not found.');
+          setUsersChartError(t('statistics.errors.authTokenMissing'));
           return;
         }
 
@@ -295,7 +301,7 @@ const StatisticsPage: React.FC = () => {
             labels,
             datasets: [
               {
-                label: 'New Users',
+                label: t('statistics.charts.users.label'),
                 data: userValues,
                 borderColor: 'rgba(13, 110, 253, 1)', // primary blue
                 backgroundColor: 'rgba(13, 110, 253, 0.2)',
@@ -306,21 +312,21 @@ const StatisticsPage: React.FC = () => {
             ]
           });
         } else {
-          setUsersChartError('Invalid data format received from server.');
+          setUsersChartError(t('statistics.errors.invalidDataFormat'));
         }
       } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response) {
           if (err.response.status === 401) {
-            setUsersChartError('Your session has expired.');
+            setUsersChartError(t('statistics.errors.sessionExpired'));
           } else if (err.response) {
-            setUsersChartError(err.response.data.message || 'Failed to fetch user data');
+            setUsersChartError(err.response.data.message || t('statistics.errors.userDataFetchFailed'));
             console.error('Error fetching user data:', err.response.data);
           } else {
-            setUsersChartError('Network error. Please check your connection.');
+            setUsersChartError(t('statistics.errors.networkError'));
             console.error('Network error:', err);
           }
         } else {
-          setUsersChartError('An unexpected error occurred.');
+          setUsersChartError(t('statistics.errors.unexpected'));
           console.error('Error fetching user data:', err);
         }
       } finally {
@@ -329,14 +335,21 @@ const StatisticsPage: React.FC = () => {
     };
 
     fetchUsersChartData();
-  }, [timePeriod]);
+  }, [timePeriod, t]);
 
   // Prepare chart data for order status breakdown
   const chartData = {
-    labels: ['Pending', 'Verified', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+    labels: [
+      t('statistics.orderStatus.pending'), 
+      t('statistics.orderStatus.verified'), 
+      t('statistics.orderStatus.processing'), 
+      t('statistics.orderStatus.shipped'), 
+      t('statistics.orderStatus.delivered'), 
+      t('statistics.orderStatus.cancelled')
+    ],
     datasets: [
       {
-        label: 'Orders by Status',
+        label: t('statistics.charts.orderStatus.label'),
         data: stats ? [
           stats.pendingOrders,
           stats.verifiedOrders,
@@ -374,7 +387,7 @@ const StatisticsPage: React.FC = () => {
       },
       title: {
         display: true,
-        text: 'Order Status Distribution',
+        text: t('statistics.charts.orderStatus.title'),
       },
     },
     scales: {
@@ -397,7 +410,7 @@ const StatisticsPage: React.FC = () => {
       },
       title: {
         display: true,
-        text: 'Sales Over Time',
+        text: t('statistics.charts.sales.title'),
       },
       tooltip: {
         callbacks: {
@@ -407,10 +420,7 @@ const StatisticsPage: React.FC = () => {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-EU', {
-                style: 'currency',
-                currency: 'EUR'
-              }).format(context.parsed.y);
+              label += formatCurrency(context.parsed.y);
             }
             return label;
           }
@@ -422,7 +432,7 @@ const StatisticsPage: React.FC = () => {
         beginAtZero: true,
         ticks: {
           callback: (value: any) => {
-            return '€' + value;
+            return formatCurrency(value);
           }
         }
       }
@@ -439,7 +449,7 @@ const StatisticsPage: React.FC = () => {
       },
       title: {
         display: true,
-        text: 'User Registrations',
+        text: t('statistics.charts.users.title'),
       },
     },
     scales: {
@@ -457,8 +467,9 @@ const StatisticsPage: React.FC = () => {
       <Container className="py-4">
         <div className="text-center my-5">
           <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading statistics...</span>
+            <span className="visually-hidden">{t('common.loading')}</span>
           </Spinner>
+          <p className="mt-3">{t('statistics.loadingMessage')}</p>
         </div>
       </Container>
     );
@@ -477,7 +488,7 @@ const StatisticsPage: React.FC = () => {
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Statistics & Reports</h2>
+        <h2 className="mb-0">{t('statistics.pageTitle')}</h2>
       </div>
       
       {/* Revenue and Orders Stats - First Row */}
@@ -487,8 +498,8 @@ const StatisticsPage: React.FC = () => {
             <Card.Body className="p-3">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="text-muted mb-1">Total Revenue</h6>
-                  <h3 className="mb-0">{stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : '€0.00'}</h3>
+                  <h6 className="text-muted mb-1">{t('statistics.cards.totalRevenue')}</h6>
+                  <h3 className="mb-0">{stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : formatCurrency(0)}</h3>
                 </div>
                 <div className="bg-success bg-opacity-10 p-3 rounded">
                   <FaDollarSign className="text-success" size={24} />
@@ -504,7 +515,7 @@ const StatisticsPage: React.FC = () => {
               <Card.Body className="p-3">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="text-muted mb-1">Total Orders</h6>
+                    <h6 className="text-muted mb-1">{t('statistics.cards.totalOrders')}</h6>
                     <h3 className="mb-0">{stats?.totalOrders ?? '-'}</h3>
                   </div>
                   <div className="bg-primary bg-opacity-10 p-3 rounded">
@@ -522,7 +533,7 @@ const StatisticsPage: React.FC = () => {
               <Card.Body className="p-3">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="text-muted mb-1">Last 7 Days</h6>
+                    <h6 className="text-muted mb-1">{t('statistics.cards.last7Days')}</h6>
                     <h3 className="mb-0">{stats?.ordersLast7Days ?? '-'}</h3>
                   </div>
                   <div className="bg-info bg-opacity-10 p-3 rounded">
@@ -540,7 +551,7 @@ const StatisticsPage: React.FC = () => {
               <Card.Body className="p-3">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h6 className="text-muted mb-1">Total Products</h6>
+                    <h6 className="text-muted mb-1">{t('statistics.cards.totalProducts')}</h6>
                     <h3 className="mb-0">{stats?.totalProducts ?? '-'}</h3>
                   </div>
                   <div className="bg-warning bg-opacity-10 p-3 rounded">
@@ -559,9 +570,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Pending+Call" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Pending</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.pending')}</h6>
                 <h3 className="mb-0">{stats?.pendingOrders ?? '-'}</h3>
-                <Badge bg="secondary" className="mt-2">Pending Call</Badge>
+                <Badge bg="secondary" className="mt-2">{t('statistics.orderStatus.pendingCall')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -571,9 +582,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Verified" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Verified</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.verified')}</h6>
                 <h3 className="mb-0">{stats?.verifiedOrders ?? '-'}</h3>
-                <Badge bg="primary" className="mt-2">Verified</Badge>
+                <Badge bg="primary" className="mt-2">{t('statistics.orderStatus.verified')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -583,9 +594,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Processing" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Processing</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.processing')}</h6>
                 <h3 className="mb-0">{stats?.processingOrders ?? '-'}</h3>
-                <Badge bg="warning" className="mt-2">Processing</Badge>
+                <Badge bg="warning" className="mt-2">{t('statistics.orderStatus.processing')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -595,9 +606,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Shipped" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Shipped</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.shipped')}</h6>
                 <h3 className="mb-0">{stats?.shippedOrders ?? '-'}</h3>
-                <Badge bg="info" className="mt-2">Shipped</Badge>
+                <Badge bg="info" className="mt-2">{t('statistics.orderStatus.shipped')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -607,9 +618,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Delivered" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Delivered</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.delivered')}</h6>
                 <h3 className="mb-0">{stats?.deliveredOrders ?? '-'}</h3>
-                <Badge bg="success" className="mt-2">Delivered</Badge>
+                <Badge bg="success" className="mt-2">{t('statistics.orderStatus.delivered')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -619,9 +630,9 @@ const StatisticsPage: React.FC = () => {
           <Link to="/admin/orders?status=Cancelled" className="text-decoration-none text-reset">
             <Card className="h-100 shadow-sm dashboard-stat-card">
               <Card.Body className="p-3">
-                <h6 className="text-muted mb-0">Cancelled</h6>
+                <h6 className="text-muted mb-0">{t('statistics.orderStatus.cancelled')}</h6>
                 <h3 className="mb-0">{stats?.cancelledOrders ?? '-'}</h3>
-                <Badge bg="danger" className="mt-2">Cancelled</Badge>
+                <Badge bg="danger" className="mt-2">{t('statistics.orderStatus.cancelled')}</Badge>
               </Card.Body>
             </Card>
           </Link>
@@ -633,7 +644,7 @@ const StatisticsPage: React.FC = () => {
         <Col lg={12}>
           <Card className="shadow-sm">
             <Card.Header className="bg-transparent py-3">
-              <h5 className="mb-0">Order Status Distribution</h5>
+              <h5 className="mb-0">{t('statistics.charts.orderStatus.title')}</h5>
             </Card.Header>
             <Card.Body>
               <div style={{ height: '300px' }}>
@@ -652,17 +663,17 @@ const StatisticsPage: React.FC = () => {
           <Card className="shadow-sm">
             <Card.Header className="bg-transparent py-3">
               <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Sales Over Time</h5>
+                <h5 className="mb-0">{t('statistics.charts.sales.title')}</h5>
                 <Form.Select 
                   className="w-auto" 
                   value={timePeriod}
                   onChange={(e) => setTimePeriod(e.target.value)}
-                  aria-label="Select time period"
+                  aria-label={t('statistics.timePeriod.ariaLabel')}
                 >
-                  <option value="7d">Last 7 Days</option>
-                  <option value="30d">Last 30 Days</option>
-                  <option value="90d">Last 90 Days</option>
-                  <option value="6m">Last 6 Months</option>
+                  <option value="7d">{t('statistics.timePeriod.last7Days')}</option>
+                  <option value="30d">{t('statistics.timePeriod.last30Days')}</option>
+                  <option value="90d">{t('statistics.timePeriod.last90Days')}</option>
+                  <option value="6m">{t('statistics.timePeriod.last6Months')}</option>
                 </Form.Select>
               </div>
             </Card.Header>
@@ -670,7 +681,7 @@ const StatisticsPage: React.FC = () => {
               {isSalesChartLoading ? (
                 <div className="text-center py-5">
                   <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading chart data...</span>
+                    <span className="visually-hidden">{t('common.loading')}</span>
                   </Spinner>
                 </div>
               ) : salesChartError ? (
@@ -682,7 +693,7 @@ const StatisticsPage: React.FC = () => {
                   </Suspense>
                 </div>
               ) : (
-                <div className="text-center py-3">No sales data available.</div>
+                <div className="text-center py-3">{t('statistics.charts.sales.noData')}</div>
               )}
             </Card.Body>
           </Card>
@@ -695,14 +706,14 @@ const StatisticsPage: React.FC = () => {
           <Card className="shadow-sm">
             <Card.Header className="bg-transparent py-3">
               <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">User Registrations</h5>
+                <h5 className="mb-0">{t('statistics.charts.users.title')}</h5>
               </div>
             </Card.Header>
             <Card.Body>
               {isUsersChartLoading ? (
                 <div className="text-center py-5">
                   <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading chart data...</span>
+                    <span className="visually-hidden">{t('common.loading')}</span>
                   </Spinner>
                 </div>
               ) : usersChartError ? (
@@ -714,7 +725,7 @@ const StatisticsPage: React.FC = () => {
                   </Suspense>
                 </div>
               ) : (
-                <div className="text-center py-3">No user data available.</div>
+                <div className="text-center py-3">{t('statistics.charts.users.noData')}</div>
               )}
             </Card.Body>
           </Card>

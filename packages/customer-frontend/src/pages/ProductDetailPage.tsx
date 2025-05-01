@@ -607,7 +607,7 @@ const ProductDetailPage = () => {
             </Button>
           </div>
           
-          <h2 className="text-primary mb-1 fs-3">€{product.price.toFixed(2)}</h2>
+          <h2 className="text-primary mb-1 fs-3">{formatCurrency(product.price)}</h2>
           
           {/* Display Rating */}
           {product.averageRating !== undefined && product.averageRating !== null && (
@@ -748,12 +748,12 @@ const ProductDetailPage = () => {
                       <ListGroup variant="flush">
                         {reviews.map((review) => (
                           <ListGroup.Item key={review.id} className="py-3">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
-                              <div className="d-flex align-items-center">
+                            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+                              <div className="d-flex align-items-center mb-1 mb-sm-0">
                                 <StarRating rating={review.rating} />
-                                <span className="ms-2 fw-bold">{review.user.email}</span>
+                                <span className="ms-2 fw-bold small">{review.user.email}</span>
                               </div>
-                              <small className="text-muted">
+                              <small className="text-muted ms-sm-2">
                                 {formatDate(review.createdAt)}
                               </small>
                             </div>

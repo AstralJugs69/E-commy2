@@ -1,6 +1,8 @@
 /**
  * Utility functions for formatting data throughout the application
  */
+import i18next from 'i18next';
+import { TFunction } from 'i18next';
 
 /**
  * Format a date string into a localized date and time string
@@ -9,7 +11,7 @@
  */
 export const formatDateTime = (dateString: string | Date): string => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(i18next.language || 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -19,14 +21,14 @@ export const formatDateTime = (dateString: string | Date): string => {
 };
 
 /**
- * Format a number as currency (USD)
+ * Format a number as currency (ETB)
  * @param amount Amount to format
  * @returns Formatted currency string
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(i18next.language || 'en', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'ETB',
   }).format(amount);
 };
 
@@ -67,29 +69,51 @@ export const formatDate = (
   }
 ): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+  return new Intl.DateTimeFormat(i18next.language || 'en-US', options).format(dateObj);
 };
 
 /**
  * Get a user-friendly description for each order status
  * @param status Order status string
+ * @param t Translation function
  * @returns Human-readable description of the status
  */
-export const getOrderStatusDescription = (status: string): string => {
+export const getOrderStatusDescription = (status: string, t?: TFunction): string => {
+  if (!t) {
+    // Fallback when t function is not provided
+    switch (status) {
+      case 'Pending Call':
+        return "Awaiting phone verification call.";
+      case 'Verified':
+        return "Order verified, preparing for processing.";
+      case 'Processing':
+        return "Your order is being processed.";
+      case 'Shipped':
+        return "Your order has shipped.";
+      case 'Delivered':
+        return "Your order has been delivered.";
+      case 'Cancelled':
+        return "Order cancelled.";
+      default:
+        return "Status unknown.";
+    }
+  }
+  
+  // With translations
   switch (status) {
     case 'Pending Call':
-      return "Awaiting phone verification call.";
+      return t('orders.statusDescription.pendingCall', "Awaiting phone verification call.");
     case 'Verified':
-      return "Order verified, preparing for processing.";
+      return t('orders.statusDescription.verified', "Order verified, preparing for processing.");
     case 'Processing':
-      return "Your order is being processed.";
+      return t('orders.statusDescription.processing', "Your order is being processed.");
     case 'Shipped':
-      return "Your order has shipped.";
+      return t('orders.statusDescription.shipped', "Your order has shipped.");
     case 'Delivered':
-      return "Your order has been delivered.";
+      return t('orders.statusDescription.delivered', "Your order has been delivered.");
     case 'Cancelled':
-      return "Order cancelled.";
+      return t('orders.statusDescription.cancelled', "Order cancelled.");
     default:
-      return "Status unknown.";
+      return t('orders.statusDescription.unknown', "Status unknown.");
   }
 }; 

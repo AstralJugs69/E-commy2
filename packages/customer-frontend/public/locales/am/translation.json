@@ -27,7 +27,8 @@
     "status": "ሁኔታ",
     "add": "ጨምር",
     "installApp": "መተግበሪያ ጫን",
-    "noResults": "ምንም ውጤቶች አልተገኙም።"
+    "noResults": "ምንም ውጤቶች አልተገኙም።",
+    "cancel": "ሰርዝ"
   },
   "pwa": {
     "updateAvailable": "አዲስ የመተግበሪያ ስሪት አለ! ለማዘመን አድስ የሚለውን ይጫኑ።",
@@ -88,7 +89,12 @@
     "continueShopping": "ግብይት ቀጥል",
     "proceedToCheckout": "ወደ ክፍያ ቀጥል",
     "addedToCart": "ወደ ጋሪ ታክሏል",
-    "failedToAdd": "ወደ ጋሪ ማከል አልተሳካም"
+    "failedToAdd": "ወደ ጋሪ ማከል አልተሳካም",
+    "product": "ምርት",
+    "quantity": "ብዛት",
+    "price": "ዋጋ",
+    "editCart": "ጋሪን አርትዕ",
+    "emptyCartCheckout": "የገበያ ጋሪዎ ባዶ ነው። ክፍያ ከመፈጸምዎ በፊት አንዳንድ ምርቶችን ይጨምሩ።"
   },
   "checkoutPage": {
     "title": "ክፍያ",
@@ -100,16 +106,26 @@
     "editCart": "ጋሪን አርትዕ",
     "location": "መገኛ",
     "selectLocation": "መገኛ ይምረጡ",
-     "alert": {
-        "locationErrorTitle": "የመገኛ ስህተት",
-        "locationNoticeText": "ያሉበት ቦታ ከአገልግሎት ክልላችን ውጪ ይመስላል። እባክዎ የደንበኞች አገልግሎትን ያነጋግሩ።",
-        "locationVerified": "ለማድረስ አመቺ ቦታ ላይ ነዎት።",
-        "checkingLocation": "መገኛዎ በአገልግሎት ክልላችን ውስጥ መሆኑን በማረጋገጥ ላይ...",
-        "verificationFailed": "መገኛዎ በአገልግሎት ክልላችን ውስጥ መሆኑን ማረጋገጥ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
-        "permissionDenied": "የመገኛ ፈቃድ ተከልክሏል። እባክዎ በአሳሽዎ ቅንብሮች ውስጥ የመገኛ አገልግሎቶችን ያንቁ።",
-        "unavailable": "የመገኛ መረጃ አይገኝም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
-        "timeout": "የመገኛ ጥያቄ ጊዜው አልፎበታል። እባክዎ እንደገና ይሞክሩ።",
-        "unknownError": "መገኛዎን በማግኘት ላይ ያልታወቀ ስህተት ተከስቷል።"
+    "alert": {
+      "locationErrorTitle": "የመገኛ ስህተት",
+      "locationNoticeText": "ያሉበት ቦታ ከአገልግሎት ክልላችን ውጪ ይመስላል። እባክዎ የደንበኞች አገልግሎትን ያነጋግሩ።",
+      "locationVerified": "ለማድረስ አመቺ ቦታ ላይ ነዎት።",
+      "checkingLocation": "መገኛዎ በአገልግሎት ክልላችን ውስጥ መሆኑን በማረጋገጥ ላይ...",
+      "verificationFailed": "መገኛዎ በአገልግሎት ክልላችን ውስጥ መሆኑን ማረጋገጥ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
+      "permissionDenied": "የመገኛ ፈቃድ ተከልክሏል። እባክዎ በአሳሽዎ ቅንብሮች ውስጥ የመገኛ አገልግሎቶችን ያንቁ።",
+      "unavailable": "የመገኛ መረጃ አይገኝም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
+      "timeout": "የመገኛ ጥያቄ ጊዜው አልፎበታል። እባክዎ እንደገና ይሞክሩ።",
+      "unknownError": "መገኛዎን በማግኘት ላይ ያልታወቀ ስህተት ተከስቷል።",
+      "outsideServiceArea": "ያሉበት ቦታ ከአገልግሎት ክልላችን ውጪ ነው። አሁን ወደዚህ ቦታ ማድረስ አንችልም።"
+    },
+    "retryLocationCheck": "የአካባቢ ምርመራን እንደገና ሞክር",
+    "loadingLocations": "የማድረሻ ቦታዎችን በመጫን ላይ...",
+    "checkingLocation": "ያሉበት ቦታ በአገልግሎት ክልላችን ውስጥ መሆኑን በማረጋገጥ ላይ...",
+    "locationAvailable": "ያሉበት ቦታ ለትክክለኛ ማድረስ ተገቢ ነው",
+    "locationUndetermined": "ያሉበት ቦታ በአገልግሎት ክልላችን ውስጥ መሆኑን ማረጋገጥ አልተቻለም",
+    "errors": {
+      "missingCoordinates": "የመገኛ መጋጠሚያዎች ጠፍተዋል። እባክዎ የመገኛ ፈቃድ ይስጡ።",
+      "serviceZoneCheck": "ያሉበት ቦታ በአገልግሎት ክልላችን ውስጥ መሆኑን ማረጋገጥ አልተሳካም። እባክዎ እንደገና ይሞክሩ።"
     }
   },
   "orderDetails": {
@@ -122,8 +138,9 @@
     "noDeliveryInfo": "የማድረሻ መረጃ የለም",
     "itemsOrderedTitle": "የታዘዙ እቃዎች",
     "noItems": "በዚህ ትዕዛዝ ውስጥ ምንም እቃዎች የሉም",
-    "actionRequiredCall": "ትዕዛዝዎን ለማጠናቀቅ እባክዎ ከክፍያ በኋላ የተሰጠውን የማረጋገጫ ስልክ ይደውሉ።",
-    "contactPhoneLabel": "መገኛ ስልክ፡"
+    "actionRequiredCall": "ትዕዛዝዎን ለማጠናቀቅ እባክዎ የተሰጠውን የማረጋገጫ ስልክ ይደውሉ።",
+    "contactPhoneLabel": "መገኛ ስልክ፡",
+    "loadError": "የትዕዛዝ መረጃን መጫን አልተቻለም።"
   },
   "homePage": {
     "title": "እንኳን ወደ ሃይብሪድስቶር በደህና መጡ",
@@ -165,7 +182,16 @@
     "noOrdersMessage": "እስካሁን ምንም ትዕዛዝ አላስገቡም። የትዕዛዝ ታሪክዎን እዚህ ለማየት ግብይት ይጀምሩ።",
     "orderIdLabel": "የትዕዛዝ ቁጥር፡",
     "datePlacedLabel": "የታዘዘበት፡",
-    "viewDetails": "ዝርዝሮችን ይመልከቱ"
+    "viewDetails": "ዝርዝሮችን ይመልከቱ",
+    "statusDescription": {
+      "pendingCall": "የስልክ ማረጋገጫ ጥሪን በመጠበቅ ላይ።",
+      "verified": "ትዕዛዝ ተረጋግጧል፣ ለማስኬድ በመዘጋጀት ላይ።",
+      "processing": "ትዕዛዝዎ በማስኬድ ላይ ነው።",
+      "shipped": "ትዕዛዝዎ ተልኳል።",
+      "delivered": "ትዕዛዝዎ ደርሷል።",
+      "cancelled": "ትዕዛዝ ተሰርዟል።",
+      "unknown": "ሁኔታ አልታወቀም።"
+    }
   },
   "orderSuccess": {
     "title": "ትዕዛዝ በተሳካ ሁኔታ ተጠናቋል!",
@@ -257,12 +283,13 @@
     "addLocation": "አድራሻ ጨምር",
     "updateLocation": "አድራሻ አዘምን",
     "setAsDefault": "እንደ ነባሪ አዘጋጅ",
-    "defaultBadge": "ነባሪ",
+    "defaultBadge": "ነባሪ ቦታ",
     "updatePassword": "የይለፍ ቃል አዘምን",
-     "addressForm": {
+    "addressForm": {
       "locationName": "የቦታ ስም",
       "locationNamePlaceholder": "ቤት፣ ስራ፣ ወዘተ.",
       "phoneNumber": "ስልክ ቁጥር",
+      "phonePlaceholder": "ስልክ ቁጥር",
       "district": "ክፍለ ከተማ / ወረዳ",
       "selectDistrict": "ክፍለ ከተማ / ወረዳ ይምረጡ",
       "errorLoadingDistricts": "ወረዳዎችን መጫን አልተሳካም",
@@ -273,7 +300,7 @@
         "addFirstAddress": "ክፍያን ለማፋጠን የመጀመሪያ ቦታዎን ያክሉ።"
     },
     "addFirstLocationButton": "የመጀመሪያ ቦታዎን ያክሉ",
-     "tips": {
+    "tips": {
         "title": "የይለፍ ቃል ደህንነት ምክሮች",
         "tip1": "የፊደላት፣ የቁጥሮች እና የልዩ ቁምፊዎች ጥምረት ይጠቀሙ",
         "tip2": "እንደ የልደት ቀን ያሉ በቀላሉ ሊገመቱ የሚችሉ መረጃዎችን ከመጠቀም ይቆጠቡ",

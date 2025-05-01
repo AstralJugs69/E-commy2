@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { FaArrowLeft, FaMapMarkerAlt, FaRegClock, FaBoxOpen, FaTruck, FaPhone } from 'react-icons/fa';
 import api from '../utils/api';
 import { formatDateTime, formatCurrency, getStatusBadgeVariant, getOrderStatusDescription } from '../utils/formatters';
+import { useTranslation } from 'react-i18next';
 
 // Interfaces based on expected API response for GET /api/orders/:id
 interface ProductImage {
@@ -52,6 +53,7 @@ interface CustomerOrder {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const CustomerOrderDetailPage = () => {
+  const { t } = useTranslation();
   const { orderId } = useParams<{ orderId: string }>();
   const { token, isAuthenticated, isAuthLoading } = useAuth();
   const navigate = useNavigate();
@@ -125,7 +127,7 @@ const CustomerOrderDetailPage = () => {
       return (
         <Container className="py-4 text-center">
              <Spinner animation="border" role="status">
-                 <span className="visually-hidden">Loading...</span>
+                 <span className="visually-hidden">{t('common.loading', 'Loading...')}</span>
              </Spinner>
          </Container>
       );
@@ -133,7 +135,7 @@ const CustomerOrderDetailPage = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-4">Order Details</h2>
+      <h2 className="mb-4">{t('orderDetails.title', 'Order Details')}</h2>
 
       {error && (
         <Alert variant="danger">{error}</Alert>
@@ -144,25 +146,25 @@ const CustomerOrderDetailPage = () => {
           <Card.Header>
             <Row className="align-items-center">
               <Col xs={12} sm={6} className="mb-2 mb-sm-0">
-                <strong>Order #</strong> {order.id}
+                <strong>{t('orderDetails.orderIdLabel', 'Order #')}</strong> {order.id}
               </Col>
               <Col xs={12} sm={6} className="text-sm-end">
                 <Badge bg={getStatusBadgeVariant(order.status)}>{order.status || 'Unknown'}</Badge>
-                <div className="text-muted small mt-1">{getOrderStatusDescription(order.status)}</div>
+                <div className="text-muted small mt-1">{getOrderStatusDescription(order.status, t)}</div>
               </Col>
             </Row>
           </Card.Header>
           <Card.Body>
             <Row className="g-4 mb-4">
               <Col xs={12} md={6} className="mb-3 mb-md-0">
-                <h5 className="border-bottom pb-2">Order Summary</h5>
-                <p className="mb-2"><strong>Date Placed:</strong> {formatDateTime(order.createdAt)}</p>
-                <p className="mb-2"><strong>Total Amount:</strong> {formatCurrency(order.totalAmount)}</p>
+                <h5 className="border-bottom pb-2">{t('checkoutPage.orderSummary', 'Order Summary')}</h5>
+                <p className="mb-2"><strong>{t('orderDetails.datePlacedLabel', 'Date Placed:')}</strong> {formatDateTime(order.createdAt)}</p>
+                <p className="mb-2"><strong>{t('orderDetails.totalAmountLabel', 'Total Amount:')}</strong> {formatCurrency(order.totalAmount)}</p>
                 
                 {/* Display verification phone number if available */}
                 {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) && (
                   <p className="mb-2">
-                    <strong><FaPhone className="me-1" /> Verification Phone:</strong>{' '}
+                    <strong><FaPhone className="me-1" /> {t('orderDetails.verificationPhoneLabel', 'Verification Phone:')}</strong>{' '}
                     <a 
                       href={`tel:${order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString}`} 
                       className="text-primary fw-bold"
@@ -174,44 +176,44 @@ const CustomerOrderDetailPage = () => {
                 
                 {order.status === 'Pending Call' && (
                   <Alert variant="warning" className="mt-2 p-2 small">
-                    <strong>Action Required:</strong> Please call the verification number {(order.verificationPhoneNumber || order.assignedPhoneNumber?.numberString) ? 'above' : 'provided after checkout'} to complete your order.
+                    <strong>{t('orderDetails.actionRequiredCall', 'Action Required: Please call the verification number provided to complete your order.')}</strong>
                   </Alert>
                 )}
               </Col>
               <Col xs={12} md={6}>
-                <h5 className="border-bottom pb-2">Delivery Details</h5>
+                <h5 className="border-bottom pb-2">{t('orderDetails.deliveryDetailsTitle', 'Delivery Details')}</h5>
                 {order.deliveryLocation ? (
                     <>
-                        <p className="mb-2"><strong>Name:</strong> {order.deliveryLocation.name}</p>
-                        <p className="mb-2"><strong>Phone:</strong> {order.deliveryLocation.phone}</p>
-                        <p className="mb-0"><strong>District:</strong> {order.deliveryLocation.district || 'N/A'}</p>
+                        <p className="mb-2"><strong>{t('common.nameLabel', 'Name:')}</strong> {order.deliveryLocation.name}</p>
+                        <p className="mb-2"><strong>{t('common.phoneLabel', 'Phone:')}</strong> {order.deliveryLocation.phone}</p>
+                        <p className="mb-0"><strong>{t('account.addressForm.district', 'District:')}</strong> {order.deliveryLocation.district || 'N/A'}</p>
                         {order.deliveryLocation.isDefault && (
-                          <Badge bg="info" className="mt-2">Default Location</Badge>
+                          <Badge bg="info" className="mt-2">{t('account.defaultBadge', 'Default Location')}</Badge>
                         )}
                     </>
                 ) : (
-                    <p className="mb-0">Delivery information not available</p>
+                    <p className="mb-0">{t('orderDetails.noDeliveryInfo', 'Delivery information not available')}</p>
                 )}
               </Col>
             </Row>
             
-            <h5 className="border-bottom pb-2 mb-3">Items Ordered</h5>
+            <h5 className="border-bottom pb-2 mb-3">{t('orderDetails.itemsOrderedTitle', 'Items Ordered')}</h5>
             {order.items && order.items.length > 0 ? (
               <div className="table-responsive">
                 <Table striped bordered hover responsive className="mb-0">
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-center">Price</th>
-                      <th className="text-end">Subtotal</th>
+                      <th>{t('cart.table.product', 'Product')}</th>
+                      <th className="text-center">{t('cart.table.quantity', 'Qty')}</th>
+                      <th className="text-center">{t('cart.table.price', 'Price')}</th>
+                      <th className="text-end">{t('cart.table.subtotal', 'Subtotal')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {order.items.map((item) => (
                       <tr key={item.id}>
                         <td className="text-break">
-                          {item.product?.name || item.productName || `Product #${item.productId}`}
+                          {item.product?.name || item.productName || `${t('cart.product', 'Product')} #${item.productId}`}
                         </td>
                         <td className="text-center">{item.quantity}</td>
                         <td className="text-center">{formatCurrency(item.price)}</td>
@@ -222,14 +224,14 @@ const CustomerOrderDetailPage = () => {
                 </Table>
               </div>
             ) : (
-              <p>No items found for this order.</p>
+              <p>{t('orderDetails.noItems', 'No items found for this order.')}</p>
             )}
           </Card.Body>
         </Card>
       )}
 
       {!error && !order && !isLoading && (
-          <Alert variant="warning">Order data could not be loaded.</Alert>
+          <Alert variant="warning">{t('orderDetails.loadError', 'Order data could not be loaded.')}</Alert>
       )}
     </Container>
   );

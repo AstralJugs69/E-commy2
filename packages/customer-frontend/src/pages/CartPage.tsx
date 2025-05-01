@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { getImageUrl } from '../utils/imageUrl';
+import { formatCurrency } from '../utils/formatters';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 
@@ -50,11 +51,6 @@ const CartPage = () => {
     } else {
       navigate('/checkout');
     }
-  };
-  
-  // Helper function to format currency
-  const formatCurrency = (value: number): string => {
-    return `€${value.toFixed(2)}`;
   };
   
   // Handle input change (update local state only)

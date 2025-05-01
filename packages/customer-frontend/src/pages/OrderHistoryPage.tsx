@@ -126,12 +126,12 @@ const OrderHistoryPage = () => {
                     <div className="d-flex justify-content-between align-items-center flex-wrap">
                       <div className="mb-1 mb-md-0">
                         <FaShoppingBag className="me-2 text-primary" />
-                        <strong>Order ID:</strong>{' '}
+                        <strong>{t('orders.orderIdLabel', 'Order ID:')}</strong>{' '}
                         <Link to={`/order/${order.id}`}>#{order.id}</Link>
                       </div>
                       <div className="mb-1 mb-md-0">
                         <FaRegClock className="me-2 text-muted" />
-                        <strong>Placed:</strong> {formatDateTime(order.createdAt)}
+                        <strong>{t('orders.datePlacedLabel', 'Placed:')}</strong> {formatDateTime(order.createdAt)}
                       </div>
                       <div>
                         <Badge bg={getStatusBadgeVariant(order.status)}
@@ -139,7 +139,7 @@ const OrderHistoryPage = () => {
                         >
                           {order.status || 'Unknown'}
                         </Badge>
-                        <div className="text-muted small mt-1">{getOrderStatusDescription(order.status)}</div>
+                        <div className="text-muted small mt-1">{getOrderStatusDescription(order.status, t)}</div>
                       </div>
                     </div>
                   </Card.Header>
@@ -147,12 +147,12 @@ const OrderHistoryPage = () => {
                     <Row className="align-items-center">
                       <Col>
                         <Card.Text as="h6" className="mb-0">
-                          Total: {formatCurrency(order.totalAmount)}
+                          {t('common.total', 'Total:')} {formatCurrency(order.totalAmount)}
                         </Card.Text>
                       </Col>
                       <Col className="text-end">
                         <Link to={`/order/${order.id}`} className="btn btn-outline-primary btn-sm px-3">
-                          View Details
+                          {t('orders.viewDetails', 'View Details')}
                         </Link>
                       </Col>
                     </Row>

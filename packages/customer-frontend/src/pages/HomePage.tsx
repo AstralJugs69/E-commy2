@@ -14,6 +14,7 @@ import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
 import { getImageUrl } from '../utils/imageUrl';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../utils/formatters';
 
 interface ProductImage {
   id: number;
@@ -639,7 +640,7 @@ const HomePage = () => {
                       </div>
                       <Card.Body className="p-2 p-md-3 text-center">
                         <Card.Title className="h6 text-dark mb-2 text-truncate">{product.name}</Card.Title>
-                        <Card.Subtitle className="mb-2 product-price">€{product.price.toFixed(2)}</Card.Subtitle>
+                        <Card.Subtitle className="mb-2 product-price">{formatCurrency(product.price)}</Card.Subtitle>
                         
                         {/* Display Rating */}
                         {product.averageRating !== undefined && product.averageRating !== null && (

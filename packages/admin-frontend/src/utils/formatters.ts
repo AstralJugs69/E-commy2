@@ -1,6 +1,7 @@
 /**
  * Utility functions for formatting data throughout the application
  */
+import i18next from 'i18next';
 
 /**
  * Format a date string into a localized date and time string
@@ -9,7 +10,7 @@
  */
 export const formatDateTime = (dateString: string | Date): string => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(i18next.language || 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -24,9 +25,9 @@ export const formatDateTime = (dateString: string | Date): string => {
  * @returns Formatted currency string
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(i18next.language || 'en', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'ETB',
   }).format(amount);
 };
 
@@ -59,7 +60,7 @@ export const getStatusBadgeVariant = (status: string): string => {
  */
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat(i18next.language || 'en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

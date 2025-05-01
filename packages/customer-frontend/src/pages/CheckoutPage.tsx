@@ -35,8 +35,8 @@ const CheckoutPage: React.FC = () => {
   // Derived label for delivery location dropdown
   const selectedLocation = savedLocations.find(loc => loc.id.toString() === selectedLocationId);
   const currentLocationLabel = selectedLocation
-    ? `${selectedLocation.name} (${selectedLocation.district}) - ${selectedLocation.phone}${selectedLocation.isDefault ? ' (Default)' : ''}`
-    : '-- Select Delivery Location --';
+    ? `${selectedLocation.name} (${selectedLocation.district}) - ${selectedLocation.phone}${selectedLocation.isDefault ? ` (${t('account.defaultBadge', 'Default')})` : ''}`
+    : t('checkoutPage.selectLocationPlaceholder', '-- Select Delivery Location --');
 
   // Add Location Modal state
   const [showAddLocationModal, setShowAddLocationModal] = useState(false);
@@ -119,10 +119,10 @@ const CheckoutPage: React.FC = () => {
           });
           
           if (!response.data.isInServiceZone) {
-            setLocationError("Your location is outside our service areas. We currently cannot deliver to your location.");
+            setLocationError(t('checkoutPage.alert.outsideServiceArea', 'Your location is outside our service areas. We currently cannot deliver to your location.'));
             setIsLocationWithinServiceZone(false); // Ensure this is false when error is present
             // Make sure we're consistent between error states
-            toast.error('Your location is outside our service areas.');
+            toast.error(t('checkoutPage.alert.outsideServiceArea', 'Your location is outside our service areas. We currently cannot deliver to your location.'));
           } else {
             // Clear any previous location errors if location is valid
             setLocationError(null);
@@ -507,7 +507,7 @@ const CheckoutPage: React.FC = () => {
     
     try {
       if (!location?.lat || !location?.lng) {
-        setLocationError("Location coordinates are missing. Please allow location access.");
+        setLocationError(t('checkoutPage.errors.missingCoordinates', 'Location coordinates are missing. Please allow location access.'));
         setIsLocationWithinServiceZone(false);
         setIsLoadingLocation(false);
         return false;
@@ -522,7 +522,7 @@ const CheckoutPage: React.FC = () => {
       
       // If not in service zone, set an appropriate error message
       if (!response.data.isInServiceZone) {
-        setLocationError("Your location is outside our service areas. We cannot deliver to this address.");
+        setLocationError(t('checkoutPage.alert.outsideServiceArea', 'Your location is outside our service areas. We currently cannot deliver to your location.'));
         setIsLocationWithinServiceZone(false);
         return false;
       }
@@ -533,7 +533,7 @@ const CheckoutPage: React.FC = () => {
       return true;
     } catch (error) {
       console.error('Error checking service zone:', error);
-      setLocationError("Failed to check if your location is within our service zone. Please try again.");
+      setLocationError(t('checkoutPage.errors.serviceZoneCheck', 'Failed to check if your location is within our service zone. Please try again.'));
       setIsLocationWithinServiceZone(false);
       setIsLoadingLocation(false);
       return false;
@@ -607,10 +607,10 @@ const CheckoutPage: React.FC = () => {
     return (
       <Container className="py-3">
         <Alert variant="warning">
-          Your cart is empty. Add some products before checkout.
+          {t('cart.emptyCartCheckout', 'Your cart is empty. Add some products before checkout.')}
         </Alert>
         <Button variant="secondary" onClick={() => navigate('/')} className="rounded-pill px-4 py-2">
-          Continue Shopping
+          {t('cart.continueShopping', 'Continue Shopping')}
         </Button>
       </Container>
     );
@@ -618,13 +618,13 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <Container className="py-3">
-      <h2 className="mb-4">Checkout</h2>
+      <h2 className="mb-4">{t('checkoutPage.title', 'Checkout')}</h2>
       
       <Row>
         <Col lg={7} className="mb-4">
           <Card className="mb-4 h-100">
             <Card.Header>
-              <h5 className="mb-0">Delivery Information</h5>
+              <h5 className="mb-0">{t('checkoutPage.deliveryInfo', 'Delivery Information')}</h5>
             </Card.Header>
             <Card.Body>
               <Form onSubmit={handleSubmit}>
@@ -649,11 +649,11 @@ const CheckoutPage: React.FC = () => {
                 {/* Display location error alert - only show this when there's an actual error */}
                 {locationError && (
                   <Alert variant="danger" className="mb-3">
-                    <Alert.Heading>Location Error</Alert.Heading>
+                    <Alert.Heading>{t('checkoutPage.alert.locationErrorTitle', 'Location Error')}</Alert.Heading>
                     <p>{locationError}</p>
                     <div className="d-flex justify-content-end">
                       <Button onClick={getUserPreciseLocation} variant="outline-danger">
-                        Retry Location Check
+                        {t('checkoutPage.retryLocationCheck', 'Retry Location Check')}
                       </Button>
                     </div>
                   </Alert>
@@ -665,20 +665,20 @@ const CheckoutPage: React.FC = () => {
                     {isLoadingLocation ? (
                       <Alert variant="info" className="mb-3">
                       <Spinner animation="border" size="sm" className="me-2" />
-                        Checking if your location is within our service zone...
+                        {t('checkoutPage.checkingLocation', 'Checking if your location is within our service zone...')}
                     </Alert>
                     ) : isLocationWithinServiceZone ? (
                       <Alert variant="success" className="mb-3">
                         <FaCheckCircle className="me-2" />
-                        Your location is available for accurate delivery
+                        {t('checkoutPage.locationAvailable', 'Your location is available for accurate delivery')}
                     </Alert>
                   ) : (
                       <Alert variant="warning" className="mb-3">
                         <FaExclamationTriangle className="me-2" />
-                        We couldn't determine if your location is within our service area
+                        {t('checkoutPage.locationUndetermined', 'We couldn\'t determine if your location is within our service area')}
                         <div className="d-flex justify-content-end mt-2">
                           <Button onClick={getUserPreciseLocation} variant="outline-warning" size="sm">
-                            Retry Location Check
+                            {t('checkoutPage.retryLocationCheck', 'Retry Location Check')}
                           </Button>
                         </div>
                     </Alert>
@@ -689,7 +689,7 @@ const CheckoutPage: React.FC = () => {
                 {/* Delivery Location Selection */}
                 <Form.Group className="mb-4">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <Form.Label className="fw-bold mb-0">Select Delivery Location</Form.Label>
+                    <Form.Label className="fw-bold mb-0">{t('checkoutPage.selectLocationLabel', 'Select Delivery Location')}</Form.Label>
                     <Button 
                       variant="outline-primary" 
                       size="sm"
@@ -697,19 +697,19 @@ const CheckoutPage: React.FC = () => {
                       className="d-flex align-items-center rounded-pill px-3 py-2"
                       disabled={isLoadingLocations || isLoadingDistricts}
                     >
-                      <FaPlus className="me-2" /> Add New Location
+                      <FaPlus className="me-2" /> {t('account.addNewAddress', 'Add New Location')}
                     </Button>
                   </div>
                   
                   {isLoadingLocations ? (
                     <div className="text-center my-4 py-3">
                       <Spinner animation="border" size="sm" className="me-2" />
-                      <span>Loading delivery locations...</span>
+                      <span>{t('checkoutPage.loadingLocations', 'Loading delivery locations...')}</span>
                     </div>
                   ) : (
                     <div className="mb-3">
                       <label htmlFor="location" className="form-label">
-                        {t('checkout.location')}
+                        {t('checkoutPage.location', 'Location')}
                       </label>
                       <div className="dropdown w-100">
                         <button
@@ -720,7 +720,7 @@ const CheckoutPage: React.FC = () => {
                           aria-expanded={locationDropdownOpen}
                           data-testid="location-dropdown"
                         >
-                          {currentLocationLabel || t('checkout.selectLocation')}
+                          {currentLocationLabel}
                           <i className="bi bi-caret-down-fill"></i>
                         </button>
                         <div
@@ -769,7 +769,7 @@ const CheckoutPage: React.FC = () => {
                       {isRetrying ? `Automatic retry in progress (${retryCount}/${maxRetries + 1})` : 'Processing...'}
                     </>
                   ) : (
-                    'Place Order'
+                    t('checkoutPage.placeOrder', 'Place Order')
                   )}
                 </Button>
               </Form>
@@ -780,15 +780,15 @@ const CheckoutPage: React.FC = () => {
         <Col lg={5}>
           <Card className="mb-4">
             <Card.Header>
-              <h5 className="mb-0">Order Summary</h5>
+              <h5 className="mb-0">{t('checkoutPage.orderSummary', 'Order Summary')}</h5>
             </Card.Header>
             <Card.Body>
               <Table responsive className="mb-3">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-end">Price</th>
+                    <th>{t('cart.product', 'Product')}</th>
+                    <th className="text-center">{t('cart.quantity', 'Qty')}</th>
+                    <th className="text-end">{t('cart.price', 'Price')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -802,14 +802,14 @@ const CheckoutPage: React.FC = () => {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th colSpan={2}>Total</th>
+                    <th colSpan={2}>{t('common.total', 'Total')}</th>
                     <th className="text-end">${totalPrice.toFixed(2)}</th>
                   </tr>
                 </tfoot>
               </Table>
               <div className="d-grid gap-2">
                 <Link to="/cart" className="btn btn-outline-secondary">
-                  Edit Cart
+                  {t('cart.editCart', 'Edit Cart')}
                 </Link>
               </div>
             </Card.Body>
@@ -818,9 +818,9 @@ const CheckoutPage: React.FC = () => {
       </Row>
       
       {/* Add New Location Modal */}
-      <Modal show={showAddLocationModal} onHide={handleCloseAddModal} centered>
-        <Modal.Header closeButton className="border-bottom">
-          <Modal.Title className="fw-semibold">Add New Delivery Location</Modal.Title>
+      <Modal show={showAddLocationModal} onHide={handleCloseAddModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>{t('account.addNewAddress', 'Add New Location')}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
           {addLocationError && (
@@ -839,10 +839,10 @@ const CheckoutPage: React.FC = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Location Name</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.locationName', 'Location Name')}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Home, Work, etc."
+                    placeholder={t('account.addressForm.locationNamePlaceholder', 'Home, Work, etc.')}
                     name="name"
                     value={newLocationData.name}
                     onChange={handleNewLocationChange}
@@ -859,10 +859,10 @@ const CheckoutPage: React.FC = () => {
             <Row className="mb-3">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">Phone Number</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.phoneNumber', 'Phone Number')}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Phone number"
+                    placeholder={t('account.addressForm.phonePlaceholder', 'Phone number')}
                     name="phone"
                     value={newLocationData.phone}
                     onChange={handleNewLocationChange}
@@ -879,7 +879,7 @@ const CheckoutPage: React.FC = () => {
             <Row className="mb-4">
               <Col>
                 <Form.Group>
-                  <Form.Label className="fw-medium">District</Form.Label>
+                  <Form.Label className="fw-medium">{t('account.addressForm.district', 'District')}</Form.Label>
                   <Dropdown className="district-dropdown" onSelect={(eventKey, event) => {
                     if (event) {
                       event.preventDefault();
@@ -888,7 +888,7 @@ const CheckoutPage: React.FC = () => {
                     setNewLocationData(prev => ({ ...prev, district: eventKey || '' }));
                   }}>
                     <Dropdown.Toggle variant={formErrors.district ? 'outline-danger' : 'outline-secondary'} id="newLocationDistrictDropdown" className="w-100 d-flex justify-content-between align-items-center district-dropdown-toggle" disabled={isLoadingDistricts}>
-                      {currentDistrictLabel}
+                      {newLocationData.district || t('account.addressForm.selectDistrict', '-- Select District --')}
                     </Dropdown.Toggle>
                     <Dropdown.Menu 
                       style={{ width: '100%' }} 
@@ -900,11 +900,11 @@ const CheckoutPage: React.FC = () => {
                         }
                       }}
                     >
-                      <Dropdown.Header>Select District</Dropdown.Header>
+                      <Dropdown.Header>{t('account.addressForm.selectDistrict', 'Select District')}</Dropdown.Header>
                       {isLoadingDistricts ? (
-                        <Dropdown.Item disabled>Loading...</Dropdown.Item>
+                        <Dropdown.Item disabled>{t('common.loading', 'Loading...')}</Dropdown.Item>
                       ) : districtError ? (
-                        <Dropdown.Item disabled className="text-danger">Error loading districts</Dropdown.Item>
+                        <Dropdown.Item disabled>{t('account.addressForm.errorLoadingDistricts', 'Error loading districts')}</Dropdown.Item>
                       ) : districts.length > 0 ? (
                         districts.map(d => (
                           <Dropdown.Item 
@@ -913,7 +913,7 @@ const CheckoutPage: React.FC = () => {
                             active={newLocationData.district === d} 
                             className="district-dropdown-item"
                             onClick={(e) => {
-                              // Prevent event bubbling to parent elements
+                              // Prevent event bubbling
                               e.preventDefault();
                               e.stopPropagation();
                               
@@ -933,7 +933,7 @@ const CheckoutPage: React.FC = () => {
                           </Dropdown.Item>
                         ))
                       ) : (
-                        <Dropdown.Item disabled>No districts available</Dropdown.Item>
+                        <Dropdown.Item disabled>{t('account.addressForm.noDistricts', 'No districts available')}</Dropdown.Item>
                       )}
                     </Dropdown.Menu>
                   </Dropdown>
@@ -954,9 +954,9 @@ const CheckoutPage: React.FC = () => {
                 {isAddingLocation ? (
                   <>
                     <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                    Saving...
+                    {t('common.saving', 'Saving...')}
                   </>
-                ) : 'Add Location'}
+                ) : t('account.addLocation', 'Add Location')}
               </Button>
             </div>
           </Form>
