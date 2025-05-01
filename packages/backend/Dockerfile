@@ -25,6 +25,8 @@ RUN npx prisma generate
 # Copy source code
 COPY src ./src
 COPY tsconfig.json ./
+COPY tsconfig.seed.json ./
+COPY scripts ./scripts/
 
 # Build the application
 RUN npm run build
@@ -48,6 +50,7 @@ RUN npm install --omit=dev
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/scripts ./scripts
 
 # Set environment variables
 ENV PORT=10000
