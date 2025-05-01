@@ -20,10 +20,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 console.log(`Running seed in ${isProduction ? 'production' : 'development'} mode...`);
 
-// Command to run based on environment
-const seedCommand = isProduction 
-  ? 'npx prisma db seed'
-  : 'ts-node prisma/seed.ts';
+// Use the JS seed file for simplicity and consistency across environments
+const seedCommand = 'node prisma/seed.js';
 
 // Execute the command
 exec(seedCommand, (error, stdout, stderr) => {

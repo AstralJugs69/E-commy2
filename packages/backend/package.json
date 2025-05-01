@@ -21,7 +21,7 @@
     "kill-server": "node -e \"try{require('child_process').execSync(process.platform === 'win32' ? 'for /f \\\"tokens=5\\\" %a in (\\'netstat -ano ^| findstr :3001\\') do taskkill /F /PID %a' : 'lsof -ti:3001,3002 | xargs kill -9')}catch(e){console.log('No processes found')}\""
   },
   "prisma": {
-    "seed": "node dist/prisma/seed.js"
+    "seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",

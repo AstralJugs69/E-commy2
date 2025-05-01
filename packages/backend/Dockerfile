@@ -52,6 +52,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/scripts ./scripts
 
+# Ensure seed.js is properly copied (even though it should be in the prisma folder already)
+COPY prisma/seed.js ./prisma/seed.js
+
 # Set environment variables
 ENV PORT=10000
 EXPOSE 10000
