@@ -4,13 +4,15 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch src/**/*.ts --exec ts-node src/index.ts",
-    "build": "prisma generate && tsc",
-    "start": "npx prisma migrate deploy && node dist/index.js",
+    "build": "prisma generate && tsc && tsc -p tsconfig.seed.json",
+    "start": "npx prisma migrate deploy && npx prisma db seed && node dist/index.js",
     "start:prod": "NODE_ENV=production node dist/index.js",
     "setup": "npm install && npm install compression@1.7.4 @types/compression@1.7.5",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "run:seed": "node scripts/run-seed.js",
+    "run:seed:prod": "NODE_ENV=production node scripts/run-seed.js",
     "test": "npx vitest run",
     "test:watch": "npx vitest",
     "coverage": "npx vitest run --coverage",
@@ -19,7 +21,7 @@
     "kill-server": "node -e \"try{require('child_process').execSync(process.platform === 'win32' ? 'for /f \\\"tokens=5\\\" %a in (\\'netstat -ano ^| findstr :3001\\') do taskkill /F /PID %a' : 'lsof -ti:3001,3002 | xargs kill -9')}catch(e){console.log('No processes found')}\""
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "node dist/prisma/seed.js"
   },
   "keywords": [],
   "author": "",
