@@ -24,11 +24,12 @@
     "language": "ቋንቋ",
     "retryInProgress": "ዳግም ሙከራ በመካሄድ ላይ...",
     "processing": "በማስኬድ ላይ...",
-    "status": "ሁኔታ",
+    "status": "ሁኔታ:",
     "add": "ጨምር",
     "installApp": "መተግበሪያ ጫን",
     "noResults": "ምንም ውጤቶች አልተገኙም።",
-    "cancel": "ሰርዝ"
+    "cancel": "ሰርዝ",
+    "returnHome": "ወደ መነሻ ተመለስ"
   },
   "pwa": {
     "updateAvailable": "አዲስ የመተግበሪያ ስሪት አለ! ለማዘመን አድስ የሚለውን ይጫኑ።",
@@ -200,9 +201,19 @@
     "verificationInstruction": "ትዕዛዝዎን ለማጠናቀቅ፣ እባክዎ ይህንን የማረጋገጫ ስልክ ቁጥር ይደውሉ፡",
     "verificationWarning": "ባለመደወልዎ ትዕዛዙ ሊሰረዝ ይችላል",
     "verificationHint": "ትዕዛዝዎን ለማረጋገጥ ይህንን ቁጥር ይደውሉ። በቀጥታ ለመደወል ከላይ ያለውን ቁጥር ይጫኑ።",
+    "loadingMessage": "የትዕዛዝ ዝርዝሮችን በመጫን ላይ...",
+    "orderNotFound": "ትዕዛዝ አልተገኘም",
     "error": {
       "missingPhoneTitle": "የማረጋገጫ ስልክ ቁጥር ጠፍቷል",
-      "missingPhoneText": "ለዚህ ትዕዛዝ የማረጋገጫ ስልክ ቁጥር አልተመደበም። እባክዎ የትዕዛዝ ቁጥርዎን {{orderId}} በመጠቀም የደንበኞች አገልግሎትን ያነጋግሩ።"
+      "missingPhoneText": "ለዚህ ትዕዛዝ የማረጋገጫ ስልክ ቁጥር አልተመደበም። እባክዎ የትዕዛዝ ቁጥርዎን በመጠቀም የደንበኞች አገልግሎትን ያነጋግሩ።"
+    },
+    "errors": {
+      "missingInfo": "የትዕዛዝ መታወቂያ ወይም የማረጋገጫ ማህተም ጠፍቷል",
+      "invalidData": "ልክ ያልሆነ የትዕዛዝ ዝርዝሮች ተቀብለዋል",
+      "unauthorized": "ይህን ትዕዛዝ ለመመልከት ፈቃድ የለዎትም",
+      "notFound": "ትዕዛዝ አልተገኘም",
+      "fetchFailed": "የትዕዛዝ ዝርዝሮችን ማግኘት አልተሳካም",
+      "network": "የአውታረ መረብ ስህተት፡ እባክዎ ግንኙነትዎን ያረጋግጡ"
     }
   },
   "product": {
